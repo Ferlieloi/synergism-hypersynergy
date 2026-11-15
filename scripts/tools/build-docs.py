@@ -179,7 +179,7 @@ def category_list(prefix: str, wiki_prefix: str) -> str:
 
 
 def own_sources(category: dict, f: dict) -> list[str]:
-    """An entry's sources beyond its category's, which its page lists once under the intro."""
+    """An entry's sources beyond its category's, which its page lists once at its end."""
     return [p for p in dict.fromkeys(f.get("sources", [])) if p not in category["sources"]]
 
 
@@ -1011,10 +1011,10 @@ def build() -> None:
              f'with information, shortcuts, interface customization and optional automation.</p>')
     home =f'''<h1>Hypersynergism</h1>{intro}
 <h2>Quick links</h2><ul>
-<li><a href="features.html">All {feature_count} documented features</a></li>
-<li><a href="wiki/index.html">Player wiki &amp; detailed guides</a></li>
 <li><a href="wiki/getting-started-guide.html">Install in a browser or on Steam</a></li>
 <li><a href="{REPO}/releases">Downloads &amp; releases</a></li>
+<li><a href="features.html">All {feature_count} features in one searchable list</a></li>
+<li><a href="wiki/index.html">The wiki: a page per category, the guides, the settings reference</a></li>
 <li><a href="#help">Help &amp; bug reports</a></li></ul>
 <h2>About the mod</h2><p>Hypersynergism adds information and practical controls to the game: Ambrosia optimization, forge and shop distribution, header editing, remembered interface preferences, save tools and more.</p>
 <p>Most features are optional. AutoSing is separately enabled and automates progression; it goes beyond the original mod's strictly QoL scope.</p>
@@ -1080,9 +1080,10 @@ def build() -> None:
         toc = '<ul class="wiki-toc">' + "".join(f'<li><a href="#{f["id"]}">{esc(f["title"])}</a></li>' for f in c["features"]) + '</ul>'
         page(f'docs/wiki/{c["id"]}.html', c["title"], "wiki",
              f'<p class="breadcrumb"><a href="index.html">Wiki</a> / {esc(c["title"])}</p>'
-             f'<h1>{category_icon(c, "../", 32)}{esc(c["title"])}</h1><p>{esc(c["intro"])}</p>{sources_html("Sources for this category", c["sources"])}'
+             f'<h1>{category_icon(c, "../", 32)}{esc(c["title"])}</h1><p>{esc(c["intro"])}</p>'
              f'{guide_link(c, c["id"] + "-guide.html")}{toc}'
-             + "".join(feature_html(c, f) for f in c["features"]), depth=1, description=category_description(c))
+             + "".join(feature_html(c, f) for f in c["features"])
+             + sources_html("Sources for this category", c["sources"]).replace('class="sources"', 'class="sources category-sources"', 1), depth=1, description=category_description(c))
     add("docs/FEATURES.md", "\n\n".join(inventory))
     settings_outputs()
     calculation_outputs()

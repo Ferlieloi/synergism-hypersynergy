@@ -40,6 +40,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .muted, .where, .setting-refs, .sources, .breadcrumb { color: var(--muted); }
 .where, .sources, .setting-refs { font-size: .875rem; }
 .sources { overflow-wrap: anywhere; }
+.category-sources { margin-top: 2rem; }
 .category-list { columns: 2; column-gap: 40px; max-width: 850px; list-style: none; }
 .page-wrapper .category-list { margin-left: 30px; padding-left: 0; }
 /* Padding, not margin: a column break drops the second column's first top margin and misaligns the columns. */
