@@ -53,8 +53,9 @@ interface HSChoiceDef {
 const hasHeaderModules = () => !!window.__HS_HEADER_MODULES_PATCHED;
 const hasChallengeModule = () => hasHeaderModules() && HSSettings.getSetting('challengeProgressHeader').isEnabled();
 
-// In the block's order; a section's grid width slider, slot counters, then its choices, then its toggles
-const SECTIONS: { title: string; gridWidth?: true; slots?: true; choices?: HSChoiceDef[]; toggles: HSToggleDef[] }[] = [
+// In the block's order; a section's grid width slider, slot counters, then its choices, then its toggles.
+// stackBelow: under the previous section, in its column (two short sections, one column)
+const SECTIONS: { title: string; stackBelow?: true; gridWidth?: true; slots?: true; choices?: HSChoiceDef[]; toggles: HSToggleDef[] }[] = [
     {
         title: 'Layout',
         gridWidth: true,
@@ -71,6 +72,14 @@ const SECTIONS: { title: string; gridWidth?: true; slots?: true; choices?: HSCho
         toggles: [
             { setting: 'headerFitLoadoutSlots', label: 'Fit slots to the cell' },
             { setting: 'headerHideLoadoutIcons', label: 'Hide ambrosia bar icon' },
+        ],
+    },
+    {
+        title: 'Octeracts',
+        stackBelow: true,
+        toggles: [
+            { setting: 'matchOcteractIconSize', label: 'Match Oct icon size' },
+            { setting: 'matchOcteractText', label: 'Match Oct text' },
         ],
     },
     {
@@ -118,13 +127,6 @@ const SECTIONS: { title: string; gridWidth?: true; slots?: true; choices?: HSCho
             { setting: 'corruptionHeaderAlwaysShown', label: 'Keep visible', shown: hasHeaderModules },
         ],
     },
-    {
-        title: 'Octeracts',
-        toggles: [
-            { setting: 'matchOcteractIconSize', label: 'Match Oct icon size' },
-            { setting: 'matchOcteractText', label: 'Match Oct text' },
-        ],
-    },
 ];
 
 // The game's most ambrosia loadout slots: the stored value for "all"
@@ -165,6 +167,7 @@ export class HSHeaderEditSettings {
     static #plusButtons = new Map<HSSlotCountKind, HTMLButtonElement>();
     static #checkboxes = new Map<keyof HSSettingsDefinition, HTMLInputElement>();
     static #toggleSections: { section: HTMLElement; toggles: { label: HTMLElement; shown?: () => boolean }[] }[] = [];
+    static #columns: HTMLElement[] = [];
     static #choices: { choice: HSChoiceDef; buttons: { button: HTMLButtonElement; value: string; shown?: () => boolean }[] }[] = [];
     static #hideRuleInjected = false;
     static #openingEditor = false;
@@ -247,11 +250,19 @@ export class HSHeaderEditSettings {
         title.textContent = '[HS] Header';
         const sections = document.createElement('div');
         sections.className = 'hs-hes-sections';
+        // One column per section, or per run of stacked sections
+        let column: HTMLElement | undefined;
         for (const section of SECTIONS) {
             const element = HSHeaderEditSettings.#buildToggleSection(section.title, section.toggles, section.choices);
             if (section.slots) element.firstElementChild!.after(...HSHeaderEditSettings.#buildSlotLines());
             if (section.gridWidth) element.firstElementChild!.after(HSHeaderGridWidth.buildLine());
-            sections.append(element);
+            if (!column || !section.stackBelow) {
+                column = document.createElement('div');
+                column.className = 'hs-hes-column';
+                sections.append(column);
+                HSHeaderEditSettings.#columns.push(column);
+            }
+            column.append(element);
         }
         block.append(title, sections);
 
@@ -496,6 +507,10 @@ export class HSHeaderEditSettings {
         for (const { section, toggles } of HSHeaderEditSettings.#toggleSections) {
             for (const toggle of toggles) toggle.label.hidden = toggle.shown ? !toggle.shown() : false;
             section.hidden = toggles.every(toggle => toggle.label.hidden);
+        }
+        // An empty column would still take a gap in the row
+        for (const column of HSHeaderEditSettings.#columns) {
+            column.hidden = Array.from(column.children).every(section => (section as HTMLElement).hidden);
         }
     }
 }

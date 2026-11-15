@@ -38,9 +38,10 @@ Started as the visible slot counts, asked by a player who bought 16 slots and us
 header setting moved there (better for everyone than the panel). Static, installed by `Hypersynergism.init` after the
 settings sync; no patcher feature.
 - **One block, its sections side by side** (one block over several), in `SECTIONS` order: Layout,
-  Ambrosia loadouts, Mod modules (Ambrosia per hour and Challenge progress only with the header modules patch, Center
-  quick bars only without it: it moves `#quickbarsRow`; also the Sing elevator popover, not a section of its
-  own: one line alone took a whole column), Challenge progress, Corruption module, Octeracts. Title
+  Ambrosia loadouts with Octeracts under it (`stackBelow`: two short sections share a column), Mod modules (Ambrosia
+  per hour and Challenge progress only with the header modules patch, Center quick bars only without it: it moves
+  `#quickbarsRow`; also the Sing elevator popover, not a section of its own: one line alone took a whole column),
+  Challenge progress, Corruption module. Title
   "[HS] Header", no "[HS]" inside; checkboxes as "[HS] Keep my header layout" (small, grey label), help texts as
   tooltips.
 - **`shown` checks run at each refresh**: lines are always built and hidden with `[hidden]` CSS, a section hidden when
