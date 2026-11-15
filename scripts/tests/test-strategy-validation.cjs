@@ -51,6 +51,8 @@ async function main() {
             s => {s.corruptionLoadouts = [null];}, s => {first(s).ifJump = [];},
             s => {first(s).challengeNumber = 200; delete first(s).ifJump;},
             s => {first(s).challengeNumber = 403; first(s).corruptionLevel = -1;},
+            s => {first(s).challengeNumber = 405; first(s).cleanseToHighest = 'yes';},
+            s => {first(s).challengeNumber = 405; first(s).cleanseToHighest = null;},
         ];
         for (const field of ['challengeCompletions', 'challengeWaitBefore', 'challengeWaitTime', 'challengeMaxTime']) {
             for (const value of ['invalid', null, -1, Infinity, NaN]) invalidCases.push(s => {first(s)[field] = value;});
@@ -63,6 +65,13 @@ async function main() {
         }
         for (const value of [null, false, 7, 'strategy', []]) assert.throws(() => manager.validateStrategy(value), /must be an object/);
         assert.equal(writes, 0, 'invalid strategies never reach storage');
+        // A cleanse step: its option true, false or absent (cleanses to 0)
+        for (const option of [true, false, undefined]) {
+            const s = valid();
+            first(s).challengeNumber = 405;
+            if (option !== undefined) first(s).cleanseToHighest = option;
+            assert.equal(first(manager.validateStrategy(s)).cleanseToHighest, option);
+        }
 
         const jumpStrategy = () => {
             const s = valid();

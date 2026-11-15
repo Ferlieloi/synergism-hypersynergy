@@ -1,4 +1,4 @@
-import { AutosingStrategyPhase, Challenge, isCorruptionLevelStep, SPECIAL_ACTIONS, SPECIAL_ACTION_BY_ID, type SpecialAction, IF_JUMP_VALUE, IsJumpChallenge, ModalInput, IfJumpParams } from "../hs-autosing-types";
+import { AutosingStrategyPhase, Challenge, isCorruptionLevelStep, SET_CORRUPTION_LEVEL_VALUE, CLEANSE_CORRUPTION_VALUE, SPECIAL_ACTIONS, SPECIAL_ACTION_BY_ID, type SpecialAction, IF_JUMP_VALUE, IsJumpChallenge, ModalInput, IfJumpParams } from "../hs-autosing-types";
 import { HSTooltip } from "../../../hs-core/hs-tooltip";
 import { HSUI } from "../../../hs-core/hs-ui";
 import { HSUtils } from "../../../hs-utils/hs-utils";
@@ -16,7 +16,7 @@ interface FieldContext {
     ifJumpMode: IfJumpMode;
 }
 
-type FieldKey = 'action' | 'challengeNum' | 'forgeItem' | 'completions' | 'corruptionLevel' | 'ascendAfterCorruption' | 'waitBefore' | 'waitInside' | 'maxTime'
+type FieldKey = 'action' | 'challengeNum' | 'forgeItem' | 'completions' | 'corruptionLevel' | 'ascendAfterCorruption' | 'cleanseToHighest' | 'waitBefore' | 'waitInside' | 'maxTime'
     | 'comment' | 'ifJumpMode' | 'ifJumpChallenge' | 'ifJumpMultiplier' | 'ifJumpOperator' | 'ifJumpValue' | 'ifJumpMaxJumps';
 
 interface FieldRowBase {
@@ -99,7 +99,7 @@ const ACTION_GROUPS: readonly { label: string; ranges: readonly [number, number]
     { label: "Condition", ranges: [[IF_JUMP_VALUE, IF_JUMP_VALUE]] },
     { label: "Challenges", ranges: [[211, 215], [C1_TO_C10_FAMILY.first, C1_TO_C10_FAMILY.last]] },
     { label: "Ambrosia loadouts", ranges: [[301, 306]], labelClass: "hs-step-ambrosia" },
-    { label: "Corruption level", ranges: [[403, 403]], labelClass: "hs-step-corruption" },
+    { label: "Corruption level", ranges: [[SET_CORRUPTION_LEVEL_VALUE, CLEANSE_CORRUPTION_VALUE]], labelClass: "hs-step-corruption" },
     { label: "AOAG and Autosing", ranges: [[901, 903]], labelClass: "hs-step-autosing" },
 ];
 
@@ -181,6 +181,10 @@ const FIELD_ROWS: readonly FieldRow[] = [
     {
         key: 'ascendAfterCorruption', label: "Ascend immediately", type: 'checkbox', initial: "true",
         shown: c => c.inputs.has("corruptionLevel"), load: fromAction(step => step.ascendAfterCorruption ?? true),
+    },
+    {
+        key: 'cleanseToHighest', label: "Cleanse to highest cleared level", type: 'checkbox', initial: "false",
+        shown: c => c.inputs.has("cleanseToHighest"), load: fromAction(step => step.cleanseToHighest ?? false),
     },
     {
         key: 'waitBefore', label: "Wait before (ms):", attributes: `min="0"`, initial: "0", check: fixedCheck(NOT_NEGATIVE),
@@ -554,7 +558,9 @@ export class HSAutosingChallengeModal {
         const action = SPECIAL_ACTION_BY_ID.get(step.challengeNumber);
         if (!action) return `<span class="${labelClass}">Challenge ${step.challengeNumber}</span> (${step.challengeCompletions} completions)`;
         const label = isCorruptionLevelStep(step.challengeNumber)
-            ? `${action.label}: ${step.corruptionLevel ?? 0} (${step.ascendAfterCorruption === false ? 'next ascension' : 'ascend now'})` : action.label;
+            ? `${action.label}: ${step.corruptionLevel ?? 0} (${step.ascendAfterCorruption === false ? 'next ascension' : 'ascend now'})`
+            : step.challengeNumber === CLEANSE_CORRUPTION_VALUE
+                ? `${action.label} (${step.cleanseToHighest === true ? 'to highest cleared' : 'to 0'})` : action.label;
         return `<strong class="${labelClass}">${label}</strong> ${actionId(step.challengeNumber)}`;
     }
 
@@ -728,6 +734,9 @@ export class HSAutosingChallengeModal {
             if (isCorruptionLevelStep(step.challengeNumber)) {
                 step.corruptionLevel = this.#number('corruptionLevel');
                 step.ascendAfterCorruption = (this.#field('ascendAfterCorruption') as HTMLInputElement).checked;
+                step.challengeCompletions = 0;
+            } else if (step.challengeNumber === CLEANSE_CORRUPTION_VALUE) {
+                step.cleanseToHighest = (this.#field('cleanseToHighest') as HTMLInputElement).checked;
                 step.challengeCompletions = 0;
             }
         }

@@ -89,6 +89,7 @@ Steps run from top to bottom. Pick a **Special Action**, fill in the fields show
 The other actions are grouped in the dropdown (Exit and Ascend, Game actions, Challenges, Ambrosia loadouts, Corruption level…). Each shows only the fields it uses. A few:
 - **601-610 - C1-C10 until no more completions**: runs one of C1–C10 until it stops getting completions.
 - **403 - Set corruption level**: sets the level used from the next ascension. With **Ascend immediately** ticked, it ascends right away (or leaves the current ascension challenge). Set the actual level: the game adds your free levels on top.
+- **405 - Cleanse corruption**: the game's Cleanse, without ascending: lowers the current level to 0 at once, or to your highest cleared level with **Cleanse to highest cleared level** ticked. The next ascension uses that level too.
 - **Store C15**: keeps C15's current score for an IF step to compare against.
 
 #### If-jump steps

@@ -1,4 +1,4 @@
-import { HSAutosingStrategy, AutosingStrategyPhase, Challenge, phases, AOAG_PHASE_ID, AOAG_PHASE_NAME, createDefaultAoagPhase, SET_CORRUPTION_LEVEL_VALUE, EXIT_ASCENSION_CHALLENGE_VALUE, STRATEGY_FORMAT_VERSION, AOAG_LEVEL_STEP_COMMENT, IF_JUMP_VALUE, SPECIAL_ACTION_BY_ID, isCorruptionLevelStep, isIfJumpMaxJumps } from "./hs-autosing-types";
+import { HSAutosingStrategy, AutosingStrategyPhase, Challenge, phases, AOAG_PHASE_ID, AOAG_PHASE_NAME, createDefaultAoagPhase, SET_CORRUPTION_LEVEL_VALUE, CLEANSE_CORRUPTION_VALUE, EXIT_ASCENSION_CHALLENGE_VALUE, STRATEGY_FORMAT_VERSION, AOAG_LEVEL_STEP_COMMENT, IF_JUMP_VALUE, SPECIAL_ACTION_BY_ID, isCorruptionLevelStep, isIfJumpMaxJumps } from "./hs-autosing-types";
 import { HSModuleRegistry } from "../../hs-core/module/hs-module-registry";
 
 import { HSGlobal } from "../../hs-core/hs-global";
@@ -349,6 +349,11 @@ export class HSStrategyManager {
                 && typeof step.ascendAfterCorruption !== 'boolean') ?? -1;
             if (invalidAscend !== -1) {
                 throw new Error(`Phase ${phase.startPhase} → ${phase.endPhase}: step ${invalidAscend + 1} has no valid corruption ascension option`);
+            }
+            const invalidCleanse = phase.strat?.findIndex(step => step.challengeNumber === CLEANSE_CORRUPTION_VALUE
+                && step.cleanseToHighest !== undefined && typeof step.cleanseToHighest !== 'boolean') ?? -1;
+            if (invalidCleanse !== -1) {
+                throw new Error(`Phase ${phase.startPhase} → ${phase.endPhase}: step ${invalidCleanse + 1} has an invalid cleanse option (true or false)`);
             }
             const invalidMaxJumps = phase.strat?.findIndex(step => step.ifJump && !isIfJumpMaxJumps(step.ifJump.ifJumpMaxJumps)) ?? -1;
             if (invalidMaxJumps !== -1) {

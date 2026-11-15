@@ -15,6 +15,7 @@ Saving or deleting changes the in-memory strategy list only after localStorage a
 ## Corruption steps
 - **A level is set only by "Set corruption level" (403)**, the level in the step's `corruptionLevel` (an actual level: the game adds the free levels, `autosing.md`). Phases have no level.
 - **"Ascend immediately"** (`ascendAfterCorruption`): a strategy without the field gets `true` when loaded, and validation refuses a 403 step without a boolean. The step list shows "(ascend now)" or "(next ascension)" after the level. Test: `scripts/tests/test-autosing-corruption-editor.cjs`.
+- **"Cleanse corruption" (405)**: `cleanseToHighest` optional; validation refuses anything but a boolean. The editor always writes it. The step list shows "(to 0)" or "(to highest cleared)". 405 is the first free id: 400–402 and 404 still name removed actions in the conversions.
 - **No named corruption loadouts** (a level is one number, nothing to name).
 - **Removed actions**: 400 "Corrup 0*" (one corruption action less), 401 "Corruption level from phase (reapply)" (with the phase levels), 402 "Corrup Ants", 404 "Set corruption level minus free levels" (set the lowest level that reached the target once free levels were added; removed for 403's actual level). The `corruptionFreeLevels` patch went with 404 (`#RETIRED_PATCHES`, older installs still report it); GDS's `calculateFreeCorruptionLevels()` stays (Tools tab, effective level).
 

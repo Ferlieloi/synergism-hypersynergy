@@ -9,7 +9,7 @@ import { HSSettings } from "../../hs-core/settings/hs-settings";
 import { HSStrategyManager } from "./hs-strategy-manager";
 import { HSNumericSetting } from "../../hs-core/settings/hs-setting";
 import { HSUtils } from "../../hs-utils/hs-utils";
-import { HSAutosingStrategy, PhaseOption, phases, AutosingStrategyPhase, Challenge, SPECIAL_ACTION_BY_ID, createDefaultAoagPhase, AOAG_PHASE_ID, AOAG_PHASE_NAME, SET_CORRUPTION_LEVEL_VALUE, IF_JUMP_VALUE, ALLOWED, type HSAutosingPassRecord, type HSAutosingExposureParts } from "./hs-autosing-types";
+import { HSAutosingStrategy, PhaseOption, phases, AutosingStrategyPhase, Challenge, SPECIAL_ACTION_BY_ID, createDefaultAoagPhase, AOAG_PHASE_ID, AOAG_PHASE_NAME, SET_CORRUPTION_LEVEL_VALUE, CLEANSE_CORRUPTION_VALUE, IF_JUMP_VALUE, ALLOWED, type HSAutosingPassRecord, type HSAutosingExposureParts } from "./hs-autosing-types";
 import { HSAutosingModal } from "./hs-autosingModal";
 import { HSAutosingRecorder } from "./hs-autosingRecorder";
 import { HSAutosingStepTimingsWindow } from "./ui/hs-autosing-step-timings-window";
@@ -852,6 +852,10 @@ export class HSAutosing extends HSModule {
                 HSLogger.debug(() => `${tag()} - SA: ${actionText()}: ${challenge.corruptionLevel ?? 0} (${challenge.ascendAfterCorruption === false ? 'next ascension' : 'ascend now'})`, this.context);
                 if (challenge.ascendAfterCorruption === false) this.#corruptionManager.setLevel(challenge.corruptionLevel ?? 0);
                 else await this.#setCorruptionLevelAndAscend(challenge.corruptionLevel ?? 0);
+                break;
+            case CLEANSE_CORRUPTION_VALUE:
+                HSLogger.debug(() => `${tag()} - SA: ${actionText()} (${challenge.cleanseToHighest === true ? 'to highest cleared' : 'to 0'})`, this.context);
+                this.#corruptionManager.cleanse(challenge.cleanseToHighest === true);
                 break;
             case IF_JUMP_VALUE:
                 return this.#handleIfJumpAction(challenge, phaseConfig, actionIndex, jumpCounts, tag);

@@ -77,7 +77,7 @@ Since the game's 4.4.0: one level (`player.corruptions.next`, used from the next
 - **Setting it**: `HSAutosingCorruption` goes through the game's `#corruptionLevelInput` + a `change` event (the game's `setNextCorruptionLevel`: synchronous, no dialog, no patch, the same for bookmarklet players). It reads the level back from the live player, or from that input (the game writes the level it kept there).
 - **The game lowers a level** above what the player can reach now, silently: 0 before C11 in the singularity, then `highestCleared` + 2 (+1 before singularity 2; `highestCleared` survives a singularity). No other cap since the game's commit `4823674d` (the 4/8/14/20 caps at C11–C14 and the Platonic / GQ / Octeract raises are gone). So a call is skipped only when the game's level already equals the target (not the last level asked): a lowered level is asked again by the next 403 step.
 - **The game adds the free reward levels** on top of the actual level: a strategy sets actual levels, not effective ones (an "effective level" action was tried and removed: `autosing-strategies.md`).
-- **Only 403 steps set a level** (no phase level). Each singularity starts at 0 (the game rebuilds `player.corruptions` at a singularity, `next` = 0: nothing to set for the first phase).
+- **Only 403 steps set a level** (no phase level; a 405 cleanse lowers it). Each singularity starts at 0 (the game rebuilds `player.corruptions` at a singularity, `next` = 0: nothing to set for the first phase).
 - **The AOAG phase's level is its own first step**, a 403 at 0 that ascends at once (no offering penalty: the rune can be bought straight away). A strategy choice, not hardcoded: an author can change or remove it. Strategies from before (no `formatVersion`) get it once at load (`autosing-strategies.md`).
 - **The end-of-singularity push** uses the game's Max button (`#corruptionLevelMax`).
 - **The settings fixer unticks the game's "auto increase"** (`#corruptionAutoIncreaseToggle`): each newly cleared level would raise the next level over the strategy's.
@@ -87,6 +87,11 @@ Since the game's 4.4.0: one level (`player.corruptions.next`, used from the next
 - **Ticked** (default): sets the level, then resets at once: inside an ascension challenge it clicks Exit Ascension challenge (records C15's score; a plain Ascend there keeps the challenge and clears the coins), else Ascend; then waits for the dialog queue if a confirm is showing. It never skips the reset because `next` already matches. A 403 inside C15 leaves C15 at once. Corruption tests showed this fits how the game works.
 - **Unticked**: only sets `next` (`HSAutosingCorruption.setLevel`), for a later Ascend or challenge to apply.
 - "Exit Ascension challenge" (103) also applies `next` (`reset('ascensionChallenge')`), but only inside an ascension challenge: outside, the click does nothing.
+
+## "Cleanse corruption" (405)
+`HSAutosingCorruption.cleanse`: the game's cleanse (`cleanseCorruptions`), no ascension, no dialog. It lowers the current level at once (`used = min(used, level)`: never raises it) and sets `next` to that level, replacing a level an earlier 403 "(next ascension)" step set.
+- **Only the game's Confirm button is clicked** (`#corruptionCleanseConfirm`, through `HSCorruptionLevel.cleanse()`, as the header's cleanse): its Cleanse button only shows Confirm for 10 s.
+- **The step's "Cleanse to highest cleared level"** (`cleanseToHighest`, absent: false) picks 0 or `min(highestCleared, max level)`: autosing sets the game's "Cleanse to highest" toggle for that cleanse, then puts the player's value back at once. The settings fixer doesn't manage that toggle.
 
 **Phase passes don't ascend.** The main loop repeats a phase while the stage stays in its range, and a pass continues the current run; only Ascend (104), 403, Exit Ascension challenge (103) and ascension challenge entries reset. No migration adds an Ascend to players' phases. The default strategies were checked: `autosing-strategies.md`.
 

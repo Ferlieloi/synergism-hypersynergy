@@ -1,6 +1,8 @@
 export const IF_JUMP_VALUE = 200;
 // Sets Challenge.corruptionLevel; ascendAfterCorruption controls whether to ascend now or on a later action.
 export const SET_CORRUPTION_LEVEL_VALUE = 403;
+// The game's cleanse, without ascending: to 0, or to the highest level cleared with Challenge.cleanseToHighest
+export const CLEANSE_CORRUPTION_VALUE = 405;
 export const EXIT_ASCENSION_CHALLENGE_VALUE = 103;
 // HSAutosingStrategy.formatVersion of the strategies written now. Absent (1): from before the AOAG phase's level 0
 // became its first step (autosing set it itself); HSStrategyManager adds that step once.
@@ -48,7 +50,7 @@ export const AOAG_PHASE_NAME = "AOAG Unlocked Phase" as const;
 
 // Standard input fields that can be enabled per special action.
 // "waitBefore" and "comment" are always enabled and not listed here.
-export type ModalInput = "challengeNum" | "completions" | "waitTime" | "maxTime" | "corruptionLevel";
+export type ModalInput = "challengeNum" | "completions" | "waitTime" | "maxTime" | "corruptionLevel" | "cleanseToHighest";
 
 export const SPECIAL_ACTIONS = [
     { label: "Exit Transcension challenge",     value: 101, inputs: [] as const },
@@ -81,6 +83,8 @@ export const SPECIAL_ACTIONS = [
     // one at its phase's level (HSStrategyManager converts them)
     { label: "Set corruption level", value: SET_CORRUPTION_LEVEL_VALUE, inputs: ["corruptionLevel"] as const },
     // 402 ("Corrup Ants") was removed with the game's 4.4.0: HSStrategyManager removes its steps from old strategies
+    // (404, "Set corruption level minus free levels", became a 403 step)
+    { label: "Cleanse corruption", value: CLEANSE_CORRUPTION_VALUE, inputs: ["cleanseToHighest"] as const },
 
     { label: "C1 until no more completions within maxTime ms (after initially waiting waitTime ms)",  value: 601, inputs: ["maxTime", "waitTime"] as const },
     { label: "C2 until no more completions within maxTime ms (after initially waiting waitTime ms)",  value: 602, inputs: ["maxTime", "waitTime"] as const },
@@ -203,6 +207,8 @@ export interface Challenge {
     corruptionLevel?: number;
     // Corruption actions ascend immediately by default, including older saved strategies; false only loads `next`.
     ascendAfterCorruption?: boolean;
+    // "Cleanse corruption" step (CLEANSE_CORRUPTION_VALUE): to the highest level cleared instead of 0 (absent: false)
+    cleanseToHighest?: boolean;
 
     // Optional special-action params
     ifJump?: IfJumpParams;
