@@ -20,8 +20,11 @@ ROOT = Path(__file__).resolve().parents[2]
 DOCS = ROOT / "docs"
 CATALOGUE = json.loads((DOCS / "data/feature-catalogue.json").read_text(encoding="utf-8"))
 SETTINGS = json.loads((ROOT / "src/mod/resource/json/hs-settings.json").read_text(encoding="utf-8"))
-# The Settings tab's page names, as the mod panel shows them.
+# The Settings tab's pages and groups, named and ordered as the mod panel shows them.
 CONTROL_PAGES = json.loads((ROOT / "src/mod/resource/json/hs-settings-control-pages.json").read_text(encoding="utf-8"))
+CONTROL_GROUPS = json.loads((ROOT / "src/mod/resource/json/hs-settings-control-groups.json").read_text(encoding="utf-8"))
+# A setting's "platforms" (hs-platform.ts), as the settings page says who sees it.
+PLATFORM_NOTES = {"userscript": "Tampermonkey loader only", "bookmarklet": "bookmarklet players only", "steam": "Steam only"}
 VERSION = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))["version"]
 CATEGORIES = CATALOGUE["categories"]
 FEATURES = [f for c in CATEGORIES for f in c["features"]]
@@ -894,26 +897,67 @@ def changelog_outputs() -> None:
          description="Hypersynergism release notes for every version: original, Live, Dev and Windows loader, newest first.")
 
 
-def settings_outputs() -> None:
-    html_rows = []
+def setting_default(s: dict) -> str:
+    """A default as the player reads it: On or Off for a switch, a dash for a button or an empty choice."""
+    if s.get("settingControl", {}).get("controlType") == "button":
+        return "—"
+    value = s.get("settingValue", s.get("enabled"))
+    if isinstance(value, bool):
+        return "On" if value else "Off"
+    if value in ("", [], None):
+        return "—"
+    return str(value) if isinstance(value, (int, float, str)) else json.dumps(value, ensure_ascii=False)
+
+
+def settings_table(heading_id: str, groups: list[tuple[str, list[str]]]) -> str:
+    """One table: a row per setting under a row per group. Explanatory text comes from the reviewed catalogue
+    (settingHelpText can lag the implementation): a row links to its feature."""
     by_setting = {k: (c, f) for c in CATEGORIES for f in c["features"] for k in f.get("settings", [])}
+    rows = []
+    for group, keys in groups:
+        rows.append(f'<tr class="settings-group"><th scope="colgroup" colspan="3">{esc(group)}</th></tr>')
+        for key in keys:
+            s = SETTINGS[key]
+            c, f = by_setting[key]
+            note = ", ".join(PLATFORM_NOTES.get(p, p) for p in s.get("platforms", []))
+            rows.append(f'<tr id="{esc(key)}"><th scope="row">{esc(s["settingDescription"])}'
+                        + (f' <span class="muted">({esc(note)})</span>' if note else "")
+                        + f'<br><code class="setting-key">{esc(key)}</code></th>'
+                        f'<td data-label="Default">{esc(setting_default(s))}</td>'
+                        f'<td data-label="Feature"><a href="{c["id"]}.html#{f["id"]}">{esc(f["title"])}</a></td></tr>')
+    return (f'<div class="table-scroll"><table class="settings-table" aria-labelledby="{heading_id}">'
+            '<thead><tr><th>Setting</th><th>Default</th><th>Feature</th></tr></thead><tbody>' + "".join(rows) + '</tbody></table></div>')
+
+
+def settings_outputs() -> None:
+    """The Settings tab's pages in its order (page order, group order, then the registry's order, as the panel sorts
+    them), then the hidden settings (saved from elsewhere, or internal) grouped by their feature's category."""
+    sections = []
+    pages: dict[str, dict[str, list[str]]] = {}
+    hidden: dict[str, list[str]] = {}
+    feature_category = {f["id"]: c for c in CATEGORIES for f in c["features"]}
+    by_setting = {k: f for c in CATEGORIES for f in c["features"] for k in f.get("settings", [])}
     for key, s in SETTINGS.items():
-        c, f = by_setting[key]
-        default = json.dumps(s.get("settingValue", s.get("enabled")), ensure_ascii=False)
-        state = "Hidden / inline or internal" if s.get("hidden") else "Panel control"
-        page_id = s.get("settingControl", {}).get("controlPage", "")
-        page_name = CONTROL_PAGES.get(page_id, {}).get("pageName", page_id)
-        # Explanatory text comes from the reviewed catalogue: settingHelpText can lag the implementation.
-        html_rows.append(f'<tr id="{esc(key)}"><th scope="row"><code>{esc(key)}</code><br>{esc(s["settingDescription"])}</th>'
-                         f'<td data-label="Initial value">{esc(default)}</td><td data-label="Control">{esc(state)}<br><span class="control-page">{esc(page_name)}</span></td>'
-                         f'<td data-label="Feature"><a href="{c["id"]}.html#{f["id"]}">{esc(f["title"])}</a></td></tr>')
+        if s.get("hidden"):
+            hidden.setdefault(feature_category[by_setting[key]["id"]]["id"], []).append(key)
+        else:
+            control = s["settingControl"]
+            pages.setdefault(control["controlPage"], {}).setdefault(control["controlGroup"], []).append(key)
+    for page_id, p in sorted(CONTROL_PAGES.items(), key=lambda x: x[1]["order"]):
+        if page_id not in pages:
+            continue
+        groups = sorted(pages[page_id].items(), key=lambda x: CONTROL_GROUPS[x[0]]["order"])
+        sections.append(f'<h2 id="page-{esc(page_id)}">{esc(p["pageName"])}</h2>'
+                        + settings_table(f"page-{page_id}", [(CONTROL_GROUPS[g]["groupName"], keys) for g, keys in groups]))
+    sections.append('<h2 id="saved-choices">Saved choices and internal state</h2>'
+                    '<p>Not in the Settings tab: choices made in the header’s edit mode, a tool window or a checkbox, and state the mod keeps between sessions. The feature says where each is set.</p>'
+                    + settings_table("saved-choices", [(c["title"], hidden[c["id"]]) for c in CATEGORIES if c["id"] in hidden]))
     page("docs/wiki/settings.html", "Settings reference", "wiki",
          '<p class="breadcrumb"><a href="index.html">Wiki</a> / Settings</p><h1>Settings reference</h1>'
-         f'<p>All {len(SETTINGS)} source-defined settings, including saved header preferences and internal state. Hidden settings often have controls in the header editor or a tool window; others are implementation state.</p>'
-         '<p>Defaults below are initial source values. Existing saved preferences, migrations and dependency checks can differ. Use the linked guide for current behavior.</p>'
-         '<div class="table-scroll"><table class="settings-table"><caption>Settings and their feature guides</caption><thead><tr><th>Setting</th><th>Initial value</th><th>Control type / page</th><th>Feature</th></tr></thead><tbody>'
-         + "".join(html_rows) + '</tbody></table></div>', depth=1,
-         description="Every Hypersynergism setting: what it does, its initial value, where it is set and the feature it belongs to.")
+         f'<p>The mod’s {len(SETTINGS)} settings: the Settings tab’s pages in the order the tab shows them (open the mod’s panel from its icon at the top left of the game), then what the mod saves from elsewhere. Each row links to the feature that explains it; the grey name under a setting is its name in the mod’s files, as a backup or the Log shows it.</p>'
+         '<p>Defaults are the mod’s initial values: a saved choice, a migration or another setting can change what you see.</p>'
+         + "".join(sections), depth=1,
+         description="Every Hypersynergism setting, page by page as the Settings tab shows them: its default and the feature it belongs to.")
 
 
 def calculation_outputs() -> None:

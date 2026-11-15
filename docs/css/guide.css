@@ -165,6 +165,9 @@ th, td { border: 1px solid #403c4c; padding: 10px 12px; text-align: left; vertic
 thead { background: #101828; }
 tbody th { font-weight: normal; }
 tbody tr:target { background: #343028; }
+/* The settings page: a row per Settings tab group, a setting's label with its file name in grey under it. */
+.settings-group th { background: #15131b; color: #b5b0c7; font-weight: bold; }
+.setting-key { color: var(--muted); font-size: .8rem; }
 /* A font list: a bare "monospace" is drawn smaller still by browsers (13 px for 16 px text). */
 code { color: #d2bfef; overflow-wrap: anywhere; font-family: Consolas, "Cascadia Mono", "SF Mono", Menlo, "DejaVu Sans Mono", monospace; font-size: .94em; }
 /* A mod setting named in a guide ("**⚙ Label**", build-docs.py): its own look, linking to its settings row. */
@@ -227,7 +230,8 @@ footer { margin: 45px 0 18px 30px; padding-top: 15px; border-top: 1px solid #353
   .settings-table td:last-child { padding-bottom: 8px; }
   .settings-table td::before { content: attr(data-label) ": "; color: var(--muted); }
   .settings-table td br { display: none; }
-  .settings-table .control-page:not(:empty)::before { content: " · "; }
+  .settings-table tr.settings-group { border: 0; margin: 18px 0 6px; }
+  .settings-table .settings-group th { padding: 0; background: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
