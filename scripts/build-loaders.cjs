@@ -39,6 +39,30 @@ function userscriptHeader({ name, version, description, author, update }) {
     ].join('\n');
 }
 
+// The bridge's editable lines. The Live bridge keeps `const repo = 'Ferlieloi';`, the line bridges
+// installed before the generator have too, so one guide sentence fits every install.
+function bridgeSettings(dev) {
+    const repoLines = dev ? [
+        '  // The code comes from the local dev server. repo only sets which repository the version check reads:',
+        "  //   'Ferlieloi' = Live",
+        "  //   'maenhiir'  = Dev (default)",
+        "  const repo = 'maenhiir';",
+    ] : [
+        '  // Which HyperSynergism to load:',
+        "  //   'Ferlieloi' = Live: stable (default)",
+        "  //   'maenhiir'  = Dev: new features first",
+        "  const repo = 'Ferlieloi';",
+    ];
+    const versionLines = dev ? [
+        '  // Not used by the dev server; shown in backups.',
+        "  const version = 'master';",
+    ] : [
+        "  // 'master' = always the latest. A version tag such as 'v2.14.8' stays on that version.",
+        "  const version = 'master';",
+    ];
+    return [...repoLines, '', ...versionLines];
+}
+
 function generateLoaders() {
     const versions = JSON.parse(fs.readFileSync(path.join(sourceDir, 'userscript-versions.json'), 'utf8'));
     const outputs = new Map([[patcherPath, bundle({
@@ -60,19 +84,29 @@ function generateLoaders() {
             author: dev ? 'Developer' : 'Ferlieloi',
             update: !dev,
         });
-        outputs.set(`src/loader/tampermonkey-bridge.${suffix}.js`, bundle({
-            ...options,
-            banner: { js: bridgeHeader },
+        // The settings players edit come first; the bundled code reads them from the wrapper's scope.
+        const bridgeCode = bundle({
+            format: 'esm',
             stdin: {
                 ...options.stdin,
                 sourcefile: 'bridge-entry.js',
                 contents: `import { runBridge } from './userscript-entry.mjs';
-import { defaultRepo } from './loader-urls.mjs';
-const repo = defaultRepo(${dev});
-const version = 'master';
 runBridge(${dev}, repo, version);`,
             },
-        }));
+        });
+        outputs.set(`src/loader/tampermonkey-bridge.${suffix}.js`, [
+            bridgeHeader,
+            '(() => {',
+            "  'use strict';",
+            '',
+            ...bridgeSettings(dev),
+            '',
+            '  // ---- Nothing to edit below this line ----',
+            '',
+            ...bridgeCode.trimEnd().split('\n').map(line => (line ? `  ${line}` : line)),
+            '})();',
+            '',
+        ].join('\n'));
         outputs.set(`src/loader/hypersynergism.${suffix}.js`, bundle({
             ...options,
             banner: { js: userscriptHeader({

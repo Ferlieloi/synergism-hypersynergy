@@ -14,11 +14,20 @@
 
 // Generated from src/loader/shared by npm run build:loaders.
 (() => {
+  'use strict';
+
+  // Which HyperSynergism to load:
+  //   'Ferlieloi' = Live: stable (default)
+  //   'maenhiir'  = Dev: new features first
+  const repo = 'Ferlieloi';
+
+  // 'master' = always the latest. A version tag such as 'v2.14.8' stays on that version.
+  const version = 'master';
+
+  // ---- Nothing to edit below this line ----
+
   // src/loader/shared/loader-urls.mjs
   var DEV_SERVER_ORIGIN = "http://127.0.0.1:8080";
-  function defaultRepo(dev) {
-    return dev ? "maenhiir" : "Ferlieloi";
-  }
   function repositoryRoot(repo2, version2) {
     return `https://cdn.jsdelivr.net/gh/${repo2}/synergism-hypersynergy@${version2}`;
   }
@@ -54,7 +63,5 @@
   }
 
   // src/loader/shared/bridge-entry.js
-  var repo = defaultRepo(false);
-  var version = "master";
   runBridge(false, repo, version);
 })();
