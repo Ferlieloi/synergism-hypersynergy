@@ -110,7 +110,8 @@ def is_side_image(image: tuple[str, int, int]) -> bool:
 
 
 def figure_html(prefix: str, image: tuple[str, int, int], alt: str, caption: str = "") -> str:
-    """A screenshot: lazy-loaded, its box sized before it loads (no layout shift), a click opens it full size.
+    """A screenshot: lazy-loaded, its box sized before it loads (no layout shift), a click enlarges
+    it over the page (guide.js; without JS the link opens the file).
     A narrow one (is_side_image) floats right of what follows it, at most half the column (guide.css, .shot-side)."""
     src, width, height = image
     href = esc(prefix + quote(src, safe="/@"))
@@ -246,15 +247,19 @@ def page(path: str, title: str, tab: str, body: str, *, depth: int = 0,
         for key, label, href, color in tabs
     )
     color = next(x[3] for x in tabs if x[0] == tab)
-    counters = [("1", str(len(FEATURES)), " Features", "yellow"),
-                ("2", str(len(CATEGORIES)), " Categories", "orange"),
-                ("3", str(len(SETTINGS)), " Settings", "red"),
-                ("4", "All" if tab == "changelog" else "Live", " Channels" if tab == "changelog" else " Channel", "magenta"),
-                ("5", "QoL", " + opt-in AutoSing", "mediumpurple")]
+    # Each counter leads to what it counts; "All Channels" on the changelog is already there.
+    counters = [("1", str(len(FEATURES)), " Features", "yellow", "features.html"),
+                ("2", str(len(CATEGORIES)), " Categories", "orange", "wiki/index.html"),
+                ("3", str(len(SETTINGS)), " Settings", "red", "wiki/settings.html"),
+                ("4", "All" if tab == "changelog" else "Live", " Channels" if tab == "changelog" else " Channel", "magenta",
+                 None if tab == "changelog" else "wiki/getting-started.html#channels"),
+                ("5", "QoL", " + opt-in AutoSing", "mediumpurple", "wiki/autosing-guide.html")]
     counter_html = "".join(
-        f'<span><img src="{prefix}res/{icon}.png" width="20" height="20" alt="">'
-        f'<span class="unit0" style="color:{color}">{esc(value)}</span><span class="unit1">{esc(label)}</span></span>'
-        for icon, value, label, color in counters
+        (f'<a href="{prefix}{href}">' if href else '<span>')
+        + f'<img src="{prefix}res/{icon}.png" width="20" height="20" alt="">'
+        f'<span class="unit0" style="color:{color}">{esc(value)}</span><span class="unit1">{esc(label)}</span>'
+        + ('</a>' if href else '</span>')
+        for icon, value, label, color, href in counters
     )
     extra_scripts = "".join(f'\n  <script src="{prefix}js/{esc(script)}" defer></script>' for script in scripts)
     unfold = "document.documentElement.classList.remove('folding')"
@@ -282,7 +287,7 @@ def page(path: str, title: str, tab: str, body: str, *, depth: int = 0,
     <div id="first-row" aria-label="Guide overview">{counter_html}</div>
     <div id="second-row"><div id="second-row-left-container"><div class="second-row-subcontainer">
       <img class="res-icon" src="{prefix}res/coin.png" width="32" height="32" alt="">
-      <div class="second-row-disp">Hypersynergism<br>Guide for <span id="version_num">v{esc(VERSION)}</span></div>
+      <div class="second-row-disp">Hypersynergism<br>Guide for <a class="version-link" href="{prefix}{version_entry_href()}"><span id="version_num">v{esc(VERSION)}</span></a></div>
     </div></div><p class="header-credit">A Synergism QoL mod<br><span>Maintained by Ferlieloi, maenhiir &amp; contributors</span></p></div>
     <nav aria-label="Main navigation"><div id="tabs">{nav}</div></nav>
   </header>
@@ -329,6 +334,29 @@ def guide_title(cid: str) -> str:
     return first[2:].strip()
 
 
+SETTING_MARK = "⚙"
+
+
+def setting_by_label(text: str) -> str:
+    """The setting a guide names as `**⚙ Label**`: its panel label as the Settings tab shows it, a trailing "(…)"
+    optional ("Start/Stop Auto-Sing" for "Start/Stop Auto-Sing (S216+)"), case ignored. None or several: refused."""
+    wanted = text.strip().casefold()
+    keys = [k for k, s in SETTINGS.items() if not s.get("hidden") and wanted in {
+        s["settingDescription"].casefold(), re.sub(r" \([^()]*\)$", "", s["settingDescription"]).casefold()}]
+    if len(keys) != 1:
+        raise ValueError(f'Guide setting "{SETTING_MARK} {text}": '
+                         + ("no panel setting has this label" if not keys else f'several settings match ({", ".join(keys)})'))
+    return keys[0]
+
+
+def setting_ref(match: re.Match) -> str:
+    """A setting named in a guide (`**⚙ Label**`, guides live in docs/wiki/): its own look, linking to its row."""
+    label = html.unescape(match[1])
+    key = setting_by_label(label)
+    return (f'<a class="setting-ref" href="settings.html#{esc(key)}" title="Setting: {esc(key)}">'
+            f'<span class="setting-gear" aria-hidden="true">{SETTING_MARK}</span><span class="setting-label">{esc(label.strip())}</span></a>')
+
+
 def inline_md(text: str) -> str:
     out = []
     for part in re.split(r"(`[^`]+`)", text):
@@ -337,6 +365,7 @@ def inline_md(text: str) -> str:
             continue
         s = esc(part)
         s = re.sub(r"\[([^\]]+)\]\(([^)\s]+)\)", r'<a href="\2">\1</a>', s)
+        s = re.sub(rf"\*\*{SETTING_MARK}️?\s*(.+?)\*\*", setting_ref, s)
         out.append(re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", s))
     return "".join(out)
 
@@ -678,6 +707,20 @@ def displayed_changelog_entries(data: dict) -> list[dict]:
     released_only = data.get("display_policy") == "released-only"
     return sorted((entry for entry in history if not released_only or entry["status"] in {"published", "tagged"}),
                   key=lambda entry: (entry["date"], entry["version"], entry["channel"]), reverse=True)
+
+
+_VERSION_HREF: list[str] = []
+
+
+def version_entry_href() -> str:
+    """The header's version links to its changelog entry (Live's first), else to the changelog's top: a Dev build's
+    version often has no entry yet."""
+    if not _VERSION_HREF:
+        raw = json.loads((DOCS / "data/changelog.json").read_text(encoding="utf-8"))
+        entries = [e for e in displayed_changelog_entries(raw) if e["version"] == VERSION]
+        entries.sort(key=lambda e: e["channel"] != "live")
+        _VERSION_HREF.append(f'changelog.html#{entries[0]["id"]}' if entries else "changelog.html")
+    return _VERSION_HREF[0]
 
 
 def changelog_outputs() -> None:

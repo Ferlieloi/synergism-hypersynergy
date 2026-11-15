@@ -12,9 +12,9 @@ Auto-Sing plays singularities for you, following a strategy. It's for the end ga
 1. Open the mod panel (the mod's icon, top left), then Settings → **Auto-Sing**.
 2. **Strategy:** pick one. The default strategies are a place to start; some of them are meant for the very end of the game. Those under **Old Strategies** (named "-temp") haven't been retuned by their authors since the game's corruption rework. To adapt one or make your own, see [Making or editing a strategy](#making-or-editing-a-strategy).
 3. **Ambrosia loadouts:** for each role (pre-AOAG cubes, post-AOAG cubes, quarks, obtainium, offerings, luck), pick the game slot that holds that loadout. The Ambrosia Heater (Tools tab) finds the best ones for your save. Each loadout switch resets the ambrosia bars' progress. If you don't want that, tick **Don't switch ambrosia loadouts**: Auto-Sing then never switches.
-4. Turn on **Start/Stop Auto-Sing**, or click ▶ in the menu by the mod's icon.
+4. Turn on **⚙ Start/Stop Auto-Sing**, or click ▶ in the menu by the mod's icon.
 
-The Auto-Sing window shows the time per singularity, the quarks and golden quarks gained per second, and how much of your quarks came from the Ants to Quark Corner. Its buttons: ⏸️ pause, 🔄 restart the singularity, 🟠 stop at the end of this singularity, 🔴 stop now, 📋 step timings (with **Record step timings** on), 📊 details.
+The Auto-Sing window shows the time per singularity, the quarks and golden quarks gained per second, and how much of your quarks came from the Ants to Quark Corner. Its buttons: ⏸️ pause, 🔄 restart the singularity, 🟠 stop at the end of this singularity, 🔴 stop now, 📋 step timings (with **⚙ Record step timings** on), 📊 details.
 
 ## Which singularity to farm
 
@@ -27,9 +27,9 @@ The Auto-Sing window shows the time per singularity, the quarks and golden quark
 ## When a run stops or stalls
 
 Auto-Sing keeps its speed when the game is in another tab. What can still stop or slow it:
-- **The computer going to sleep.** The **Keep the PC awake** setting prevents it while the game is in view. On Steam, it also works while the window is minimized or covered and while the PC is locked. In a browser, it doesn't: for another tab, a minimized or covered window, or a locked PC, change your computer's sleep settings instead.
+- **The computer going to sleep.** The **⚙ Keep the PC awake** setting prevents it while the game is in view. On Steam, it also works while the window is minimized or covered and while the PC is locked. In a browser, it doesn't: for another tab, a minimized or covered window, or a locked PC, change your computer's sleep settings instead.
 - **Chrome's Energy Saver** (a leaf icon next to the address bar). It can freeze a hidden tab after 5 minutes. Turn it off in `chrome://settings/performance`, or keep the game window in view.
-- **A singularity much slower than the others, or one that never ends.** The strategy doesn't suit your account at that singularity: farm a few singularities lower ([Which singularity to farm](#which-singularity-to-farm)). To see where it waits, turn on **Full log during Auto-Sing** (Settings → Auto-Sing) and tick **Debug logs** under the mod panel's Log tab: each step writes a line, numbered as in the phase's actions window (✎). A step that ran out of time shows there even without the full log. **Record step timings** shows which steps take the time ([Testing a strategy](#testing-a-strategy)).
+- **A singularity much slower than the others, or one that never ends.** The strategy doesn't suit your account at that singularity: farm a few singularities lower ([Which singularity to farm](#which-singularity-to-farm)). To see where it waits, turn on **⚙ Full log during Auto-Sing** (Settings → Auto-Sing) and tick **Debug logs** under the mod panel's Log tab: each step writes a line, numbered as in the phase's actions window (✎). A step that ran out of time shows there even without the full log. **⚙ Record step timings** shows which steps take the time ([Testing a strategy](#testing-a-strategy)).
 - **A game window left open.** During a run, Auto-Sing answers the game's confirmations and closes its messages, yours included. A window that asks you for something (an amount, a purchase) or an information message stays open, and Auto-Sing waits behind it at the end of the singularity: close it.
 - **Your game settings after a run.** Auto-Sing changes some game settings for its run (auto-buy toggles, buy amounts, cube opening…) and puts them back when it stops, also after a failed start. If the game was reloaded or closed during a run, they're put back at the next load, with a notification. An Exalt the run was in is left as it is.
 
@@ -120,7 +120,7 @@ An If-jump step (an IF row in the list) jumps to its **Jump here** row when its 
 
 ![Step timings after 10 singularities, sorted by time per singularity](../../res/guides/step-timings@2x.webp)
 
-Turn on **Record step timings** in Settings → Auto-Sing, then start Auto-Sing. 📋 in the Auto-Sing window shows where a singularity's time goes, step by step:
+Turn on **⚙ Record step timings** in Settings → Auto-Sing, then start Auto-Sing. 📋 in the Auto-Sing window shows where a singularity's time goes, step by step:
 - **Runs**: times per singularity. **ms**: time per singularity. **%**: its part of a singularity. **Wait**: the part of ms spent in the step's Wait before.
 - **Between singularities** and **Outside the steps** are the time spent in no step of your strategy.
 - Click a column's title to sort by it. **Copy** gives the table as text, to compare two runs or share one.

@@ -12,6 +12,10 @@ nav { margin-top: 10px; }
 .header-credit span { color: #96939f; }
 #version_num { animation: color_rotate 8s linear infinite; white-space: nowrap; }
 .second-row-disp { color: yellow; line-height: 1.4; }
+/* The counters and the version lead to what they show (build-docs.py, page()). */
+#first-row a, #first-row a:visited { display: flex; align-items: center; white-space: pre; color: inherit; text-decoration: none; }
+.version-link, .version-link:visited { color: inherit; text-decoration: none; }
+#first-row a:hover .unit1, .version-link:hover #version_num { text-decoration: underline; }
 #tabs { gap: 0 5px; }
 #tabs a { display: block; border: 1px solid var(--tab-color); border-bottom: none; border-radius: 5px 5px 0 0; min-width: 100px; min-height: 25px; padding: 4px 12px; color: white; background: #101828; text-decoration: none; line-height: 1; }
 #tabs a:hover { background: #006; }
@@ -61,18 +65,33 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .fold-all > span { grid-area: 1 / 1; }
 .fold-all > span:last-child, .fold-all.unfold > span:first-child { visibility: hidden; }
 .fold-all.unfold > span:last-child { visibility: visible; }
-.feature { border-bottom: 1px solid #35323d; padding: 4px 0 18px; scroll-margin-top: 18px; }
-.feature:target { border-left: 2px solid #f5d96b; background: #201e26; }
+.feature { border-bottom: 2px solid #35323d; padding: 4px 0 18px; scroll-margin-top: 18px; }
+/* Bars drawn inside the box (a border would push the content aside when it appears). */
+.feature:target { box-shadow: inset 2px 0 #f5d96b; background: #201e26; }
 .permalink, .permalink:visited { color: ghostwhite; }
+/* Titles stand out from their summaries and from the category's intro, so the page can be skimmed by title. */
+.feature h3 .permalink, .feature h3 .permalink:visited { color: #fff; font-weight: bold; }
+.page-wrapper .feature h3 { font-size: 1.12em; margin-bottom: 2px; }
+.page-wrapper .feature h3 + p { margin-top: 2px; color: #d3cfdc; }
+.page-wrapper .feature-category > p { color: var(--muted); font-size: .95em; }
+/* Features page: a click anywhere on an entry opens or closes it (guide.js). Its state: hovered (mouse only), open,
+   and open as the link's target; a closed entry loses its highlight, the link's target included. */
+.feature-category .feature { cursor: pointer; }
+.feature-category .feature:target { background: none; box-shadow: none; }
+@media (hover: hover) {
+  .feature-category .feature:hover { background: #1c1b21; box-shadow: inset 2px 0 #4a4656; }
+}
+.feature-category .feature:has(> details[open]) { background: #201e26; box-shadow: inset 2px 0 #9d93c9; }
+.feature-category .feature:target:has(> details[open]) { box-shadow: inset 2px 0 #f5d96b; }
 .feature details { margin-left: 30px; padding-top: 4px; }
-.feature details summary { color: #b5b0c7; cursor: pointer; width: fit-content; }
+.feature details summary { color: #b5b0c7; cursor: pointer; width: fit-content; font-size: .92em; }
 .feature details p { margin-left: 0; }
 .feature details ul { margin-left: 20px; }
 .feature details .limits ul { margin-left: 20px; }
 .limits { margin: 15px 0 12px 30px; border-left: 2px solid #79704a; padding: 6px 12px; color: #cbc5b9; font-size: .92em; }
 .limits ul { margin-left: 18px; margin-bottom: 6px; }
 .feature details .limits { margin-left: 0; }
-/* Screenshots (guides' images and catalogue entries' "images"): shrunk to the column, a click opens them full size. */
+/* Screenshots (guides' images and catalogue entries' "images"): shrunk to the column, a click enlarges them (.lightbox). */
 .shot { margin: 14px 0 18px 30px; }
 .shot a { display: inline-block; max-width: 100%; }
 .shot img { display: block; max-width: 100%; height: auto; border: 1px solid #403c4c; border-radius: 4px; }
@@ -105,7 +124,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .changelog-controls label { display: flex; flex-direction: column; gap: 5px; font-size: .85rem; color: #c1bdcc; }
 .feature-controls :is(input, select, button), .changelog-controls :is(input, select, button) { box-sizing: border-box; height: 38px; font-size: .85rem; }
 .changelog-entry { border-bottom: 1px solid #35323d; padding: 4px 0 16px; scroll-margin-top: 18px; }
-.changelog-entry:target { border-left: 2px solid #f5d96b; background: #201e26; }
+.changelog-entry:target { box-shadow: inset 2px 0 #f5d96b; background: #201e26; }
 .changelog-source-version { display: none; scroll-margin-top: 18px; }
 .changelog-source-version:target { display: block; }
 .changelog-source-versions:not(:has(:target)) { display: none; }
@@ -144,7 +163,32 @@ th, td { border: 1px solid #403c4c; padding: 10px 12px; text-align: left; vertic
 thead { background: #101828; }
 tbody th { font-weight: normal; }
 tbody tr:target { background: #343028; }
-code { color: #d2bfef; overflow-wrap: anywhere; font-size: .86em; }
+/* A font list: a bare "monospace" is drawn smaller still by browsers (13 px for 16 px text). */
+code { color: #d2bfef; overflow-wrap: anywhere; font-family: Consolas, "Cascadia Mono", "SF Mono", Menlo, "DejaVu Sans Mono", monospace; font-size: .94em; }
+/* A mod setting named in a guide ("**⚙ Label**", build-docs.py): its own look, linking to its settings row. */
+.setting-ref, .setting-ref:visited { display: inline; padding: 0 5px; border: 1px solid #4a4560; border-radius: 4px; background: #24212e; color: #ddd5f5; white-space: nowrap; }
+.setting-ref:hover, .setting-ref:hover:visited { border-color: #7d73a8; color: #ddd5f5; text-decoration: none; }
+.setting-ref:hover .setting-label { text-decoration: underline; }
+.setting-gear { margin-right: 4px; color: #a99fd6; }
+/* Links leaving the site: a small grey icon saying where they go (not in the changelog's cards, full of them). */
+.page-wrapper a[href^="http"]::after { content: ""; display: inline-block; width: .8em; height: .8em; margin-left: .25em; vertical-align: -.05em; background: #8d89a0; -webkit-mask: var(--external) center / contain no-repeat; mask: var(--external) center / contain no-repeat; }
+.page-wrapper a[href^="http"] { --external: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M14 3h7v7h-2V6.41l-9.29 9.3-1.42-1.42L17.59 5H14V3zM5 5h6v2H5v12h12v-6h2v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z'/%3E%3C/svg%3E"); }
+.page-wrapper a[href^="https://github.com"] { --external: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z'/%3E%3C/svg%3E"); }
+.page-wrapper a:is([href^="https://discord"], [href^="https://www.discord"]) { --external: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M20.32 4.37a19.8 19.8 0 0 0-4.89-1.52.07.07 0 0 0-.08.04c-.21.38-.44.87-.61 1.25a18.27 18.27 0 0 0-5.49 0 12.64 12.64 0 0 0-.62-1.25.08.08 0 0 0-.08-.04 19.74 19.74 0 0 0-4.88 1.52.07.07 0 0 0-.03.03C.53 9.05-.32 13.58.1 18.06a.08.08 0 0 0 .03.06 19.9 19.9 0 0 0 5.99 3.03.08.08 0 0 0 .08-.03c.46-.63.87-1.3 1.23-1.99a.08.08 0 0 0-.04-.11 13.1 13.1 0 0 1-1.87-.89.08.08 0 0 1-.01-.13l.37-.29a.07.07 0 0 1 .08-.01c3.93 1.79 8.18 1.79 12.06 0a.07.07 0 0 1 .08.01l.37.29a.08.08 0 0 1-.01.13 12.3 12.3 0 0 1-1.87.89.08.08 0 0 0-.04.11c.36.7.77 1.36 1.23 1.99a.08.08 0 0 0 .08.03 19.84 19.84 0 0 0 6-3.03.08.08 0 0 0 .03-.06c.5-5.18-.84-9.67-3.55-13.66a.06.06 0 0 0-.03-.03zM8.02 15.33c-1.18 0-2.16-1.09-2.16-2.42 0-1.33.96-2.42 2.16-2.42 1.21 0 2.18 1.1 2.16 2.42 0 1.33-.96 2.42-2.16 2.42zm7.97 0c-1.18 0-2.15-1.09-2.15-2.42 0-1.33.95-2.42 2.15-2.42 1.21 0 2.18 1.1 2.16 2.42 0 1.33-.95 2.42-2.16 2.42z'/%3E%3C/svg%3E"); }
+.page-wrapper :is(.changelog-entry, .changelog-source-version) a[href^="http"]::after { content: none; }
+/* A link's target that keeps no highlight of its own (a heading, the home page's Help…) flashes on arrival, also when
+   the address already pointed to it (guide.js sets the class: :target alone can't replay). Held while the page scrolls. */
+.target-flash { animation: target-flash 2.5s ease-out; }
+@keyframes target-flash { 0%, 35% { background-color: rgba(245, 217, 107, .25); } 100% { background-color: transparent; } }
+/* Screenshots enlarged over the page (guide.js); without JavaScript their link opens the file. */
+.lightbox { max-width: none; max-height: none; width: 100vw; height: 100dvh; margin: 0; padding: 0; border: 0; background: transparent; display: none; place-items: center; cursor: zoom-out; }
+.lightbox[open] { display: grid; }
+.lightbox::backdrop { background: rgba(10, 10, 14, .88); }
+.lightbox img { max-width: 96vw; max-height: 90dvh; width: auto; height: auto; border: 1px solid #403c4c; border-radius: 4px; background: #18171c; }
+.lightbox-bar { position: fixed; top: 10px; right: 14px; display: flex; gap: 10px; align-items: center; font-size: .85rem; }
+.lightbox-bar a, .lightbox-bar a:visited { color: #b5b0c7; }
+.lightbox-bar button { min-height: 0; padding: 4px 10px; }
+.shot a { cursor: zoom-in; }
 footer { margin: 45px 0 18px 30px; padding-top: 15px; border-top: 1px solid #35323d; font-size: .8rem; color: var(--muted); }
 @media (max-width: 640px) {
   nav { margin-top: 0; }

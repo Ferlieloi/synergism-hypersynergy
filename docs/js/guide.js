@@ -8,6 +8,66 @@
   } finally {
     document.documentElement.classList.remove('folding');
   }
+  setUpLightbox();
+  setUpTargetFlash();
+
+  function plainClick(event) {
+    return event.button === 0 && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey;
+  }
+
+  // A link's target flashes on arrival (every page), also when the address already pointed to it: no hashchange
+  // then, and :target alone can't replay an animation. Not the elements with a highlight of their own.
+  function setUpTargetFlash() {
+    const ownHighlight = '.feature, .changelog-entry, .changelog-source-version, tr, #content';
+    const flash = () => {
+      let target;
+      try { target = document.getElementById(decodeURIComponent(location.hash.slice(1))); } catch { return; }
+      if (!target?.closest('.page-wrapper') || target.matches(ownHighlight)) return;
+      target.classList.remove('target-flash');
+      void target.offsetWidth; // restarts the animation
+      target.classList.add('target-flash');
+    };
+    window.addEventListener('hashchange', flash);
+    document.addEventListener('click', event => {
+      const link = event.target.closest?.('a[href*="#"]');
+      if (link && plainClick(event) && link.hash === location.hash && link.pathname === location.pathname) {
+        setTimeout(flash);
+      }
+    });
+    flash();
+  }
+
+  // Screenshots (every page): a click enlarges one over the page; a click anywhere or Esc closes it. Without
+  // JavaScript, or with a modifier key, the link opens the file.
+  function setUpLightbox() {
+    const links = document.querySelectorAll('.shot a');
+    if (!links.length || typeof HTMLDialogElement !== 'function') return;
+    const box = document.createElement('dialog');
+    box.className = 'lightbox';
+    box.setAttribute('aria-label', 'Enlarged screenshot');
+    box.innerHTML = '<div class="lightbox-bar"><a target="_blank" rel="noopener">Open the file</a>'
+      + '<button type="button" autofocus>Close</button></div>';
+    const file = box.querySelector('a');
+    document.body.append(box);
+    box.addEventListener('click', () => box.close());
+    // The image exists only while shown: an <img> without a file would count as a broken image.
+    box.addEventListener('close', () => box.querySelector('img')?.remove());
+    for (const link of links) {
+      link.addEventListener('click', event => {
+        if (!plainClick(event)) return;
+        event.preventDefault();
+        const img = new Image();
+        // One file pixel per screen pixel: the largest size that stays sharp, shrunk to the window if larger.
+        img.onload = () => {
+          img.style.maxWidth = `min(96vw, ${img.naturalWidth / Math.max(1, window.devicePixelRatio)}px)`;
+        };
+        img.alt = link.querySelector('img')?.alt || '';
+        img.src = file.href = link.href;
+        box.append(img);
+        box.showModal();
+      });
+    }
+  }
 
   function setUp() {
   const search = document.getElementById('feature-search');
@@ -153,6 +213,43 @@
       details.querySelector('.shot')?.scrollIntoView({ block: 'nearest' });
     });
   }
+  // A click anywhere on an entry opens or closes its details, except on a link or a control (the summary toggles
+  // by itself) and except when it ends a text selection.
+  for (const feature of features) {
+    const details = feature.querySelector('details');
+    if (!details) continue;
+    feature.addEventListener('click', event => {
+      if (!plainClick(event) || event.target.closest('a, button, summary, input, select, label')) return;
+      if (String(window.getSelection()).trim()) return;
+      details.open = !details.open;
+    });
+  }
+  // A title clicked on the page highlights and opens its entry where it is (it is in view: no scrolling); the address
+  // still becomes the entry's link. An open entry closes instead. A link from anywhere else brings the entry to the
+  // top (revealAnchor).
+  let clickedId = null;
+  for (const link of document.querySelectorAll('.feature .permalink')) {
+    link.addEventListener('click', event => {
+      if (!plainClick(event)) return;
+      event.preventDefault();
+      const feature = link.closest('.feature');
+      const open = feature.querySelector('details');
+      if (open?.open) {
+        open.open = false;
+        return;
+      }
+      // Setting the hash scrolls to it at once (that's also what :target needs): put the scroll back.
+      const scrollers = [document.scrollingElement, document.getElementById('page-container')].filter(Boolean);
+      const tops = scrollers.map(scroller => scroller.scrollTop);
+      if (location.hash.slice(1) !== feature.id) {
+        clickedId = feature.id;
+        location.hash = feature.id;
+      }
+      scrollers.forEach((scroller, i) => scroller.scrollTo({ top: tops[i], behavior: 'instant' }));
+      const details = feature.querySelector('details');
+      if (details) details.open = true;
+    });
+  }
   search.addEventListener('input', () => filter());
   category.addEventListener('change', () => filter());
   reset.addEventListener('click', () => {
@@ -161,7 +258,11 @@
     filter();
     search.focus();
   });
-  window.addEventListener('hashchange', revealAnchor);
+  window.addEventListener('hashchange', () => {
+    const fromTitle = clickedId !== null && location.hash.slice(1) === clickedId;
+    clickedId = null;
+    if (!fromTitle) revealAnchor();
+  });
   filter(false);
   revealAnchor();
   }
