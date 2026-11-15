@@ -2,7 +2,7 @@
   "schema_version": 1,
   "methodology": [
     "Inventory starts from every namespaced annotated/actual Git tag captured under refs/changelog-tags, using the peeled commit as the version endpoint.",
-    "GitHub release published_at is used when a matching release exists; otherwise the annotated tagger date is used; commit date is the explicit fallback for source-only version records.",
+    "GitHub release published_at is used when a matching release exists, except for releases created later for older tags, which keep the annotated tagger date; otherwise the annotated tagger date is used; commit date is the explicit fallback for source-only version records.",
     "Original history was also checked for HSSettings.CURRENT_VERSION and HSGlobal.General.currentModVersion declarations and released bundle artifacts; source declarations absent from a version tag are marked version-record.",
     "Live and Dev tag pairs with identical version and peeled commit are deduplicated; separately tagged versions or different build commits remain distinct.",
     "Release API snapshots are partial for older tag-only versions; tag URLs and commit sources remain available even when release_url is null.",
@@ -13035,9 +13035,13 @@
       "previous_commit": "089df6631b4e568047c3fd0dccf2d5e04fb717e5",
       "date": "2026-04-13",
       "date_kind": "tag",
-      "status": "tagged",
-      "release_url": null,
+      "status": "published",
+      "release_url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.11.0-dev13",
       "sources": [
+        {
+          "label": "Published release",
+          "url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.11.0-dev13"
+        },
         {
           "label": "Git tag",
           "url": "https://github.com/maenhiir/synergism-hypersynergy/tree/v2.11.0-dev13"
@@ -13051,16 +13055,10 @@
           "url": "https://github.com/maenhiir/synergism-hypersynergy/blob/0611b83152251fd42e226e2740fa98eafbf169d8/src/loader/tampermonkey-bridge.user.js"
         }
       ],
-      "notes": [],
-      "changes": [
-        {
-          "type": "fixed",
-          "text": "Correct Live/Dev loader URLs and the repository used by version checking.",
-          "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/0611b83152251fd42e226e2740fa98eafbf169d8/src/loader/tampermonkey-bridge.user.js"
-          ]
-        }
+      "notes": [
+        "Loader setup change only; no visible change."
       ],
+      "changes": [],
       "contributors": [
         {
           "id": "maenhiir",
@@ -13088,9 +13086,13 @@
       "previous_commit": "bb5eb52f1132029fe49029bf6580f0293e66fc0e",
       "date": "2026-04-13",
       "date_kind": "tag",
-      "status": "tagged",
-      "release_url": null,
+      "status": "published",
+      "release_url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.11.0-dev12",
       "sources": [
+        {
+          "label": "Published release",
+          "url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.11.0-dev12"
+        },
         {
           "label": "Git tag",
           "url": "https://github.com/maenhiir/synergism-hypersynergy/tree/v2.11.0-dev12"
@@ -13108,9 +13110,16 @@
       "changes": [
         {
           "type": "changed",
-          "text": "Reduce waiting and repeated work in AutoSing challenge/loadout transitions.",
+          "text": "AutoSing does fewer checks when entering challenges and during Max C11-14.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/089df6631b4e568047c3fd0dccf2d5e04fb717e5/src/mod/class/hs-modules/hs-autosing/hs-autosing.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/089df6631b4e568047c3fd0dccf2d5e04fb717e5"
+          ]
+        },
+        {
+          "type": "fixed",
+          "text": "Stopping AutoSing while it is paused says Autosing stopped instead of Autosing resumed.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/089df6631b4e568047c3fd0dccf2d5e04fb717e5"
           ]
         }
       ],
@@ -13141,9 +13150,13 @@
       "previous_commit": "d2eccde5f6bef76f7eb55e4818a0f7293743de81",
       "date": "2026-04-13",
       "date_kind": "tag",
-      "status": "tagged",
-      "release_url": null,
+      "status": "published",
+      "release_url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.11.0-dev11",
       "sources": [
+        {
+          "label": "Published release",
+          "url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.11.0-dev11"
+        },
         {
           "label": "Git tag",
           "url": "https://github.com/maenhiir/synergism-hypersynergy/tree/v2.11.0-dev11"
@@ -13168,24 +13181,39 @@
       "notes": [],
       "changes": [
         {
-          "type": "added",
-          "text": "Add an Auto-confirm pop-ups setting and an option to skip AutoSing game-settings initialization.",
+          "type": "changed",
+          "text": "With the Tampermonkey loader, AutoSing uses the game’s own functions for corruptions, challenge caps, game ticks, Exalts and teleports, without dialogs.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/78626f9010a32e5b472f9abef804d0d42bf453b9/src/mod/resource/json/hs-settings.json"
-          ]
-        },
-        {
-          "type": "fixed",
-          "text": "Repair subtab tracking/restoration and version comparison.",
-          "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/ae76f6f5b52b7867988f5be381083cb6238660eb/src/mod/class/hs-core/github/hs-github.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/78626f9010a32e5b472f9abef804d0d42bf453b9"
           ]
         },
         {
           "type": "changed",
-          "text": "Speed up AutoSing challenge, corruption and Ambrosia operations using game functions and state when the loader exposes them.",
+          "text": "AutoSing waits on game changes instead of checking repeatedly when switching loadouts and entering or leaving challenges.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/78626f9010a32e5b472f9abef804d0d42bf453b9/src/mod/class/hs-modules/hs-autosing/hs-autosing.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/aa9af61867bb1e3319fce4755250fdd21cec4206",
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/112cb9f4170cabc4ccedfad546bad1b9aaf895f3"
+          ]
+        },
+        {
+          "type": "fixed",
+          "text": "After setting up the game’s settings at start, AutoSing puts the player back on the tab they were on.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/78626f9010a32e5b472f9abef804d0d42bf453b9"
+          ]
+        },
+        {
+          "type": "added",
+          "text": "Added Auto-confirm pop-ups (UI, Tampermonkey only), which answers the game’s confirmation and alert pop-ups with OK.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/78626f9010a32e5b472f9abef804d0d42bf453b9"
+          ]
+        },
+        {
+          "type": "fixed",
+          "text": "The version check compares version numbers, so dev10 no longer counts as older than dev9.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/ae76f6f5b52b7867988f5be381083cb6238660eb"
           ]
         }
       ],
@@ -13218,9 +13246,13 @@
       "previous_commit": "aba47da868f851523e9475a9d1a5825a763a0804",
       "date": "2026-04-07",
       "date_kind": "tag",
-      "status": "tagged",
-      "release_url": null,
+      "status": "published",
+      "release_url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.11.0-dev10",
       "sources": [
+        {
+          "label": "Published release",
+          "url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.11.0-dev10"
+        },
         {
           "label": "Git tag",
           "url": "https://github.com/maenhiir/synergism-hypersynergy/tree/v2.11.0-dev10"
@@ -13245,24 +13277,31 @@
       "notes": [],
       "changes": [
         {
-          "type": "fixed",
-          "text": "Correct conditional target handling in the strategy editor.",
+          "type": "changed",
+          "text": "Settings are more compact, with each checkbox before its name; Hide vanilla tabs has a (none) entry.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/0c98a6a963bfeeeb44168082adadda0a0c52ef01/src/mod/class/hs-modules/hs-autosing/ui/hs-autosing-strategy-modal.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/0c98a6a963bfeeeb44168082adadda0a0c52ef01"
+          ]
+        },
+        {
+          "type": "fixed",
+          "text": "A new conditional jump in the strategy editor points to the step after it instead of past the end of the list.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/0c98a6a963bfeeeb44168082adadda0a0c52ef01"
+          ]
+        },
+        {
+          "type": "added",
+          "text": "Saving a strategy shows an error when it fails.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/728284db0e934117f64f99d1bbd95f4978d20fdd"
           ]
         },
         {
           "type": "changed",
-          "text": "Use a more compact settings layout with checkboxes before labels.",
+          "text": "While the Log tab is closed, new lines are buffered and drawn in batches, so long sessions use less memory and CPU.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/0c98a6a963bfeeeb44168082adadda0a0c52ef01/src/mod/class/hs-core/settings/hs-settings.ts"
-          ]
-        },
-        {
-          "type": "fixed",
-          "text": "Bound and buffer offscreen log rendering to prevent long sessions from continually growing the log UI.",
-          "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/ee2bce92b7fe5f5069ccf927c4831a5fed9c1099/src/mod/class/hs-core/hs-logger.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/ee2bce92b7fe5f5069ccf927c4831a5fed9c1099"
           ]
         }
       ],
@@ -13295,9 +13334,13 @@
       "previous_commit": "6a4fda88293c3eee884dba664199eb46a15739ae",
       "date": "2026-04-06",
       "date_kind": "tag",
-      "status": "tagged",
-      "release_url": null,
+      "status": "published",
+      "release_url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.11.0-dev9",
       "sources": [
+        {
+          "label": "Published release",
+          "url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.11.0-dev9"
+        },
         {
           "label": "Git tag",
           "url": "https://github.com/maenhiir/synergism-hypersynergy/tree/v2.11.0-dev9"
@@ -13315,9 +13358,23 @@
       "changes": [
         {
           "type": "fixed",
-          "text": "Ensure coin upgrade 81 is bought after a singularity before AutoSing enters a challenge.",
+          "text": "After a singularity, AutoSing waits for coin upgrade 81 before entering the first challenge, with every loader.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/339699cc59def4ef094acf3fc1584abb669696a2/src/mod/class/hs-modules/hs-autosing/hs-autosing.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/339699cc59def4ef094acf3fc1584abb669696a2"
+          ]
+        },
+        {
+          "type": "changed",
+          "text": "The first AutoSing phase after a singularity no longer starts with an ascension.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/339699cc59def4ef094acf3fc1584abb669696a2"
+          ]
+        },
+        {
+          "type": "changed",
+          "text": "The automation quick bar shows every active challenge.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/339699cc59def4ef094acf3fc1584abb669696a2"
           ]
         }
       ],
@@ -13350,9 +13407,13 @@
       "previous_commit": "32433f4ab6007334bb183686f8c474806d13b9ca",
       "date": "2026-04-05",
       "date_kind": "tag",
-      "status": "tagged",
-      "release_url": null,
+      "status": "published",
+      "release_url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.11.0-dev8",
       "sources": [
+        {
+          "label": "Published release",
+          "url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.11.0-dev8"
+        },
         {
           "label": "Git tag",
           "url": "https://github.com/maenhiir/synergism-hypersynergy/tree/v2.11.0-dev8"
@@ -13374,16 +13435,23 @@
       "changes": [
         {
           "type": "added",
-          "text": "Allow selected vanilla game tabs to be hidden.",
+          "text": "Added Hide vanilla tabs (UI) to hide chosen tabs from the game’s tab row.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/9167e075cfe32e09787cc935d9d1a1ed91e9e5e3/src/mod/resource/json/hs-settings.json"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/9167e075cfe32e09787cc935d9d1a1ed91e9e5e3"
           ]
         },
         {
           "type": "fixed",
-          "text": "Restore AFK Swapper after the game update and improve coin-upgrade recovery using exposed player data.",
+          "text": "AFK Swapper and the ambrosia minibars use the game update’s new Ambrosia Accelerator and Limited Time values.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/d8549791497112cae32417308d2ad6ce866c533c/src/mod/class/hs-modules/hs-ambrosia.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/d8549791497112cae32417308d2ad6ce866c533c"
+          ]
+        },
+        {
+          "type": "fixed",
+          "text": "AutoSing works around a game bug with coin purchases right after a singularity (Tampermonkey loader).",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/15e7375c788877a9ad393a279847524100fcdafe"
           ]
         }
       ],
@@ -13416,9 +13484,13 @@
       "previous_commit": "f3a5dda8f8200874214c61db2200ba0491ce0070",
       "date": "2026-04-04",
       "date_kind": "tag",
-      "status": "tagged",
-      "release_url": null,
+      "status": "published",
+      "release_url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.11.0-dev7",
       "sources": [
+        {
+          "label": "Published release",
+          "url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.11.0-dev7"
+        },
         {
           "label": "Git tag",
           "url": "https://github.com/maenhiir/synergism-hypersynergy/tree/v2.11.0-dev7"
@@ -13440,34 +13512,43 @@
           "url": "https://github.com/maenhiir/synergism-hypersynergy/blob/73633c4b5acabab883cc0d1b9173fffa6eb6988f/src/mod/class/hs-modules/hs-corruption.ts"
         }
       ],
-      "notes": [],
+      "notes": [
+        "The Events quick bar and Corruption quick bar settings are turned back on once by this update: turn them off again if you don’t use them."
+      ],
       "changes": [
         {
           "type": "added",
-          "text": "Show the current active challenge on the Automation quickbar.",
+          "text": "Clicking a Corruption quick bar slot loads that loadout; a ? explains the icon controls.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/4eff65afb13c1e94730ab386ba03aed84f057e4a/src/mod/class/hs-modules/hs-qolQuickbarAutomation.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/73633c4b5acabab883cc0d1b9173fffa6eb6988f"
+          ]
+        },
+        {
+          "type": "added",
+          "text": "The automation quick bar shows the active challenge.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/4eff65afb13c1e94730ab386ba03aed84f057e4a"
           ]
         },
         {
           "type": "changed",
-          "text": "Hide Automation/Corruption quickbar heading text when minibars are disabled.",
+          "text": "The text lines above the automation and corruption quick bars are hidden when the ambrosia minibars are off.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/4eff65afb13c1e94730ab386ba03aed84f057e4a/src/mod/class/hs-modules/hs-qolQuickbarAutomation.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/4eff65afb13c1e94730ab386ba03aed84f057e4a"
           ]
         },
         {
           "type": "removed",
-          "text": "Remove the redundant active Ambrosia loadout setting from the settings panel.",
+          "text": "Removed the Current active ambrosia loadout line from the Ambrosia settings; the mod remembers the loaded loadout with the slot icons.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/73633c4b5acabab883cc0d1b9173fffa6eb6988f/src/mod/resource/json/hs-settings.json"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/73633c4b5acabab883cc0d1b9173fffa6eb6988f"
           ]
         },
         {
           "type": "fixed",
-          "text": "Improve corruption loadout tracking and Ambrosia slot state synchronization.",
+          "text": "Start/Stop Auto-Sing is no longer turned off at load when Game Data is off.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/73633c4b5acabab883cc0d1b9173fffa6eb6988f/src/mod/class/hs-modules/hs-corruption.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/73633c4b5acabab883cc0d1b9173fffa6eb6988f"
           ]
         }
       ],
@@ -13498,9 +13579,13 @@
       "previous_commit": "cd9d6b557ebb816a796f6a31782956b30dbdaf8c",
       "date": "2026-04-01",
       "date_kind": "tag",
-      "status": "tagged",
-      "release_url": null,
+      "status": "published",
+      "release_url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.11.0-dev6",
       "sources": [
+        {
+          "label": "Published release",
+          "url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.11.0-dev6"
+        },
         {
           "label": "Git tag",
           "url": "https://github.com/maenhiir/synergism-hypersynergy/tree/v2.11.0-dev6"
@@ -13511,7 +13596,7 @@
         }
       ],
       "notes": [
-        "Version increment only; no additional player-facing behavior changes were found."
+        "Same build as v2.11.0-dev5; only the version number changed."
       ],
       "changes": [],
       "research_notes": [
@@ -13544,9 +13629,13 @@
       "previous_commit": "89fe53a842c802537e0c5b407725d5355d8fa3e0",
       "date": "2026-04-01",
       "date_kind": "tag",
-      "status": "tagged",
-      "release_url": null,
+      "status": "published",
+      "release_url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.11.0-dev5",
       "sources": [
+        {
+          "label": "Published release",
+          "url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.11.0-dev5"
+        },
         {
           "label": "Git tag",
           "url": "https://github.com/maenhiir/synergism-hypersynergy/tree/v2.11.0-dev5"
@@ -13564,20 +13653,30 @@
           "url": "https://github.com/maenhiir/synergism-hypersynergy/blob/06aefff09b8743e2e019d87c1746c2d4dc1cfc78/src/mod/class/hs-modules/hs-qolButtonsEventsQuickbar.ts"
         }
       ],
-      "notes": [],
+      "notes": [
+        "Add+Time Amb loadouts auto-switch is turned off once by this update: turn it on again if you used it. The ADD and TIME loadouts are kept."
+      ],
       "changes": [
         {
           "type": "added",
-          "text": "Add a Corruption loadout quickbar.",
+          "text": "Added a Corruption quick bar showing which loadout matches the current and next corruptions, with the corruption levels above it; Alt+Click a slot to give it a game icon, right-click to clear it.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/f17d6e742aa82ee68c9511594163fd4901154747/src/mod/class/hs-modules/hs-qolButtonsCorruptionQuickbar.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/f17d6e742aa82ee68c9511594163fd4901154747"
           ]
         },
         {
-          "type": "fixed",
-          "text": "Handle missing event WebSocket data gracefully and correct the mod repository link.",
+          "type": "changed",
+          "text": "The Events quick bar is on by default, hides while the event server is unreachable, lists up to 4 bell end times and stands out from 5 bells.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/06aefff09b8743e2e019d87c1746c2d4dc1cfc78/src/mod/class/hs-modules/hs-qolButtonsEventsQuickbar.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/06aefff09b8743e2e019d87c1746c2d4dc1cfc78",
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/f17d6e742aa82ee68c9511594163fd4901154747"
+          ]
+        },
+        {
+          "type": "removed",
+          "text": "Removed the Mod Website button, which opened the old website.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/f17d6e742aa82ee68c9511594163fd4901154747"
           ]
         }
       ],
@@ -13630,9 +13729,13 @@
       "previous_commit": "89fe53a842c802537e0c5b407725d5355d8fa3e0",
       "date": "2026-03-29",
       "date_kind": "tag",
-      "status": "tagged",
-      "release_url": null,
+      "status": "published",
+      "release_url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.11.0-dev4",
       "sources": [
+        {
+          "label": "Published release",
+          "url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.11.0-dev4"
+        },
         {
           "label": "Git tag",
           "url": "https://github.com/maenhiir/synergism-hypersynergy/tree/v2.11.0-dev4"
@@ -13775,9 +13878,82 @@
         }
       ],
       "notes": [
+        "First tagged Dev build. Its own changes come first; the older ones shipped in Live v2.11.0.",
         "AutoSing and its strategy editor first appeared in the Live 2.9.0 build."
       ],
       "changes": [
+        {
+          "type": "added",
+          "text": "Added an Events quick bar with the number of active Happy Hour bells and their end times, and the Lotus icon while a Lotus is active.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/b617e5919f5e59663e06687840c4ffaffc608093"
+          ]
+        },
+        {
+          "type": "added",
+          "text": "The quick access menu has a Quickbars entry: hover it to turn each quick bar on or off, click it to turn them all on or off.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/dd802a4ce988640e4d73386bb41dd7f8e34f8261"
+          ]
+        },
+        {
+          "type": "added",
+          "text": "While no Ambrosia loadout slot has an icon, a hint explains how to drag icons onto the slots.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/fc6b3c891d8845be5eb6af16d9b689f568039b8c"
+          ]
+        },
+        {
+          "type": "added",
+          "text": "The AutoSing dashboard shows the share of singularities completed with a Happy Hour bell active.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/b32e60fa5050ed3290b1815259adae0ba474094d"
+          ]
+        },
+        {
+          "type": "changed",
+          "text": "AutoSing turns Game Data off while it runs and reads quarks and Golden Quarks only when needed.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/f8e764f9bc207289e4d51a7936ac945b99e6c662",
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/9f0c45392b7b8778fee39e26444b426c9c138506"
+          ]
+        },
+        {
+          "type": "fixed",
+          "text": "When AutoSing stops, the mod features it turned off for speed (automation quick bar, minibars, AFK Swapper, Game Data) are turned back on.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/ce017a5c4396d5960ceec771f5f04ffe6fd8169c"
+          ]
+        },
+        {
+          "type": "fixed",
+          "text": "Strategy editor: inserting or deleting a step no longer moves conditional jump targets, and the Add Here marker follows the mouse.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/d63dc5720c08cbacffd0c65217a44f502e909c25",
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/127ded4fbc08f954ca152b3af92c08feacefc078"
+          ]
+        },
+        {
+          "type": "changed",
+          "text": "Saved strategies use the new action IDs; Live versions of the mod still read them.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/bab9518b75658e37889673e0291b714123796599"
+          ]
+        },
+        {
+          "type": "changed",
+          "text": "The version check compares the mod with its latest GitHub version and marks the mod icon and panel title when a newer one exists.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/4e2e74992336567f4aa0ae229a52b9d438b7d5bf"
+          ]
+        },
+        {
+          "type": "fixed",
+          "text": "Fix Exalt Bug fixes the Exalt state directly when no active Exalt is found on screen (Tampermonkey loader).",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/e54334e8e6431416093e20751e6af2ac9c752102"
+          ]
+        },
         {
           "type": "added",
           "text": "Added a Fix Exalt Bug recovery button to the mod panel.",
