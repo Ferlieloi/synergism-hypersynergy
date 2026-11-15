@@ -74,7 +74,7 @@ The attribution helper does not fetch or publish. Review any new identity before
 
 Open `docs/index.html` directly in a browser: the complete site, wiki, relative assets and feature search work without a server. Alternatively run `python -m http.server 8080 --directory docs` and visit `http://localhost:8080/`. No game save is needed.
 
-On Dev, whose checked-in pages lag the data, preview without touching `docs/`: `python scripts/tools/build-docs.py --out local/site` builds the site into the git-ignored `local/site/` and copies `css/`, `js/` and `res/` next to it; open `local/site/docs/index.html`. `npm run site` rebuilds that preview at each change of the site's sources (catalogue, guides, changelog, `css/`, `js/`, `res/`, the generator, the settings, the calculations, the version); `start-dev-server.bat` runs it and serves the preview at `http://localhost:8081/docs/` (reload to see a rebuild).
+On Dev, whose checked-in pages lag the data, preview without touching `docs/`: `python scripts/tools/build-docs.py --out local/site` builds the site into the git-ignored `local/site/` and copies `css/`, `js/`, `res/` and the mod's images (`src/mod/resource/img/`) next to it; open `local/site/docs/index.html`. `npm run site` rebuilds that preview at each change of the site's sources (catalogue, guides, changelog, `css/`, `js/`, `res/`, the mod's images, the generator, the settings, the calculations, the version); `start-dev-server.bat` runs it and serves the preview at `http://localhost:8081/docs/` (reload to see a rebuild).
 
 Check these flows at desktop and narrow/mobile widths:
 
@@ -93,7 +93,7 @@ Check these flows at desktop and narrow/mobile widths:
 
 Pages serves Live's `master` from the **repository root** (Settings → Pages: Deploy from a branch, `master`, `/ (root)`), so committing the regenerated pages to `master` publishes them. Wait for the Pages deployment to finish before calling a change live. No Actions workflow: the root `.nojekyll` makes it a plain static deployment.
 
-Keep the root source: the site's addresses contain `docs/` (the root `index.html` redirects the bare address there), and the mod's strategy editor, the README and the GitHub Wiki link to those addresses. Switching the source to `/docs` breaks them (`docs/features/website.md`, "Hosting").
+Keep the root source: the site's addresses contain `docs/` (the root `index.html` redirects the bare address there), and the mod's strategy editor, the README and the GitHub Wiki link to those addresses, and the category icons that are the mod's own are served from `src/`. Switching the source to `/docs` breaks them (`docs/features/website.md`, "Hosting").
 
 ## The native GitHub Wiki
 

@@ -127,11 +127,29 @@ def feature_images(f: dict) -> list[tuple[dict, tuple[str, int, int]]]:
     return out
 
 
+# The site reads the mod's files, never the reverse (docs/features/website.md, "Sources and outputs"): a category
+# icon (catalogue "icon", a path from the repository root) is a site picture or one of the mod's own, shown
+# without a copy. Pages serves the repository root, so the mod's folder is served next to docs/.
+MOD_IMAGES = "src/mod/resource/img"
+ICON_FOLDERS = ("docs/res", MOD_IMAGES)
+
+
+def icon_file(icon: str) -> Path | None:
+    """The file of a catalogue icon path, or None when it isn't an image file under one of ICON_FOLDERS."""
+    path = (ROOT / icon).resolve()
+    if (not any(path.is_relative_to((ROOT / folder).resolve()) for folder in ICON_FOLDERS)
+            or path.suffix.lower() not in IMAGE_TYPES or not path.is_file()):
+        return None
+    return path
+
+
 def category_icon(category: dict, prefix: str, size: int) -> str:
-    """The category's game picture (catalogue "icon", under docs/res/), decorative: its title follows."""
+    """The category's picture (catalogue "icon"), decorative: its title follows."""
     if not category.get("icon"):
         return ""
-    return (f'<img class="category-icon" src="{prefix}res/{esc(category["icon"])}" width="{size}" height="{size}" alt="">')
+    src = "../" + Path(category["icon"]).as_posix()
+    src = src.removeprefix("../docs/")
+    return (f'<img class="category-icon" src="{prefix}{esc(src)}" width="{size}" height="{size}" alt="">')
 
 
 def category_list(prefix: str, wiki_prefix: str) -> str:
@@ -460,8 +478,9 @@ def validate_catalogue() -> None:
                 if key not in SETTINGS:
                     raise ValueError(f'{f["id"]}: unknown setting {key}')
                 mapped.add(key)
-        if c.get("icon") and not (DOCS / "res" / c["icon"]).is_file():
-            raise ValueError(f'{c["id"]}: missing icon docs/res/{c["icon"]}')
+        if c.get("icon") and not icon_file(c["icon"]):
+            raise ValueError(f'{c["id"]}: icon {c["icon"]} must be a {", ".join(IMAGE_TYPES)} file under '
+                             + " or ".join(f"{folder}/" for folder in ICON_FOLDERS))
         for item in [c] + c["features"]:
             for p in item.get("sources", []):
                 if not (ROOT / p).is_file():
@@ -1006,6 +1025,7 @@ def main() -> None:
         # The pages' hand-written assets, served as they are (docs/features/website.md, "Sources and outputs").
         for assets in ("css", "js", "res"):
             shutil.copytree(DOCS / assets, out / "docs" / assets, dirs_exist_ok=True)
+        shutil.copytree(ROOT / MOD_IMAGES, out / MOD_IMAGES, dirs_exist_ok=True)
     print(f"{'Checked' if args.check else 'Built'} {len(OUTPUTS)} files: {len(FEATURES)} features, {len(CATEGORIES)} categories, {len(SETTINGS)} settings."
           + (f" Open {out / 'docs' / 'index.html'}" if args.out else ""))
 

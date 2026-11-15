@@ -11,7 +11,7 @@ const root = path.resolve(__dirname, '..', '..')
 const outDir = path.join(root, 'local', 'site')
 
 // Folders whose every file feeds the site.
-const watchedFolders = ['docs/data', 'docs/css', 'docs/js', 'docs/res']
+const watchedFolders = ['docs/data', 'docs/css', 'docs/js', 'docs/res', 'src/mod/resource/img']
 // Single files, watched through their folder: editors that save by replacing the file break a watch on the file.
 const watchedFiles = [
   'package.json',

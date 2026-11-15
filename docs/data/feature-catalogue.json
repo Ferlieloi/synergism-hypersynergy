@@ -7,7 +7,7 @@
       "id": "getting-started",
       "title": "Installation & updates",
       "color": "orange",
-      "icon": "categories/getting-started.png",
+      "icon": "src/mod/resource/img/hs-panel-icon.png",
       "intro": "Choose the browser userscript or the Windows Steam loader. Both patch the game before loading the mod. A patch step that can't be applied is reported once at load, with details in the Log tab.",
       "sources": [
         "src/loader/tampermonkey-bridge.user.js",
@@ -107,7 +107,7 @@
       "id": "interface",
       "title": "Interface & navigation",
       "color": "cyan",
-      "icon": "categories/interface.png",
+      "icon": "docs/res/categories/interface.png",
       "intro": "The mod panel and quick menu, hidden tabs and remembered subtabs, search fields, and choices for the game's dialogs and notifications.",
       "sources": [
         "src/mod/class/hs-core/hs-ui.ts",
@@ -282,7 +282,7 @@
       "id": "input",
       "title": "Click-saving tools & input",
       "color": "gold",
-      "icon": "categories/input.png",
+      "icon": "docs/res/categories/input.png",
       "intro": "Convenience controls use the game's own actions; optional repeated input is active only while its modifier is held.",
       "sources": [
         "src/mod/class/hs-modules/hs-codes.ts",
@@ -353,7 +353,7 @@
       "id": "ambrosia",
       "title": "Ambrosia loadouts & income",
       "color": "orchid",
-      "icon": "categories/ambrosia.png",
+      "icon": "docs/res/categories/ambrosia.png",
       "intro": "The mod enhances the game's Ambrosia loadout controls and adds generation information for blue, red and purple resources.",
       "sources": [
         "src/mod/class/hs-modules/hs-ambrosia/hs-ambrosia.ts",
@@ -492,7 +492,7 @@
       "id": "header",
       "title": "Header customization",
       "color": "lightskyblue",
-      "icon": "categories/header.png",
+      "icon": "docs/res/categories/header.png",
       "intro": "Open the game's header editor with the pencil beside the mod icon, or Settings → UI → Edit game header. HS options live beside the game's module tray, not in a separate quickbar settings page.",
       "sources": [
         "docs/features/header-edit-mode.md",
@@ -784,7 +784,7 @@
       "id": "challenges",
       "title": "Corruption & challenge displays",
       "color": "limegreen",
-      "icon": "categories/challenges.png",
+      "icon": "docs/res/categories/challenges.png",
       "intro": "Current versions use a single corruption level. The old corruption-loadout modules are no longer part of the mod.",
       "sources": [
         "docs/features/header-corruption.md",
@@ -888,7 +888,7 @@
       "id": "heater",
       "title": "Integrated Ambrosia Heater",
       "color": "orangered",
-      "icon": "categories/heater.png",
+      "icon": "src/mod/resource/img/hs-heater-icon.png",
       "intro": "An in-game optimizer for Ambrosia loadouts, with resource-aware result tables and direct imports. Results depend on the exported game state and selected options.",
       "sources": [
         "docs/features/heater.md",
@@ -1105,7 +1105,7 @@
       "id": "hepteracts",
       "title": "Hepteracts & Platonic upgrades",
       "color": "mediumpurple",
-      "icon": "categories/hepteracts.png",
+      "icon": "docs/res/categories/hepteracts.png",
       "intro": "Forge shortcuts and distribution tools reduce repetitive crafting while exposing what an action will cost.",
       "sources": [
         "src/mod/class/hs-modules/hs-hepteracts/hs-hepteracts.ts",
@@ -1263,7 +1263,7 @@
       "id": "golden-quarks",
       "title": "Golden Quarks & shop preferences",
       "color": "gold",
-      "icon": "categories/golden-quarks.png",
+      "icon": "docs/res/categories/golden-quarks.png",
       "intro": "Shop helpers allocate a chosen budget and remember which completed upgrades you want out of the way.",
       "sources": [
         "docs/features/gq-distributor.md",
@@ -1351,7 +1351,7 @@
       "id": "saves",
       "title": "Save exports, backups & restore",
       "color": "lightsteelblue",
-      "icon": "categories/saves.png",
+      "icon": "docs/res/categories/saves.png",
       "intro": "Timed game exports collect native export rewards. A full HS backup is a separate action that also preserves local mod state.",
       "sources": [
         "docs/features/auto-export.md",
@@ -1470,7 +1470,7 @@
       "id": "autosing",
       "title": "AutoSing & strategy editor",
       "color": "springgreen",
-      "icon": "categories/autosing.png",
+      "icon": "docs/res/categories/autosing.png",
       "intro": "An explicitly opt-in automation system for end-game singularity farming. This goes beyond strictly informational QoL.",
       "sources": [
         "docs/features/autosing.md",
@@ -1690,7 +1690,7 @@
       "id": "tools",
       "title": "Calculations, logs & framework",
       "color": "plum",
-      "icon": "categories/tools.png",
+      "icon": "docs/res/categories/tools.png",
       "intro": "Information tools expose computed game values and diagnostics; developer-only tools are kept separate from player features.",
       "sources": [
         "docs/features/tools-tab.md",

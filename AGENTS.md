@@ -8,7 +8,7 @@ work with; people named elsewhere (Shewchou, Ferlieloi) are the maintainers.
 HyperSynergism is an unofficial quality-of-life mod for the browser/Steam game [Synergism](https://synergism.cc/). It doesn't automate the game, apart from the opt-in autosing module.
 
 - **Vanilla game source (read-only):** `node scripts/tools/update-game.cjs` clones or pulls the official repo into `local/game/SynergismOfficial-master`, fetches the live bundle into `local/game/out.js` and runs `patcher.js` on it. Use it for formulas, save-data shapes and DOM ids; never edit it. GitHub's `master` can be ahead of the deployed game. After a game update: `docs/game/updating.md`.
-- **`docs/` (committed):** `game/` how the game behaves, `features/` one file per feature with its rules and decisions, `dev/` procedures (`code.md`, `releasing.md`, `tricks.md`). The rest is the player website and wiki, generated from `docs/data/` (`feature-catalogue.json` and the players' guides in `guides/`): edit those, never the generated pages (`docs/dev/publishing-guide.md`; the site's behaviour: `docs/features/website.md`). People are named there (Shewchou, Ferlieloi), never "the user": each developer's agent would read that as its own user. No personal data.
+- **`docs/` (committed):** `game/` how the game behaves, `features/` one file per feature with its rules and decisions, `dev/` procedures (`code.md`, `releasing.md`, `tricks.md`). The rest is the player website and wiki, generated from `docs/data/` (`feature-catalogue.json` and the players' guides in `guides/`): edit those, never the generated pages (`docs/dev/publishing-guide.md`; the site's behaviour: `docs/features/website.md`). The site reads the mod's files (settings, the mod's icons), never the reverse: the mod's build reads nothing in `docs/`. People are named there (Shewchou, Ferlieloi), never "the user": each developer's agent would read that as its own user. No personal data.
 - **`local/` is git-ignored**: it exists only on your disk, so tracked code and docs never point to it, except to what a tool creates there (`local/game/`, `local/harness-out/`, `local/account/`, `local/site/`). Your saves and design docs go there too. Search tools skip it by default: give the path explicitly.
 
 ## Where knowledge goes
@@ -97,6 +97,7 @@ Prefer the game's state (`HSGlobal.exposedPlayer`, GDS data) or signals it keeps
 - **Commit only when explicitly asked**: "tests passed" or an earlier "ok" is not a request. After any change since the developer's tests, ask for a retest first.
 - **A commit holds only your own work**: `git add` explicit paths (never `-A` or `commit -a`), check `git diff --cached --stat`, say which files were left out. Only your hunks of a shared file: `docs/dev/tricks.md`.
 - **When a design grows**, point out which decisions drive the complexity and offer the simpler variant.
+- **Shared ownership:** either maintainer may change any part of the repository, the other's work included (code, generator, catalogue, docs). Who wrote something never rules out or downgrades an option: read how and why it was done, then tell the other what changed. The rules in `docs/features/` still change only when asked.
 
 ### Before claiming or estimating
 - **Search the repo before saying something is missing or sizing work**; game formulas: GDS first.
