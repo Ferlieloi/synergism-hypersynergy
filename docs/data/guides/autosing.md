@@ -24,11 +24,14 @@ The Auto-Sing window shows the time per singularity, the quarks and golden quark
 - Then go up one singularity at a time, as long as golden quarks per second keep going up.
 - Wait for 10 to 15 singularities before you compare: one singularity alone varies too much.
 
-## Keep the game running
+## When a run stops or stalls
 
-Auto-Sing keeps its speed when the game is in another tab. Two things can still stop it:
+Auto-Sing keeps its speed when the game is in another tab. What can still stop or slow it:
 - **The computer going to sleep.** The **Keep the PC awake** setting prevents it while the game is in view. On Steam, it also works while the window is minimized or covered and while the PC is locked. In a browser, it doesn't: for another tab, a minimized or covered window, or a locked PC, change your computer's sleep settings instead.
 - **Chrome's Energy Saver** (a leaf icon next to the address bar). It can freeze a hidden tab after 5 minutes. Turn it off in `chrome://settings/performance`, or keep the game window in view.
+- **A singularity much slower than the others, or one that never ends.** The strategy doesn't suit your account at that singularity: farm a few singularities lower ([Which singularity to farm](#which-singularity-to-farm)). To see where it waits, turn on **Full log during Auto-Sing** (Settings → Auto-Sing) and tick **Debug logs** under the mod panel's Log tab: each step writes a line, numbered as in the phase's actions window (✎). A step that ran out of time shows there even without the full log. **Record step timings** shows which steps take the time ([Testing a strategy](#testing-a-strategy)).
+- **A game window left open.** During a run, Auto-Sing answers the game's confirmations and closes its messages, yours included. A window that asks you for something (an amount, a purchase) or an information message stays open, and Auto-Sing waits behind it at the end of the singularity: close it.
+- **Your game settings after a run.** Auto-Sing changes some game settings for its run (auto-buy toggles, buy amounts, cube opening…) and puts them back when it stops, also after a failed start. If the game was reloaded or closed during a run, they're put back at the next load, with a notification. An Exalt the run was in is left as it is.
 
 ---
 
