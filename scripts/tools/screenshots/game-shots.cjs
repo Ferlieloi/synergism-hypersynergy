@@ -24,8 +24,9 @@ const SESSION_SETTINGS = {
     autosingObtLoadout: '1', autosingEarlyCubeLoadout: '2', autosingLateCubeLoadout: '3',
     autosingQuarkLoadout: '4', autosingOffLoadout: '5', autosingAmbrosiaLoadout: '6',
 }
-// The strategy shown in the editor views: Basic has no IF step
-const EDITOR_STRATEGY = 'Demon King (rus) v1.4-temp'
+// The strategy shown in the editor views: Basic has no IF step; the guide describes this one's last-phase IF
+// (C15 < 1e110, at most 5 jumps)
+const EDITOR_STRATEGY = 'Demon King (BTMco) v1.2-temp'
 const RUN_SINGULARITIES = 10
 
 // Page helpers, defined in each evaluation
