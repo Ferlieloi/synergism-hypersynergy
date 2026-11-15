@@ -9800,9 +9800,13 @@
       "previous_commit": "4aa7600f9983229ac7218f8961b2815cd0b366d8",
       "date": "2026-05-27",
       "date_kind": "tag",
-      "status": "tagged",
-      "release_url": null,
+      "status": "published",
+      "release_url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.13.0-dev1",
       "sources": [
+        {
+          "label": "Published release",
+          "url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.13.0-dev1"
+        },
         {
           "label": "Git tag",
           "url": "https://github.com/maenhiir/synergism-hypersynergy/tree/v2.13.0-dev1"
@@ -9828,34 +9832,37 @@
           "url": "https://github.com/maenhiir/synergism-hypersynergy/blob/59faf3f2abb6755b772f7f19f9541e29372bf168/src/mod/resource/json/hs-settings.json"
         }
       ],
-      "notes": [],
+      "notes": [
+        "If you used Auto-confirm pop-ups, it is turned off: answer the game’s pop-ups yourself.",
+        "A slot set to Vouchers in the Heater’s loadout order goes back to None."
+      ],
       "changes": [
         {
-          "type": "added",
-          "text": "Added a pin for the current Ambrosia level display; hovering the upgrade grid temporarily hides it so levels do not become stale while buying upgrades.",
+          "type": "changed",
+          "text": "The current-levels pin is on by default and remembered, and hides while your mouse is over the upgrade grid.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/59faf3f2abb6755b772f7f19f9541e29372bf168/src/mod/class/hs-modules/hs-ambrosia.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/59faf3f2abb6755b772f7f19f9541e29372bf168"
           ]
         },
         {
           "type": "changed",
-          "text": "Updated Heater Singularity-reduction and One Mind calculations, Gambler cap and affordable-loadout search.",
+          "text": "Ambrosia Heater follows Rus’s sheet (Half Mind and One Mind speed, Gambler up to 40, affordable-loadout search); Obtainium and Offering get their own group; the Vouchers loadout is removed.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/59faf3f2abb6755b772f7f19f9541e29372bf168/src/mod/class/hs-modules/hs-heater/hs-heater-optimizer.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/59faf3f2abb6755b772f7f19f9541e29372bf168"
           ]
         },
         {
           "type": "changed",
           "text": "Minimizing the mod panel also hides its tabs and resize handle.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/59faf3f2abb6755b772f7f19f9541e29372bf168/src/mod/class/hs-core/hs-ui.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/59faf3f2abb6755b772f7f19f9541e29372bf168"
           ]
         },
         {
           "type": "removed",
-          "text": "Removed the general Auto-Confirm popup setting from the UI and disabled it on load; Autosing retains its own confirmation handling.",
+          "text": "The Auto-confirm pop-ups setting is hidden and turned off; AutoSing still answers its own pop-ups.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/59faf3f2abb6755b772f7f19f9541e29372bf168/src/mod/resource/json/hs-settings.json"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/59faf3f2abb6755b772f7f19f9541e29372bf168"
           ]
         }
       ],
@@ -10127,9 +10134,13 @@
       "previous_commit": "0352a02fa15ee227cd68694ec92f648f26ce6cda",
       "date": "2026-05-25",
       "date_kind": "tag",
-      "status": "tagged",
-      "release_url": null,
+      "status": "published",
+      "release_url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.12.4-dev13",
       "sources": [
+        {
+          "label": "Published release",
+          "url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.12.4-dev13"
+        },
         {
           "label": "Git tag",
           "url": "https://github.com/maenhiir/synergism-hypersynergy/tree/v2.12.4-dev13"
@@ -10151,16 +10162,16 @@
       "changes": [
         {
           "type": "fixed",
-          "text": "Correct Heater’s combined-Ambrosia loadout optimization.",
+          "text": "Ambrosia Heater: fixed the All Ambrosia loadout.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/8bdb8a328372aded74f953408b1cf1558c9219e2/src/mod/class/hs-modules/hs-heater/hs-heater-optimizer.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/8bdb8a328372aded74f953408b1cf1558c9219e2"
           ]
         },
         {
           "type": "changed",
-          "text": "Hide the quick-access menu when opening the HS panel to avoid accidental clicks.",
+          "text": "Clicking the mod’s icon closes the quick-access menu.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/8bdb8a328372aded74f953408b1cf1558c9219e2/src/mod/class/hs-core/hs-ui.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/8bdb8a328372aded74f953408b1cf1558c9219e2"
           ]
         }
       ],
@@ -10193,9 +10204,13 @@
       "previous_commit": "0541b9c461611bebb47b48c19c5428cbdbb85bb0",
       "date": "2026-05-25",
       "date_kind": "tag",
-      "status": "tagged",
-      "release_url": null,
+      "status": "published",
+      "release_url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.12.4-dev12",
       "sources": [
+        {
+          "label": "Published release",
+          "url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.12.4-dev12"
+        },
         {
           "label": "Git tag",
           "url": "https://github.com/maenhiir/synergism-hypersynergy/tree/v2.12.4-dev12"
@@ -10221,23 +10236,30 @@
       "changes": [
         {
           "type": "added",
-          "text": "Pin Heater import tooltips with right-click and clear pinned tooltips with Escape; allow the Ambrosia-level display to remain pinned.",
+          "text": "Ambrosia Heater: right-click pins an Import tooltip; Escape unpins them.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/03d7a45fd8d3e44c81c53f334da7c3ea0a971c65/src/mod/class/hs-modules/hs-heater/hs-heater-ui-result.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/03d7a45fd8d3e44c81c53f334da7c3ea0a971c65"
           ]
         },
         {
           "type": "fixed",
-          "text": "Correct Heater loadout construction and AFK Swapper’s initial loadout switch.",
+          "text": "Ambrosia Heater: a loadout costing exactly your Ambrosia is no longer left out.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/03d7a45fd8d3e44c81c53f334da7c3ea0a971c65/src/mod/class/hs-modules/hs-ambrosia.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/03d7a45fd8d3e44c81c53f334da7c3ea0a971c65"
           ]
         },
         {
           "type": "added",
-          "text": "Add usage tips to the AFK Swapper quick-access tooltip.",
+          "text": "The game’s current-levels button can be pinned to keep your Ambrosia upgrade levels shown.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/03d7a45fd8d3e44c81c53f334da7c3ea0a971c65/src/mod/class/hs-modules/hs-qolButtons.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/03d7a45fd8d3e44c81c53f334da7c3ea0a971c65"
+          ]
+        },
+        {
+          "type": "fixed",
+          "text": "AFK Swapper started on another loadout switches to its Octeract loadout.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/03d7a45fd8d3e44c81c53f334da7c3ea0a971c65"
           ]
         }
       ],
@@ -10270,9 +10292,13 @@
       "previous_commit": "cbb6b2c690f805d1a8c7c10b69940f750698002a",
       "date": "2026-05-24",
       "date_kind": "tag",
-      "status": "tagged",
-      "release_url": null,
+      "status": "published",
+      "release_url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.12.4-dev11",
       "sources": [
+        {
+          "label": "Published release",
+          "url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.12.4-dev11"
+        },
         {
           "label": "Git tag",
           "url": "https://github.com/maenhiir/synergism-hypersynergy/tree/v2.12.4-dev11"
@@ -10290,20 +10316,22 @@
           "url": "https://github.com/maenhiir/synergism-hypersynergy/blob/9f612384fcddc201d339cfebee457ef805b3431c/src/mod/class/hs-modules/hs-heater/hs-heater-optimizer.ts"
         }
       ],
-      "notes": [],
+      "notes": [
+        "Quick Import of a single loadout writes it to slot 1 again, not to your active slot (back in v2.13.0-dev4)."
+      ],
       "changes": [
         {
-          "type": "fixed",
-          "text": "Repair quick import and support the updated optimizer-sheet loadout format.",
+          "type": "added",
+          "text": "Ambrosia Heater: Vouchers, Max SR1 and Max SR2 loadouts, and a reworked Red Ambrosia window.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/9f612384fcddc201d339cfebee457ef805b3431c/src/mod/class/hs-modules/hs-ambrosia.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/9f612384fcddc201d339cfebee457ef805b3431c"
           ]
         },
         {
-          "type": "changed",
-          "text": "Sync Heater with the latest voucher and maximum-singularity-reduction optimizer rules and improve the Red Ambrosia UI.",
+          "type": "fixed",
+          "text": "Quick Import works again and reads the sheet’s new line format.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/9f612384fcddc201d339cfebee457ef805b3431c/src/mod/class/hs-modules/hs-heater/hs-heater-optimizer.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/9f612384fcddc201d339cfebee457ef805b3431c"
           ]
         }
       ],
@@ -10336,9 +10364,13 @@
       "previous_commit": "efb5a6f7ae0e9728b5cda4deb3ed118add0d27a7",
       "date": "2026-05-23",
       "date_kind": "tag",
-      "status": "tagged",
-      "release_url": null,
+      "status": "published",
+      "release_url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.12.4-dev10",
       "sources": [
+        {
+          "label": "Published release",
+          "url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.12.4-dev10"
+        },
         {
           "label": "Git tag",
           "url": "https://github.com/maenhiir/synergism-hypersynergy/tree/v2.12.4-dev10"
@@ -10364,23 +10396,23 @@
       "changes": [
         {
           "type": "added",
-          "text": "Add the Red Ambrosia Heater view and help/instant tooltips.",
+          "text": "Ambrosia Heater: a Red Ambrosia window and help tooltips.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/e9581f35e4bd5690096f6fdf22a33cd98dc26a89/src/mod/class/hs-modules/hs-heater/hs-heater-red-ambrosia-table.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/e9581f35e4bd5690096f6fdf22a33cd98dc26a89"
           ]
         },
         {
           "type": "fixed",
-          "text": "Correct the greatly overstated Quark-shop bonus and raise the Heater Gambler maximum from 25 to 40.",
+          "text": "Ambrosia Heater: the Quark shop bonus is no longer far too high, and Gambler is read up to level 40.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/e9581f35e4bd5690096f6fdf22a33cd98dc26a89/src/mod/class/hs-modules/hs-heater/hs-heater-optimizer.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/e9581f35e4bd5690096f6fdf22a33cd98dc26a89"
           ]
         },
         {
           "type": "fixed",
-          "text": "Keep the results modal in place when recomputing Heater results.",
+          "text": "Recomputing Heater results no longer moves the results window.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/e9581f35e4bd5690096f6fdf22a33cd98dc26a89/src/mod/class/hs-modules/hs-heater/hs-heater-result-modal-controller.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/e9581f35e4bd5690096f6fdf22a33cd98dc26a89"
           ]
         }
       ],
@@ -10413,9 +10445,13 @@
       "previous_commit": "d8099a871bd967d0dfe760d537b3742ad0644e4f",
       "date": "2026-05-20",
       "date_kind": "tag",
-      "status": "tagged",
-      "release_url": null,
+      "status": "published",
+      "release_url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.12.4-dev9",
       "sources": [
+        {
+          "label": "Published release",
+          "url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.12.4-dev9"
+        },
         {
           "label": "Git tag",
           "url": "https://github.com/maenhiir/synergism-hypersynergy/tree/v2.12.4-dev9"
@@ -10437,16 +10473,16 @@
       "changes": [
         {
           "type": "fixed",
-          "text": "Make Ambrosia quickbar clicks work from SAVE mode and restore Add/Time automatic loadout switching.",
+          "text": "Ambrosia quick bar clicks work in SAVE mode, and the Add and Time auto-switch puts your loadout back afterwards.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/60d8b473974c15667076be424a4dcd11574ecef2/src/mod/class/hs-modules/hs-ambrosia.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/60d8b473974c15667076be424a4dcd11574ecef2"
           ]
         },
         {
           "type": "changed",
-          "text": "Clarify the Heater Sync All Settings tooltip.",
+          "text": "Ambrosia Heater: Sync All Loadout Settings has a clearer tooltip and updates the settings tab right away.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/60d8b473974c15667076be424a4dcd11574ecef2/src/mod/class/hs-modules/hs-heater/hs-heater-input-config.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/60d8b473974c15667076be424a4dcd11574ecef2"
           ]
         }
       ],
@@ -10479,9 +10515,13 @@
       "previous_commit": "b0cef9794fd5ae169a4bf1eba28c5d385451b7e7",
       "date": "2026-05-19",
       "date_kind": "tag",
-      "status": "tagged",
-      "release_url": null,
+      "status": "published",
+      "release_url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.12.4-dev8",
       "sources": [
+        {
+          "label": "Published release",
+          "url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.12.4-dev8"
+        },
         {
           "label": "Git tag",
           "url": "https://github.com/maenhiir/synergism-hypersynergy/tree/v2.12.4-dev8"
@@ -10511,30 +10551,37 @@
       "changes": [
         {
           "type": "added",
-          "text": "Save default loadout icons from Heater results; add Sync All Settings, a blueberry-cost column and clearer result availability feedback.",
+          "text": "Ambrosia Heater: Sync All Loadout Settings sets the mod’s loadout settings from your loadout order.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/e8c579f852ca7c409c8bbe22ca4529588012795b/src/mod/class/hs-modules/hs-heater/hs-heater-ui-result.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/e8c579f852ca7c409c8bbe22ca4529588012795b"
           ]
         },
         {
-          "type": "changed",
-          "text": "Import a single quick-import loadout into the currently active slot.",
+          "type": "added",
+          "text": "Ambrosia Heater: editable default icons per loadout type, a Blueberry cost column, and marks for computed and needed loadouts.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/e8c579f852ca7c409c8bbe22ca4529588012795b/src/mod/class/hs-modules/hs-ambrosia.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/e8c579f852ca7c409c8bbe22ca4529588012795b"
           ]
         },
         {
           "type": "fixed",
-          "text": "Show the correct post-AOAG state when opening or refreshing Heater inputs.",
+          "text": "Ambrosia Heater: the post-AoAG input is read correctly when the inputs window opens.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/e8c579f852ca7c409c8bbe22ca4529588012795b/src/mod/class/hs-modules/hs-heater/hs-heater-input-modal-controller.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/e8c579f852ca7c409c8bbe22ca4529588012795b"
           ]
         },
         {
           "type": "changed",
-          "text": "Bring a modal to the front when its header is clicked, and stop auto-clicking when focus is lost.",
+          "text": "Quick Import of a single loadout writes it to your active slot.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/e8c579f852ca7c409c8bbe22ca4529588012795b/src/mod/class/hs-core/hs-ui.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/e8c579f852ca7c409c8bbe22ca4529588012795b"
+          ]
+        },
+        {
+          "type": "changed",
+          "text": "Clicking a mod window’s title bar brings it to the front, and auto-click stops when the game loses focus.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/e8c579f852ca7c409c8bbe22ca4529588012795b"
           ]
         }
       ],
@@ -10567,9 +10614,13 @@
       "previous_commit": "cd26fbb75bb76efc0c37a05d1e05cf7e651e41ff",
       "date": "2026-05-16",
       "date_kind": "tag",
-      "status": "tagged",
-      "release_url": null,
+      "status": "published",
+      "release_url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.12.4-dev7",
       "sources": [
+        {
+          "label": "Published release",
+          "url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.12.4-dev7"
+        },
         {
           "label": "Git tag",
           "url": "https://github.com/maenhiir/synergism-hypersynergy/tree/v2.12.4-dev7"
@@ -10587,9 +10638,9 @@
       "changes": [
         {
           "type": "fixed",
-          "text": "Account for Superior Intellect bonus levels and talisman effects in Heater optimization.",
+          "text": "Ambrosia Heater: counts Superior Intellect’s bonus levels and the talisman’s rune levels, and fixes a few upgrade costs.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/b0cef9794fd5ae169a4bf1eba28c5d385451b7e7/src/mod/class/hs-modules/hs-heater/hs-heater-optimizer.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/b0cef9794fd5ae169a4bf1eba28c5d385451b7e7"
           ]
         }
       ],
@@ -10620,9 +10671,13 @@
       "previous_commit": "60a9a05f90789ff8bac3e48f2390b6dc5ac1ab17",
       "date": "2026-05-16",
       "date_kind": "tag",
-      "status": "tagged",
-      "release_url": null,
+      "status": "published",
+      "release_url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.12.4-dev6",
       "sources": [
+        {
+          "label": "Published release",
+          "url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.12.4-dev6"
+        },
         {
           "label": "Git tag",
           "url": "https://github.com/maenhiir/synergism-hypersynergy/tree/v2.12.4-dev6"
@@ -10652,28 +10707,42 @@
       "changes": [
         {
           "type": "added",
-          "text": "Add minimize controls to modals and reload automatically on the loader HTMLDiv initialization error.",
+          "text": "Ambrosia Heater: a saved loadout order, Import All Loadouts and Sync All Icons buttons; Hyperflux loadouts are computed as pre-AoAG.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/bf7637441b2a4589396d3f38f851041191360ef5/src/mod/class/hs-core/hs-ui.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/bf7637441b2a4589396d3f38f851041191360ef5"
+          ]
+        },
+        {
+          "type": "changed",
+          "text": "Quick Import pauses AFK Swapper while it writes your loadouts.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/bf7637441b2a4589396d3f38f851041191360ef5"
           ]
         },
         {
           "type": "added",
-          "text": "Save Heater loadout order, quick-import all loadouts, and synchronize Ambrosia quickbar icons.",
+          "text": "Mod windows and the mod panel have a Minimize button.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/bf7637441b2a4589396d3f38f851041191360ef5/src/mod/class/hs-modules/hs-heater/hs-heater-ui-result.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/bf7637441b2a4589396d3f38f851041191360ef5"
           ]
         },
         {
           "type": "fixed",
-          "text": "Compute H0–7 Heater loadouts as pre-AOAG and temporarily disable AFK Swapper during quick import.",
+          "text": "Game Data applies each Quark shop bonus to the right upgrades and refreshes inside the No Ambrosia Upgrades and Sadistic Prequel challenges.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/bf7637441b2a4589396d3f38f851041191360ef5/src/mod/class/hs-modules/hs-heater/hs-heater-optimizer.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/bf7637441b2a4589396d3f38f851041191360ef5"
+          ]
+        },
+        {
+          "type": "added",
+          "text": "The Tampermonkey loader reloads the page when the game fails to start with an Illegal constructor error.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/bf7637441b2a4589396d3f38f851041191360ef5"
           ]
         },
         {
           "type": "removed",
-          "text": "Remove the obsolete Ambrosia view overflow patch and its setting.",
+          "text": "Removed the Ambrosia view overflow patch from the Debug tab.",
           "evidence": [
             "https://github.com/maenhiir/synergism-hypersynergy/commit/bf7637441b2a4589396d3f38f851041191360ef5"
           ]
@@ -10708,9 +10777,13 @@
       "previous_commit": "e4e22f61ab4c3c1bc9bde1c7806d21a64c61e9fc",
       "date": "2026-05-14",
       "date_kind": "tag",
-      "status": "tagged",
-      "release_url": null,
+      "status": "published",
+      "release_url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.12.4-dev5",
       "sources": [
+        {
+          "label": "Published release",
+          "url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.12.4-dev5"
+        },
         {
           "label": "Git tag",
           "url": "https://github.com/maenhiir/synergism-hypersynergy/tree/v2.12.4-dev5"
@@ -10736,23 +10809,23 @@
       "changes": [
         {
           "type": "fixed",
-          "text": "Avoid repeating the first AOAG phase action when AOAG unlocks while paused; add the configured timeout to Max C11–14.",
+          "text": "AutoSing no longer runs the first AoAG step twice when AoAG unlocks while paused, and no longer enters the Exalt when stopped during the last step.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/6b9803ab939630f70d0955788a89cd1fd072a0e1/src/mod/class/hs-modules/hs-autosing/hs-autosing.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/6b9803ab939630f70d0955788a89cd1fd072a0e1"
+          ]
+        },
+        {
+          "type": "changed",
+          "text": "Max C11-14 stops at the step’s max time, and the strategy editor enables only the fields each special action uses.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/6b9803ab939630f70d0955788a89cd1fd072a0e1"
           ]
         },
         {
           "type": "fixed",
-          "text": "Honor a stop request before entering Exalt at the final step and enable the correct timing fields in the strategy editor.",
+          "text": "Ambrosia Heater: the Copy and Import buttons work, the optimizer follows Rus’s latest sheet, and the Tools tab link opens it.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/6b9803ab939630f70d0955788a89cd1fd072a0e1/src/mod/class/hs-modules/hs-autosing/ui/hs-autosing-challenge-modal.ts"
-          ]
-        },
-        {
-          "type": "fixed",
-          "text": "Make Heater Copy/Import work, update its optimizer to Rus’s latest changes and correct the sheet link.",
-          "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/6b9803ab939630f70d0955788a89cd1fd072a0e1/src/mod/class/hs-modules/hs-heater/hs-heater-ui-result.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/6b9803ab939630f70d0955788a89cd1fd072a0e1"
           ]
         }
       ],
