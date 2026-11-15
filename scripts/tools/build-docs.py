@@ -973,6 +973,8 @@ def calculation_outputs() -> None:
             entries.append((name[1], fn[1], bool(re.search(r"supportsReduce:\s*true", block))))
     if not entries:
         raise ValueError("Calculation extraction failed")
+    if not any(reduce for _, _, reduce in entries):
+        raise ValueError("Calculation extraction failed: no entry has supportsReduce: true")
     entries.sort()
     rows = []
     for name, fn, reduce in entries:
