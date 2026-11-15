@@ -7221,9 +7221,9 @@
       "changes": [
         {
           "type": "fixed",
-          "text": "Heater shows N / A for undefined ratios and nonfinite values, and correctly formats negative result values.",
+          "text": "Heater: N / A for a ratio to a zero base and for values that aren’t finite; negative values are formatted correctly.",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/e3f4ff4b5148f575d2e9da30d95f153276bdd261/src/mod/class/hs-modules/hs-heater/hs-heater-utils.ts"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/e3f4ff4b5148f575d2e9da30d95f153276bdd261"
           ]
         }
       ],
@@ -7278,16 +7278,17 @@
       "changes": [
         {
           "type": "fixed",
-          "text": "Live update notices ignore development tags.",
+          "text": "The new-version notice no longer offers Dev builds to Live players.",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/a1215a53d8178255d2d2a65e9f4824bf24b68924/src/mod/class/hs-core/github/hs-version-tags.ts"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/a1215a53d8178255d2d2a65e9f4824bf24b68924"
           ]
         },
         {
           "type": "fixed",
-          "text": "Unaffordable Max Ambrosia + Octeract results return a valid empty loadout containing every upgrade at level zero.",
+          "text": "When Max Amb + Oct can’t be afforded, the Heater shows an empty loadout that still imports (every upgrade at level 0).",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/76f9df55a98b2dba32584910adee50f477bdfc53/src/mod/class/hs-modules/hs-heater/hs-heater-optimizer.ts"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/a745ffcacae00b2f13e3e147aac88c9cfefa4e36",
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/76f9df55a98b2dba32584910adee50f477bdfc53"
           ]
         }
       ],
@@ -7300,6 +7301,8 @@
           ],
           "commits": [
             "a1215a53d8178255d2d2a65e9f4824bf24b68924",
+            "a745ffcacae00b2f13e3e147aac88c9cfefa4e36",
+            "76f9df55a98b2dba32584910adee50f477bdfc53",
             "16077101ab95814397472a16c138f4e1ffe95235"
           ]
         }
@@ -7351,38 +7354,45 @@
       "notes": [],
       "changes": [
         {
-          "type": "added",
-          "text": "Heater optimizes Ambrosia Luck builds for sustained Blue Ambrosia, Red Ambrosia and Purple Honey income, accounting for reactor routing and bar feedback.",
+          "type": "changed",
+          "text": "The Heater’s Blue Luck, Red Luck and All Ambrosia builds maximise the Blue Ambrosia, Red Ambrosia and Purple Honey gained over time, counting the Purple Reactor’s routing and bar refills, instead of the luck stat alone.",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/3819ddda74f1df8d7a4553586ff939f73f3df1d3/src/mod/class/hs-modules/hs-heater/hs-heater-bar-income.ts"
-          ]
-        },
-        {
-          "type": "fixed",
-          "text": "Corrected Heater export calculations for Purple reactor, shop, rune and free-level effects.",
-          "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/d1c7de07327b3030e2324b002b54eb92575e094b/src/mod/class/hs-core/gds/hs-gamedata-api.ts"
-          ]
-        },
-        {
-          "type": "fixed",
-          "text": "Refined Heater searches for TWO MIND and Brick of Lead alternatives, prioritized direct Ambrosia income before secondary vouchers, and avoided counting persistent Red free bonuses twice.",
-          "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/25d4102f76066fcf61f621421addb894b60f2392/src/mod/class/hs-modules/hs-heater/hs-heater-optimizer.ts"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/3819ddda74f1df8d7a4553586ff939f73f3df1d3"
           ]
         },
         {
           "type": "changed",
-          "text": "The Golden Quark Distributor supports all unlocked unmaxed upgrades and saves ratios by upgrade, migrating the old positional ratios.",
+          "text": "Max Amb + Oct starts from the fully purchased All Ambrosia build.",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/25d4102f76066fcf61f621421addb894b60f2392/src/mod/class/hs-modules/hs-qolButtons.ts"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/25d4102f76066fcf61f621421addb894b60f2392"
+          ]
+        },
+        {
+          "type": "removed",
+          "text": "The Amb Gen + Oct rows are gone; AutoSing’s Ambrosia loadout and Auto-Loadout Add / Time get the All Ambrosia build.",
+          "evidence": [
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/25d4102f76066fcf61f621421addb894b60f2392"
           ]
         },
         {
           "type": "fixed",
-          "text": "Golden Quark distribution converts allocated GQ into affordable upgrade levels instead of entering a currency amount as a level count.",
+          "text": "Heater: Red Ambrosia’s free levels are no longer counted twice in bar speed and luck.",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/25d4102f76066fcf61f621421addb894b60f2392/src/mod/class/hs-modules/hs-qolButtons.ts"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/3819ddda74f1df8d7a4553586ff939f73f3df1d3"
+          ]
+        },
+        {
+          "type": "changed",
+          "text": "GQ Distributor: lists every unlocked Golden Quark upgrade that isn’t maxed (it listed only the infinite ones) and saves each ratio with its upgrade, carrying the old ratios over.",
+          "evidence": [
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/25d4102f76066fcf61f621421addb894b60f2392"
+          ]
+        },
+        {
+          "type": "fixed",
+          "text": "GQ Distributor: buys the levels the allocated Golden Quarks pay for; it used to enter the Golden Quark amount as a level count.",
+          "evidence": [
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/25d4102f76066fcf61f621421addb894b60f2392"
           ]
         }
       ],
@@ -7395,6 +7405,8 @@
           ],
           "commits": [
             "d1c7de07327b3030e2324b002b54eb92575e094b",
+            "3819ddda74f1df8d7a4553586ff939f73f3df1d3",
+            "25d4102f76066fcf61f621421addb894b60f2392",
             "e0d55a03a190782a7ceee34f541e01bcd98332da"
           ]
         }
@@ -7439,16 +7451,16 @@
       "changes": [
         {
           "type": "fixed",
-          "text": "Reduced Heater memory use to prevent browser crashes during large searches.",
+          "text": "The Heater runs its searches one after another to use less memory, which could crash the browser.",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/d6645af8bda92aaf852d1ad3d87a3cf44d318812/src/mod/class/hs-modules/hs-heater/hs-heater-optimizer-runner.ts"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/d6645af8bda92aaf852d1ad3d87a3cf44d318812"
           ]
         },
         {
           "type": "added",
-          "text": "Heater reports calculation failures and stops searches that exceed its memory safety limit, with advice to try fewer builds.",
+          "text": "When a search would exceed its memory limit, the Heater stops and suggests calculating fewer builds at once; other failures are reported too.",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/d6645af8bda92aaf852d1ad3d87a3cf44d318812/src/mod/class/hs-modules/hs-heater/hs-heater-input-modal-controller.ts"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/d6645af8bda92aaf852d1ad3d87a3cf44d318812"
           ]
         }
       ],
@@ -7503,23 +7515,23 @@
       "changes": [
         {
           "type": "changed",
-          "text": "Heater calculations keep the game responsive; repeated calculations finish faster when their inputs are unchanged.",
+          "text": "The Heater calculates in background workers: the game stays responsive, and a rerun with the same inputs reuses the last result.",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/f8b573288e1c573706c42beed2e09dc536dbd034/src/mod/class/hs-modules/hs-heater/hs-heater-optimizer-runner.ts"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/f8b573288e1c573706c42beed2e09dc536dbd034"
           ]
         },
         {
           "type": "changed",
-          "text": "Accelerated Heater searches while preserving intermediate voucher choices and legal upgrade prerequisites.",
+          "text": "Faster Heater searches, with the same results.",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/f8b573288e1c573706c42beed2e09dc536dbd034/src/mod/class/hs-modules/hs-heater/hs-heater-optimizer.ts"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/f8b573288e1c573706c42beed2e09dc536dbd034"
           ]
         },
         {
           "type": "fixed",
-          "text": "Corrected duplicate Red free voucher bonuses, prerequisite and Purple free-level handling, and separate Cube/Octeract and Obtainium/Offering candidate searches.",
+          "text": "Heater: Red Ambrosia’s free voucher levels are no longer counted twice, prerequisites count purchased levels as the game does, and Purple free levels start with an upgrade’s first purchased level.",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/f8b573288e1c573706c42beed2e09dc536dbd034/src/mod/class/hs-modules/hs-heater/hs-heater-optimizer.ts"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/f8b573288e1c573706c42beed2e09dc536dbd034"
           ]
         }
       ],
@@ -7594,45 +7606,75 @@
       "changes": [
         {
           "type": "changed",
-          "text": "Updated Heater inputs, exports, upgrade rows and formulas for the current game, including Purple upgrades, Exalt 10, TWO MIND, free levels, shop bonuses, unlocks and Blueberry costs.",
+          "text": "Heater export and calculations updated for the current game: Purple upgrades, Exalt 10, TWO MIND, free levels, shop bonuses, unlocks and Blueberry costs; the Amb Gen rows go up to Gen 5.",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/5f572eca40bd8ffc4a892fd7a5364a204efa04e1/src/mod/class/hs-modules/hs-heater/hs-heater-input-config.ts"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/4f3984c29471a379d1e16dc38ec2e025f3602e47",
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/e735c844bd0a84962fb02ac9eff15d5478e3f4c1",
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/83f4a13e6191670347933360d77df4727208071c"
           ]
         },
         {
           "type": "fixed",
-          "text": "Corrected Heater baseline values so active Ambrosia upgrades are not counted twice, and corrected game-mode, event, luck, rune and talisman contributions.",
+          "text": "The Heater’s baseline no longer counts active Ambrosia upgrades twice; game mode, event, luck, rune and talisman inputs corrected.",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/5f572eca40bd8ffc4a892fd7a5364a204efa04e1/src/mod/class/hs-core/gds/hs-gamedata-api.ts"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/d10953163b28b799a5c244f108d0a1f0d0375777",
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/0635dafd9c315167a5cff933dd8dfcd4977db25c",
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/50e0bfdc477d152d1f4a69f2ce2dbace9451d3ee",
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/c2a2c94c94224af4fbd260c85c628a470cfeed79",
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/d2bb3e08d9c83261f0ac37fe029b7f4df8ea694a"
           ]
         },
         {
           "type": "fixed",
-          "text": "Heater search respects the Blueberry budget and returns complete importable loadouts including the newer upgrades.",
+          "text": "Heater results stay within the Blueberry budget and import completely, the newer upgrades included.",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/5f572eca40bd8ffc4a892fd7a5364a204efa04e1/src/mod/class/hs-modules/hs-heater/hs-heater-optimizer.ts"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/9e270e200e53e85f1a37c5a481c7ee3b847dc454",
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/c1bb79826b879ae6b5e0b31bd26d628eb3536fb6"
+          ]
+        },
+        {
+          "type": "changed",
+          "text": "Faster Heater searches.",
+          "evidence": [
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/beff350bb4790c327f9d8d9205665fe52f07c428",
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/5baae6ef173e4212bc83ee6873cfcfd75b21d6ac",
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/4868f46a7002ac83ebecd33f824178d875221215",
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/c1bb79826b879ae6b5e0b31bd26d628eb3536fb6"
+          ]
+        },
+        {
+          "type": "changed",
+          "text": "Heater game data must be re-exported: an export from an older version is refused.",
+          "evidence": [
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/4f3984c29471a379d1e16dc38ec2e025f3602e47"
           ]
         },
         {
           "type": "fixed",
-          "text": "Improved browser loader compatibility with Rocket Loader and game bundle changes, preventing repeated Illegal constructor reload loops.",
+          "text": "Quick Import fills the upgrades a copied loadout leaves out with level 0, so older loadouts still import.",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/5f572eca40bd8ffc4a892fd7a5364a204efa04e1/src/loader/hypersynergism.user.js"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/5f572eca40bd8ffc4a892fd7a5364a204efa04e1"
           ]
         },
         {
           "type": "fixed",
-          "text": "Quick import fills omitted Ambrosia upgrade keys with zeros so older copied loadouts remain compatible.",
+          "text": "Platonic upgrade times read the current resources before calculating.",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/5f572eca40bd8ffc4a892fd7a5364a204efa04e1/src/mod/class/hs-modules/hs-ambrosia.ts"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/4f3984c29471a379d1e16dc38ec2e025f3602e47"
           ]
         },
         {
           "type": "fixed",
-          "text": "Platonic time estimates refresh current resources before calculating; the Corruption quickbar reads upgrade levels correctly from the current save format.",
+          "text": "The Corruption quick bar reads Golden Quark and Octeract upgrade levels from the game’s new save format.",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/5f572eca40bd8ffc4a892fd7a5364a204efa04e1/src/mod/class/hs-modules/hs-hepteracts.ts",
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/5f572eca40bd8ffc4a892fd7a5364a204efa04e1/src/mod/class/hs-modules/hs-qol-quickbar/hs-qolQuickbarCorruption.ts"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/4f3984c29471a379d1e16dc38ec2e025f3602e47"
+          ]
+        },
+        {
+          "type": "fixed",
+          "text": "Browser userscript 3.9: works with Cloudflare Rocket Loader, no longer reloads the page in a loop on an Illegal constructor error, and finds the game code it patches more reliably after game updates.",
+          "evidence": [
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/4f3984c29471a379d1e16dc38ec2e025f3602e47"
           ]
         }
       ],
@@ -7643,7 +7685,20 @@
             "changes"
           ],
           "commits": [
-            "4f3984c29471a379d1e16dc38ec2e025f3602e47"
+            "4f3984c29471a379d1e16dc38ec2e025f3602e47",
+            "d10953163b28b799a5c244f108d0a1f0d0375777",
+            "0635dafd9c315167a5cff933dd8dfcd4977db25c",
+            "50e0bfdc477d152d1f4a69f2ce2dbace9451d3ee",
+            "c2a2c94c94224af4fbd260c85c628a470cfeed79",
+            "d2bb3e08d9c83261f0ac37fe029b7f4df8ea694a",
+            "e735c844bd0a84962fb02ac9eff15d5478e3f4c1",
+            "83f4a13e6191670347933360d77df4727208071c",
+            "9e270e200e53e85f1a37c5a481c7ee3b847dc454",
+            "beff350bb4790c327f9d8d9205665fe52f07c428",
+            "5baae6ef173e4212bc83ee6873cfcfd75b21d6ac",
+            "4868f46a7002ac83ebecd33f824178d875221215",
+            "c1bb79826b879ae6b5e0b31bd26d628eb3536fb6",
+            "5f572eca40bd8ffc4a892fd7a5364a204efa04e1"
           ]
         }
       ],
@@ -7683,9 +7738,9 @@
       "changes": [
         {
           "type": "fixed",
-          "text": "Platonic upgrade estimates include Abyss Hepteracts consumed by capacity expansions, including the double-capacity reward.",
+          "text": "Platonic upgrade times count the Abyss Hepteracts used up by capacity expansions while crafting, double capacity included.",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/782aed2a3f96b570ef02e7c344dbb5bdd8dac423/src/mod/class/hs-modules/hs-hepteracts.ts"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/782aed2a3f96b570ef02e7c344dbb5bdd8dac423"
           ]
         }
       ],
@@ -7746,23 +7801,30 @@
       "changes": [
         {
           "type": "added",
-          "text": "Added time-until-affordable estimates for Hepteract expansions and Platonic upgrades, including resources received on the next Ascension.",
+          "text": "Hepteract crafting: the cost line for the next expansion adds the time until it is affordable, counting what the next Ascension gives.",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/8c24488cadc63449ef66e1769c45ab7580dc01da/src/mod/class/hs-modules/hs-hepteracts.ts"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/f2202307169adaeda4f81735fb57ba6ec97fccb3"
           ]
         },
         {
-          "type": "fixed",
-          "text": "The mod remembers native hidden-tab and hide-maxed Golden Quark/Octeract choices after reload.",
+          "type": "added",
+          "text": "Platonic upgrades: hovering one shows the time until its next level and which resource takes longest, counting what the next Ascension gives.",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/8553e90a3a80eaf3f691fedec4e591932dd883dc/src/mod/class/hs-core/settings/hs-settings-ui.ts"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/8c24488cadc63449ef66e1769c45ab7580dc01da"
           ]
         },
         {
           "type": "changed",
-          "text": "Hidden tabs can be toggled individually without Ctrl-click; added more tabs to the list and made PseudoCoins removable through native tab editing.",
+          "text": "Hidden tabs setting: click a tab to hide or restore it (no Ctrl+click); Challenges, WOW! Cubes, Corruption and Singularity are in the list, PseudoCoins can be hidden too, and the setting follows the tabs hidden in the game’s own tab editing.",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/8553e90a3a80eaf3f691fedec4e591932dd883dc/src/mod/resource/json/hs-settings.json"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/8553e90a3a80eaf3f691fedec4e591932dd883dc"
+          ]
+        },
+        {
+          "type": "fixed",
+          "text": "Hide maxed Golden Quark / Octeract upgrades use the game’s own toggle and remember the choice after a reload.",
+          "evidence": [
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/8553e90a3a80eaf3f691fedec4e591932dd883dc"
           ]
         }
       ],
@@ -7778,6 +7840,8 @@
           ],
           "commits": [
             "8553e90a3a80eaf3f691fedec4e591932dd883dc",
+            "f2202307169adaeda4f81735fb57ba6ec97fccb3",
+            "8c24488cadc63449ef66e1769c45ab7580dc01da",
             "f213f0d5b3ca77ed23faf9726eb17159a194b471"
           ]
         }
@@ -7885,9 +7949,16 @@
       "changes": [
         {
           "type": "fixed",
-          "text": "Corrected Purple Honey requirement reductions to use purchased levels rather than invested honey, and corrected Exalt 7’s Red Ambrosia requirement bonus.",
+          "text": "Purple Honey minibar: the requirement reductions count upgrade levels (the save stores the honey invested).",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/6e413b346befcf2981599efd417fd790c5d940f9/src/mod/class/hs-core/gds/hs-gamedata-api-ambrosia.ts"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/6e413b346befcf2981599efd417fd790c5d940f9"
+          ]
+        },
+        {
+          "type": "fixed",
+          "text": "Red Ambrosia minibar: Exalt 7 lowers the bar requirement by 1% per completion, not 2%.",
+          "evidence": [
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/6e413b346befcf2981599efd417fd790c5d940f9"
           ]
         }
       ],
@@ -7957,45 +8028,52 @@
       "notes": [],
       "changes": [
         {
-          "type": "added",
-          "text": "Added a Purple Honey progress minibar, shown when the Purple tab is unlocked.",
+          "type": "removed",
+          "text": "The Ambrosia AFK Swapper is retired: its toggle and settings are turned off and marked RETIRED, and the Heater no longer suggests loadouts for it.",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/522ecdabbb6a709217482b7fc7562041e653733a/src/mod/class/hs-modules/hs-ambrosia.ts"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/522ecdabbb6a709217482b7fc7562041e653733a"
           ]
         },
         {
-          "type": "removed",
-          "text": "Retired the Ambrosia AFK Swapper, its toggle, loadout settings and Heater recommendations.",
+          "type": "added",
+          "text": "A Purple Honey minibar, shown once the Purple subtab is unlocked.",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/522ecdabbb6a709217482b7fc7562041e653733a/src/mod/resource/json/hs-settings.json"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/522ecdabbb6a709217482b7fc7562041e653733a"
           ]
         },
         {
           "type": "fixed",
-          "text": "Ambrosia minibars now track game data independently of hidden or stale game bars, with current Red Ambrosia, TWO MIND and Bar Dependence requirements.",
+          "text": "The Blue and Red minibars are computed from the save, so they keep moving while the game’s own bars are hidden, and use the current Red Ambrosia, TWO MIND and Bar Dependence requirements.",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/522ecdabbb6a709217482b7fc7562041e653733a/src/mod/class/hs-core/gds/hs-gamedata-api-ambrosia.ts"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/522ecdabbb6a709217482b7fc7562041e653733a"
           ]
         },
         {
           "type": "changed",
-          "text": "Turning off GDS warns which dependent features will be turned off; GDS turns off when its last dependent feature is disabled.",
+          "text": "Turning GDS off says which features it turns off with it; turning off the last feature that uses GDS turns GDS off.",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/522ecdabbb6a709217482b7fc7562041e653733a/src/mod/class/hs-core/settings/hs-setting.ts"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/522ecdabbb6a709217482b7fc7562041e653733a"
           ]
         },
         {
           "type": "fixed",
-          "text": "Temporary GDS pauses during loadout icon picking and save loads no longer disable dependent feature settings.",
+          "text": "GDS’s short pauses at each singularity and at a save load no longer turn off the features that use it.",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/522ecdabbb6a709217482b7fc7562041e653733a/src/mod/class/hs-core/gds/hs-gamedata.ts"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/522ecdabbb6a709217482b7fc7562041e653733a"
           ]
         },
         {
           "type": "added",
-          "text": "Autosing warns when its selected loadout buttons cannot be found.",
+          "text": "AutoSing warns when one of its Ambrosia loadout settings points to a loadout it can’t find.",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/522ecdabbb6a709217482b7fc7562041e653733a/src/mod/class/hs-modules/hs-autosing/hs-autosing.ts"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/522ecdabbb6a709217482b7fc7562041e653733a"
+          ]
+        },
+        {
+          "type": "fixed",
+          "text": "Subtab memory knows the Singularity tab’s Purple subtab.",
+          "evidence": [
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/522ecdabbb6a709217482b7fc7562041e653733a"
           ]
         }
       ],
@@ -8046,9 +8124,9 @@
       "changes": [
         {
           "type": "fixed",
-          "text": "Autosing no longer stops when AOAG unlocks while an earlier phase is still waiting for fresh UI text.",
+          "text": "On bookmarklet setups, AutoSing no longer stops when AOAG unlocks while it is waiting for the game’s stage text.",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/03ebe99ff689a3388b15453df7c6672cc091230e/src/mod/class/hs-modules/hs-autosing/hs-autosing.ts"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/03ebe99ff689a3388b15453df7c6672cc091230e"
           ]
         }
       ],
