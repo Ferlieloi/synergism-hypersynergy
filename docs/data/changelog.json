@@ -8702,9 +8702,13 @@
       "previous_commit": "b67772bb8c0a6b559de85cb64b75670be66021ca",
       "date": "2026-08-13",
       "date_kind": "tag",
-      "status": "tagged",
-      "release_url": null,
+      "status": "published",
+      "release_url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.13.3-dev5",
       "sources": [
+        {
+          "label": "Published release",
+          "url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.13.3-dev5"
+        },
         {
           "label": "Git tag",
           "url": "https://github.com/maenhiir/synergism-hypersynergy/tree/v2.13.3-dev5"
@@ -8726,16 +8730,16 @@
       "changes": [
         {
           "type": "fixed",
-          "text": "Fixed Heater calculations for early Singularity saves with zero Antiquities or Singularity rune levels.",
+          "text": "The Ambrosia Heater works when your Infinite Ascent or Superior Intellect rune has no EXP yet.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/94ea2f4461cf7a43b5586fbd64b9efdcfe5d2b9b/src/mod/class/hs-modules/hs-heater/hs-heater-optimizer.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/94ea2f4461cf7a43b5586fbd64b9efdcfe5d2b9b"
           ]
         },
         {
           "type": "changed",
-          "text": "Clarified Heater start and AFK Swapper help, and explained that lower/brighter Red Ambrosia comparison values are better.",
+          "text": "The Red Ambrosia window says lower values and brighter colours are better, and the Start heating and AFK Swapper tooltips are clearer.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/94ea2f4461cf7a43b5586fbd64b9efdcfe5d2b9b/src/mod/class/hs-modules/hs-heater/hs-heater-red-ambrosia-table.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/94ea2f4461cf7a43b5586fbd64b9efdcfe5d2b9b"
           ]
         }
       ],
@@ -8768,9 +8772,13 @@
       "previous_commit": "0afd7ef6784c50e317d1e0f7ac779f7aeeb34bc5",
       "date": "2026-08-12",
       "date_kind": "tag",
-      "status": "tagged",
-      "release_url": null,
+      "status": "published",
+      "release_url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.13.3-dev4",
       "sources": [
+        {
+          "label": "Published release",
+          "url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.13.3-dev4"
+        },
         {
           "label": "Git tag",
           "url": "https://github.com/maenhiir/synergism-hypersynergy/tree/v2.13.3-dev4"
@@ -8796,17 +8804,31 @@
       "changes": [
         {
           "type": "fixed",
-          "text": "Restored AFK Swapper and Ambrosia quickbar compatibility after the game update.",
+          "text": "AFK Swapper and the Ambrosia calculations read your Quark bonus again after synergism.cc changed its account data.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/f26db734f61f31f312e050fcb9c546d4866ec6b6/src/mod/class/hs-modules/hs-ambrosiaQuickbar.ts",
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/f26db734f61f31f312e050fcb9c546d4866ec6b6/src/mod/class/hs-core/gds/hs-gamedata-api-ambrosia.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/f26db734f61f31f312e050fcb9c546d4866ec6b6"
           ]
         },
         {
           "type": "fixed",
-          "text": "Corrected development-channel update detection and initialized tab detection for bookmarklet setups.",
+          "text": "The Ambrosia quick bar no longer copies the game’s new save button.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/fbaadadefeebf85fdf41428db4a52b4d4a259da1/src/mod/class/hs-core/github/hs-github.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/f26db734f61f31f312e050fcb9c546d4866ec6b6"
+          ]
+        },
+        {
+          "type": "fixed",
+          "text": "The New version available notice works on the Dev channel and checks at load.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/fbaadadefeebf85fdf41428db4a52b4d4a259da1",
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/f26db734f61f31f312e050fcb9c546d4866ec6b6"
+          ]
+        },
+        {
+          "type": "fixed",
+          "text": "The mod knows which tab is open when it loads.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/fbaadadefeebf85fdf41428db4a52b4d4a259da1"
           ]
         }
       ],
@@ -8819,6 +8841,7 @@
           ],
           "commits": [
             "fbaadadefeebf85fdf41428db4a52b4d4a259da1",
+            "f26db734f61f31f312e050fcb9c546d4866ec6b6",
             "b67772bb8c0a6b559de85cb64b75670be66021ca"
           ]
         }
@@ -8839,9 +8862,13 @@
       "previous_commit": "6e9fa63f4da74c6bf5b9550319c3b5c69b60bcc0",
       "date": "2026-07-20",
       "date_kind": "tag",
-      "status": "tagged",
-      "release_url": null,
+      "status": "published",
+      "release_url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.13.3-dev3",
       "sources": [
+        {
+          "label": "Published release",
+          "url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.13.3-dev3"
+        },
         {
           "label": "Git tag",
           "url": "https://github.com/maenhiir/synergism-hypersynergy/tree/v2.13.3-dev3"
@@ -8859,9 +8886,9 @@
       "changes": [
         {
           "type": "fixed",
-          "text": "Heater ranks Luck-Cube and Brick of Lead combinations by Cube output instead of Luck alone.",
+          "text": "Ambrosia Heater: Luck + Cube loadouts weigh Brick of Lead by Cubes, not by Luck.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/c9709aba4a48b31d7bfc26c984d5acb7da0c8fc7/src/mod/class/hs-modules/hs-heater/hs-heater-optimizer.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/c9709aba4a48b31d7bfc26c984d5acb7da0c8fc7"
           ]
         }
       ],
@@ -8894,9 +8921,13 @@
       "previous_commit": "907f937c6a8cc0cfb083fc456d27c93061ff9a9d",
       "date": "2026-07-16",
       "date_kind": "tag",
-      "status": "tagged",
-      "release_url": null,
+      "status": "published",
+      "release_url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.13.3-dev2",
       "sources": [
+        {
+          "label": "Published release",
+          "url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.13.3-dev2"
+        },
         {
           "label": "Git tag",
           "url": "https://github.com/maenhiir/synergism-hypersynergy/tree/v2.13.3-dev2"
@@ -8910,13 +8941,15 @@
           "url": "https://github.com/maenhiir/synergism-hypersynergy/blob/a5cacf954db57aa1958166834748fb0f5c94194d/src/mod/resource/json/strategies/manifest.json"
         }
       ],
-      "notes": [],
+      "notes": [
+        "If AutoSing used BTMco. Demon King v1.1 or BTMco. Quark Factory v2.2, select it again under its new name."
+      ],
       "changes": [
         {
           "type": "added",
-          "text": "Added Demon King (rus) v1.2 and labeled the existing Demon King and Quark Factory strategies with their BTMco author.",
+          "text": "Added the Demon King (rus) v1.2 strategy; BTMco’s strategies are renamed Demon King (BTMco) v1.1 and Quark Factory (BTMco) v2.2.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/a5cacf954db57aa1958166834748fb0f5c94194d/src/mod/resource/json/strategies/manifest.json"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/a5cacf954db57aa1958166834748fb0f5c94194d"
           ]
         }
       ],
@@ -8949,9 +8982,13 @@
       "previous_commit": "386e0775253fd0d831ca03c59de3c8db4647d4b5",
       "date": "2026-07-16",
       "date_kind": "tag",
-      "status": "tagged",
-      "release_url": null,
+      "status": "published",
+      "release_url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.13.3-dev1",
       "sources": [
+        {
+          "label": "Published release",
+          "url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.13.3-dev1"
+        },
         {
           "label": "Git tag",
           "url": "https://github.com/maenhiir/synergism-hypersynergy/tree/v2.13.3-dev1"
@@ -8981,9 +9018,9 @@
       "changes": [
         {
           "type": "fixed",
-          "text": "Heater now accounts for Brick of Lead’s Cube and Octeract penalties when choosing Luck-Cube builds.",
+          "text": "Ambrosia Heater: Luck + Cube loadouts count Brick of Lead’s Cube and Octeract penalties.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/6b2f2a8aeb28e188231671223a22a355adea20db/src/mod/class/hs-modules/hs-heater/hs-heater-optimizer.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/6b2f2a8aeb28e188231671223a22a355adea20db"
           ]
         }
       ],
@@ -9124,9 +9161,13 @@
       "previous_commit": "7eaa39c6a3522107a1067693d53c5c55c9a4f6de",
       "date": "2026-06-26",
       "date_kind": "tag",
-      "status": "tagged",
-      "release_url": null,
+      "status": "published",
+      "release_url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.13.1-dev1",
       "sources": [
+        {
+          "label": "Published release",
+          "url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.13.1-dev1"
+        },
         {
           "label": "Git tag",
           "url": "https://github.com/maenhiir/synergism-hypersynergy/tree/v2.13.1-dev1"
@@ -9144,9 +9185,9 @@
       "changes": [
         {
           "type": "fixed",
-          "text": "Corrected Heater Octeract builds to exclude rune bonuses, allowed maximum-Ambrosia comparisons beyond the current budget, and corrected Singularity-reduction choices for Offering and Hyperflux builds.",
+          "text": "Ambrosia Heater follows Rus’s sheet: Octeract loadouts leave out the rune upgrades, Singularity reduction is fixed for Offering and Hyperflux loadouts, and All Ambrosia is compared with the maxed tree whatever your Ambrosia.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/7378f5fdfb73bd11e114fe4be0656f1d21e0f1e1/src/mod/class/hs-modules/hs-heater/hs-heater-optimizer.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/7378f5fdfb73bd11e114fe4be0656f1d21e0f1e1"
           ]
         }
       ],
@@ -9327,9 +9368,13 @@
       "previous_commit": "9b46c70ec2a3eefaf9d1a9c1dec10ef169d3b070",
       "date": "2026-06-20",
       "date_kind": "tag",
-      "status": "tagged",
-      "release_url": null,
+      "status": "published",
+      "release_url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.13.1-dev0",
       "sources": [
+        {
+          "label": "Published release",
+          "url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.13.1-dev0"
+        },
         {
           "label": "Git tag",
           "url": "https://github.com/maenhiir/synergism-hypersynergy/tree/v2.13.1-dev0"
@@ -9366,6 +9411,15 @@
       "notes": [],
       "changes": [],
       "contributors": [
+        {
+          "id": "Ferlieloi",
+          "roles": [
+            "changes"
+          ],
+          "commits": [
+            "d478f3fd38b2a7da66a32d7b29bd7768083cf2a7"
+          ]
+        },
         {
           "id": "maenhiir",
           "roles": [
@@ -9562,9 +9616,13 @@
       "previous_commit": "b33906b2c681180a854624df7f2dfeb7d8806505",
       "date": "2026-05-31",
       "date_kind": "tag",
-      "status": "tagged",
-      "release_url": null,
+      "status": "published",
+      "release_url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.13.0-dev4",
       "sources": [
+        {
+          "label": "Published release",
+          "url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.13.0-dev4"
+        },
         {
           "label": "Git tag",
           "url": "https://github.com/maenhiir/synergism-hypersynergy/tree/v2.13.0-dev4"
@@ -9598,30 +9656,43 @@
           "url": "https://github.com/maenhiir/synergism-hypersynergy/blob/091956f0e39d25459c0d1e859577f62b182eee3d/src/mod/class/hs-modules/hs-codes.ts"
         }
       ],
-      "notes": [],
+      "notes": [
+        "The Basic strategy is renamed Basic v1.2: if AutoSing used Basic, select Basic v1.2."
+      ],
       "changes": [
         {
           "type": "changed",
-          "text": "Updated the Basic strategy to v1.2 and corrected the strategy editor’s action descriptions and If-jump edit fields.",
+          "text": "Updated the Basic strategy to v1.2; the strategy editor shows each step’s wait times and opens an If-jump with its own values.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/091956f0e39d25459c0d1e859577f62b182eee3d/src/mod/resource/json/strategies/Basic%20v1.2.json",
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/091956f0e39d25459c0d1e859577f62b182eee3d/src/mod/class/hs-modules/hs-autosing/ui/hs-autosing-challenge-modal.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/091956f0e39d25459c0d1e859577f62b182eee3d"
           ]
         },
         {
           "type": "changed",
-          "text": "Importing an individual Heater result now saves it to its selected loadout slot; single-loadout quick import again saves to the active slot.",
+          "text": "A Heater result’s Import button saves the loadout into your active slot.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/091956f0e39d25459c0d1e859577f62b182eee3d/src/mod/class/hs-modules/hs-heater/hs-heater-ui-result.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/091956f0e39d25459c0d1e859577f62b182eee3d"
+          ]
+        },
+        {
+          "type": "changed",
+          "text": "Quick Import of a single loadout writes it to your active slot again.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/091956f0e39d25459c0d1e859577f62b182eee3d"
           ]
         },
         {
           "type": "fixed",
-          "text": "Fixed switching Ambrosia from SAVE to LOAD, hiding maxed Golden Quark upgrades with increased level caps, and code redemption.",
+          "text": "A quick bar click in SAVE mode switches the game to LOAD first, also with the Add and Time auto-switch off.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/091956f0e39d25459c0d1e859577f62b182eee3d/src/mod/class/hs-modules/hs-qolButtons.ts",
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/091956f0e39d25459c0d1e859577f62b182eee3d/src/mod/class/hs-modules/hs-ambrosia.ts",
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/091956f0e39d25459c0d1e859577f62b182eee3d/src/mod/class/hs-modules/hs-codes.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/091956f0e39d25459c0d1e859577f62b182eee3d"
+          ]
+        },
+        {
+          "type": "fixed",
+          "text": "Hide maxed GQ upgrades counts the higher level caps, and the codes list shows synergism2026.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/091956f0e39d25459c0d1e859577f62b182eee3d"
           ]
         }
       ],
@@ -9654,9 +9725,13 @@
       "previous_commit": "378e73e4decdb7a365f8a346f7619f786e4fa3d0",
       "date": "2026-05-29",
       "date_kind": "tag",
-      "status": "tagged",
-      "release_url": null,
+      "status": "published",
+      "release_url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.13.0-dev3",
       "sources": [
+        {
+          "label": "Published release",
+          "url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.13.0-dev3"
+        },
         {
           "label": "Git tag",
           "url": "https://github.com/maenhiir/synergism-hypersynergy/tree/v2.13.0-dev3"
@@ -9686,30 +9761,30 @@
       "changes": [
         {
           "type": "added",
-          "text": "Added the Basic Autosing strategy.",
+          "text": "Added the Basic AutoSing strategy.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/644fa61db641278fe747fc5e542c6a861deef0f1/src/mod/resource/json/strategies/Basic.json"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/644fa61db641278fe747fc5e542c6a861deef0f1"
           ]
         },
         {
           "type": "changed",
-          "text": "Autosing restores the previous tab after each phase on bookmarklet and Steam setups, and recommends the Settings page for better performance.",
+          "text": "Without the Tampermonkey patch, AutoSing reads the stage on the Settings tab and returns to your tab after each step; staying on Settings is fastest.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/644fa61db641278fe747fc5e542c6a861deef0f1/src/mod/class/hs-modules/hs-autosing/hs-autosing.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/644fa61db641278fe747fc5e542c6a861deef0f1"
           ]
         },
         {
           "type": "fixed",
-          "text": "Autosing phase loop statistics now show averages instead of only the latest value; fixed missing window padding.",
+          "text": "The AutoSing dashboard shows each phase’s average loop count and has its padding back.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/644fa61db641278fe747fc5e542c6a861deef0f1/src/mod/class/hs-modules/hs-autosing/hs-autosingPhaseStats.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/644fa61db641278fe747fc5e542c6a861deef0f1"
           ]
         },
         {
-          "type": "fixed",
-          "text": "Changing one Heater loadout type now updates only that slot’s checkbox; tightened the input and result layouts.",
+          "type": "changed",
+          "text": "Ambrosia Heater: changing a slot in Your Loadout Order updates only that slot’s checkbox, and the tables are denser.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/644fa61db641278fe747fc5e542c6a861deef0f1/src/mod/class/hs-modules/hs-heater/hs-heater-result-modal-controller.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/644fa61db641278fe747fc5e542c6a861deef0f1"
           ]
         }
       ],
@@ -9742,9 +9817,13 @@
       "previous_commit": "655258bd7f0b4fbbaf4792437e07de5fcf8cc21b",
       "date": "2026-05-27",
       "date_kind": "tag",
-      "status": "tagged",
-      "release_url": null,
+      "status": "published",
+      "release_url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.13.0-dev2",
       "sources": [
+        {
+          "label": "Published release",
+          "url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.13.0-dev2"
+        },
         {
           "label": "Git tag",
           "url": "https://github.com/maenhiir/synergism-hypersynergy/tree/v2.13.0-dev2"
@@ -9762,9 +9841,9 @@
       "changes": [
         {
           "type": "fixed",
-          "text": "Fixed Ambrosia quickbar clicks keeping the active loadout synchronized while the Ambrosia tab is hidden.",
+          "text": "The Ambrosia quick bar marks the loadout AutoSing switches to, even while the Ambrosia tab is closed.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/0a81bbd10dbe6383a209def7e9b742b29bcf7946/src/mod/class/hs-modules/hs-ambrosia.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/0a81bbd10dbe6383a209def7e9b742b29bcf7946"
           ]
         }
       ],
@@ -9840,6 +9919,13 @@
         {
           "type": "changed",
           "text": "The current-levels pin is on by default and remembered, and hides while your mouse is over the upgrade grid.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/59faf3f2abb6755b772f7f19f9541e29372bf168"
+          ]
+        },
+        {
+          "type": "changed",
+          "text": "The Add and Time loadout auto-switch no longer puts your loadout back afterwards (back in v2.14.4b-dev4).",
           "evidence": [
             "https://github.com/maenhiir/synergism-hypersynergy/commit/59faf3f2abb6755b772f7f19f9541e29372bf168"
           ]
