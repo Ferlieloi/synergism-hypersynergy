@@ -6,7 +6,7 @@ The Ambrosia Heater finds, for your save, the best Ambrosia upgrade tree for eac
 
 ![The Ambrosia Heater Inputs window: what the Heater read from your save on the left; the loadouts to heat, Start Heater and your loadout order on the right](../../res/guides/heater-inputs@2x.webp#past-headings)
 
-Open the mod panel (the mod's icon, top left), then Tools → **Ambrosia Heater**. The menu by the mod's icon opens it too. The **Ambrosia Heater Inputs** window opens, filled from your game: its left column holds what the Heater read from your save, which you rarely need to change.
+Open the mod panel (the mod's icon, top left), then Tools → **Ambrosia Heater**. The [menu by the mod's icon](https://ferlieloi.github.io/synergism-hypersynergy/docs/wiki/interface.html#quick-menu) opens it too. The **Ambrosia Heater Inputs** window opens, filled from your game: its left column holds what the Heater read from your save, which you rarely need to change.
 
 ## Say which slot holds what
 
@@ -35,14 +35,14 @@ A **Red Ambrosia Upgrades** window opens with the results: it compares those upg
 
 ## Import them in your slots
 
-- For one tree only: **Import** on its row puts it into the loadout slot currently active; **Copy** copies it as text, ready for a **Quick Import** (Ambrosia tab).
+- For one tree only: **Import** on its row puts it into the loadout slot currently active; **Copy** copies it as text, ready for a [**Quick Import**](https://ferlieloi.github.io/synergism-hypersynergy/docs/wiki/ambrosia.html#quick-import) (Ambrosia tab).
 - **Import All ☑ Loadouts** ⑥ (in the Inputs window) writes each ticked slot's tree into it. A slot set to **Best H (P4x4 now)** gets the H row that wins at your P4x4 at that moment.
 - **Sync All Icons** ⑦ gives each slot an icon that matches its role.
-- **Sync All Loadout Settings** ⑧ gives your slots' roles to Auto-Sing, the ADD and TIME code loadouts and the timed export, so you don't set them by hand.
+- **Sync All Loadout Settings** ⑧ gives your slots' roles to [Auto-Sing](https://ferlieloi.github.io/synergism-hypersynergy/docs/wiki/autosing.html#autosing-loadouts), the [ADD and TIME code loadouts](https://ferlieloi.github.io/synergism-hypersynergy/docs/wiki/ambrosia.html#code-loadouts) and the [timed export](https://ferlieloi.github.io/synergism-hypersynergy/docs/wiki/saves.html#export-loadout), so you don't set them by hand.
 
 ## When to heat again
 
 Heat again when your Ambrosia or Blueberries have grown, or after upgrades that change your Ambrosia luck or speed. The Heater reads your game when it opens: if its window was already open, click **Update 🔓 Inputs** first.
 
 > [!TIP]
-> Before a big change of trees, make a backup (Tools → Backup & Restore → Export to file): your old loadouts are in it.
+> Before a big change of trees, make a [backup](https://ferlieloi.github.io/synergism-hypersynergy/docs/wiki/saves.html#full-backup) (Tools → Backup & Restore → Export to file): your old loadouts are in it.

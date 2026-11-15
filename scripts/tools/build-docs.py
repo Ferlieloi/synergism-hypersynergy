@@ -368,14 +368,56 @@ def setting_ref(match: re.Match) -> str:
             f'<span class="setting-gear" aria-hidden="true">{SETTING_MARK}</span><span class="setting-label">{esc(label.strip())}</span></a>')
 
 
-def inline_md(text: str) -> str:
+def guide_anchors(cid: str) -> set[str]:
+    """The ids of a guide's headings, as guide_html gives them."""
+    return {slug(m[1].strip()) for m in re.finditer(r"^#{1,4} (.+)$", GUIDES[cid], re.M)}
+
+
+def site_anchors(page: str) -> set[str] | None:
+    """The anchors a guide may link to on one of the site's pages (its path from docs/); None for a page it can't link to."""
+    for c in CATEGORIES:
+        if page == f'wiki/{c["id"]}.html':
+            return {f["id"] for f in c["features"]}
+    for cid in GUIDES:
+        if page == f"wiki/{cid}-guide.html":
+            return guide_anchors(cid)
+    if page == "wiki/settings.html":
+        return set(SETTINGS)
+    if page == "features.html":
+        return {f["id"] for f in FEATURES}
+    return None
+
+
+def guide_href(cid: str, text: str, href: str) -> str:
+    """A guide's link target on the site. A link to the site itself is written as a full URL (a relative one would point
+    elsewhere from the guide's file on GitHub) and made relative here: no "opens elsewhere" icon, and a local preview
+    stays local. Its page and anchor must exist, as must an in-page anchor's heading."""
+    where = f'Guide {cid}.md, link "{html.unescape(text)}"'
+    if href.startswith("#"):
+        if href[1:] not in guide_anchors(cid):
+            raise ValueError(f"{where}: this guide has no heading {href}")
+        return href
+    if not href.lower().startswith(SITE.lower()):
+        return href
+    page, _, anchor = href[len(SITE):].partition("#")
+    anchors = site_anchors(page)
+    if anchors is None:
+        raise ValueError(f"{where}: a link to the site goes to a category's wiki page, a guide, the settings page "
+                         f"or the features page ({page or 'the home page'} isn't one)")
+    if anchor and anchor not in anchors:
+        raise ValueError(f"{where}: {page} has no #{anchor}")
+    # Guides are served from docs/wiki/
+    return (page.removeprefix("wiki/") if page.startswith("wiki/") else "../" + page) + (f"#{anchor}" if anchor else "")
+
+
+def inline_md(text: str, cid: str) -> str:
     out = []
     for part in re.split(r"(`[^`]+`)", text):
         if len(part) > 1 and part.startswith("`") and part.endswith("`"):
             out.append(f"<code>{esc(part[1:-1])}</code>")
             continue
         s = esc(part)
-        s = re.sub(r"\[([^\]]+)\]\(([^)\s]+)\)", r'<a href="\2">\1</a>', s)
+        s = re.sub(r"\[([^\]]+)\]\(([^)\s]+)\)", lambda m: f'<a href="{guide_href(cid, m[1], m[2])}">{m[1]}</a>', s)
         s = re.sub(rf"\*\*{SETTING_MARK}️?\s*(.+?)\*\*", setting_ref, s)
         # Image marks outside bold only: in bold, a circled character is the UI's own text
         s = "".join(p if p.startswith("**") else image_marks(p) for p in re.split(r"(\*\*.+?\*\*)", s))
@@ -417,7 +459,7 @@ def guide_html(cid: str) -> str:
 
     def end_para() -> None:
         if para:
-            out.append(f"<p>{inline_md(' '.join(para))}</p>")
+            out.append(f"<p>{inline_md(' '.join(para), cid)}</p>")
             para.clear()
 
     def end_list() -> None:
@@ -439,7 +481,7 @@ def guide_html(cid: str) -> str:
                 end_list()
                 out.append(f"<{new_kind}>")
                 kind = new_kind
-            out.append(f"<li>{inline_md(item[2])}</li>")
+            out.append(f"<li>{inline_md(item[2], cid)}</li>")
         else:
             end_list()
             para.append(line.strip())
@@ -503,7 +545,7 @@ def guide_html(cid: str) -> str:
             end_list()
             level, text = len(heading[1]), heading[2].strip()
             beside = ' class="beside-shot"' if beside_shot else ""
-            out.append(f'<h{level} id="{esc(slug(text))}"{beside}>{inline_md(text)}</h{level}>')
+            out.append(f'<h{level} id="{esc(slug(text))}"{beside}>{inline_md(text, cid)}</h{level}>')
         else:
             text_line(line)
     end_para()

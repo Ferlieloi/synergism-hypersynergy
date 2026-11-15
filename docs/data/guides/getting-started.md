@@ -29,7 +29,7 @@ The next times, open the loader and click **Launch last played build** on its fi
 ## Check that it works
 
 - The mod's icon shows at the top left of the game. Click it to open the mod panel: its title reads "Hypersynergism v" and the mod's version.
-- If part of the game's patch couldn't be applied, a notification says so once at load, with the details in the panel's **Log** tab.
+- If part of the game's patch couldn't be applied, a notification says so once at load, with the details in the panel's [**Log** tab](https://ferlieloi.github.io/synergism-hypersynergy/docs/wiki/tools.html#mod-log).
 - A rainbow border around the icon means a newer version is out: reload the page in a browser, restart the game from the loader on Steam.
 
 ## Live or Dev
@@ -42,7 +42,7 @@ The mod comes from one of two channels: **Live** (Ferlieloi's repository, the de
 ## With a bookmark (not recommended)
 
 > [!WARNING]
-> Loaded by a bookmark, the mod can't reach the game's internals: several features are missing, slower or less reliable, Auto-Sing among them. The mod then shows a window explaining how to switch to Tampermonkey.
+> Loaded by a bookmark, the mod can't reach the game's internals: several features are missing, slower or less reliable, [Auto-Sing](https://ferlieloi.github.io/synergism-hypersynergy/docs/wiki/autosing-guide.html) among them. The mod then shows a window explaining how to switch to Tampermonkey.
 
 1. Create a bookmark with any name. As its address, paste the whole content of [release/loader/loader.js](https://github.com/Ferlieloi/synergism-hypersynergy/blob/master/release/loader/loader.js) (it starts with `javascript:`).
 2. Each time: load the game, close its offline popup, then click the bookmark.
