@@ -27,6 +27,109 @@
   ],
   "entries": [
     {
+      "id": "loader-0.2.11",
+      "version": "0.2.11",
+      "channel": "loader",
+      "repository": "Ferlieloi/synergism-hypersynergy",
+      "commit": "c86c0c4ee543fd9ac0c2142081df386da774a772",
+      "previous_commit": "0bee9d69e6a4dcfa5d6e0a25ee897cc2ed9bb49b",
+      "date": "2026-11-15",
+      "date_kind": "published",
+      "status": "published",
+      "release_url": "https://github.com/Ferlieloi/synergism-hypersynergy/releases/tag/loader-v0.2.11",
+      "sources": [
+        {
+          "label": "Published release",
+          "url": "https://github.com/Ferlieloi/synergism-hypersynergy/releases/tag/loader-v0.2.11"
+        },
+        {
+          "label": "Git tag",
+          "url": "https://github.com/Ferlieloi/synergism-hypersynergy/tree/loader-v0.2.11"
+        },
+        {
+          "label": "Release/build commit",
+          "url": "https://github.com/Ferlieloi/synergism-hypersynergy/commit/c86c0c4ee543fd9ac0c2142081df386da774a772"
+        },
+        {
+          "label": "Source: 357a6f4e",
+          "url": "https://github.com/Ferlieloi/synergism-hypersynergy/commit/357a6f4e5ccfb7c9c0f4a84271641a16d5ebc72d"
+        },
+        {
+          "label": "Source: ef25d347",
+          "url": "https://github.com/Ferlieloi/synergism-hypersynergy/commit/ef25d34793f120d1e2c1227a18c51688790b2387"
+        },
+        {
+          "label": "Source: 91d37476",
+          "url": "https://github.com/Ferlieloi/synergism-hypersynergy/commit/91d37476603ac62df7efc43ef72ea6031ac434e9"
+        },
+        {
+          "label": "Source: baafea65",
+          "url": "https://github.com/Ferlieloi/synergism-hypersynergy/commit/baafea659d1b99d56acb189665dd89feefca85f4"
+        }
+      ],
+      "notes": [
+        "No new patch is needed after this update."
+      ],
+      "changes": [
+        {
+          "type": "added",
+          "text": "The loader comes with its own 7-Zip, so 7-Zip no longer needs to be installed to patch the game; a 7-Zip already chosen on the first screen is still used.",
+          "evidence": [
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/357a6f4e5ccfb7c9c0f4a84271641a16d5ebc72d"
+          ]
+        },
+        {
+          "type": "changed",
+          "text": "Starting the loader while it is already open brings the open window to the front instead of opening a second loader, which could patch the same game folder at the same time.",
+          "evidence": [
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/ef25d34793f120d1e2c1227a18c51688790b2387"
+          ]
+        },
+        {
+          "type": "added",
+          "text": "The patch log has a Copy button, and its height can be dragged from its bottom-right corner.",
+          "evidence": [
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/357a6f4e5ccfb7c9c0f4a84271641a16d5ebc72d"
+          ]
+        },
+        {
+          "type": "fixed",
+          "text": "Builds are listed by the date of their version, even when a release page was added for that version later.",
+          "evidence": [
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/91d37476603ac62df7efc43ef72ea6031ac434e9"
+          ]
+        },
+        {
+          "type": "fixed",
+          "text": "The loader keeps finding its own updates as the number of mod releases grows.",
+          "evidence": [
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/baafea659d1b99d56acb189665dd89feefca85f4"
+          ]
+        }
+      ],
+      "contributors": [
+        {
+          "id": "maenhiir",
+          "roles": [
+            "changes"
+          ],
+          "commits": [
+            "357a6f4e5ccfb7c9c0f4a84271641a16d5ebc72d",
+            "ef25d34793f120d1e2c1227a18c51688790b2387",
+            "91d37476603ac62df7efc43ef72ea6031ac434e9",
+            "baafea659d1b99d56acb189665dd89feefca85f4",
+            "c86c0c4ee543fd9ac0c2142081df386da774a772"
+          ]
+        }
+      ],
+      "contributor_range": {
+        "base": "0bee9d69e6a4dcfa5d6e0a25ee897cc2ed9bb49b",
+        "head": "c86c0c4ee543fd9ac0c2142081df386da774a772",
+        "scope": "synergism_modloader/"
+      },
+      "merges": []
+    },
+    {
       "id": "dev-2.14.8a-dev1",
       "version": "2.14.8a-dev1",
       "channel": "dev",
