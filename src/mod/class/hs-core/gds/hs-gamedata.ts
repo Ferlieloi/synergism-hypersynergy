@@ -98,7 +98,6 @@ export class HSGameData extends HSModule {
 
     /**
      * Caches DOM elements used during initialization and later operations.
-     * @returns void
      */
     #cacheDomElements() {
         this.#importSaveButton = document.querySelector('#importFileButton') as HTMLLabelElement;
@@ -109,7 +108,6 @@ export class HSGameData extends HSModule {
     /**
      * Initializes the HSGameData module, sets up DOM elements, fetches pseudo and me data,
      * and hooks the import button for save file interception.
-     * @returns Promise<void>
      */
     async init() {
         const self = this;
@@ -209,7 +207,6 @@ export class HSGameData extends HSModule {
      * Save source: forces a save. The game's save handler calls btoa synchronously, so the capture is processed here at
      * once: the hook's microtask then finds nothing new. Only a changed save is parsed and notified, as on the periodic
      * tick (a refused save, e.g. during a time warp, leaves the data as it was).
-     * @returns Promise<void>
      */
     async forceRefreshGameData(): Promise<void> {
         if (this.#useLiveSource()) {
@@ -233,7 +230,6 @@ export class HSGameData extends HSModule {
 
     /**
      * Reads the PseudoCoin levels (#loadPCoinLevels) and the quark bonuses (#loadQuarkBonus) once, at load.
-     * @returns Promise<void>
      */
     async #refreshFetchedData() {
         await this.#loadPCoinLevels();
@@ -372,7 +368,6 @@ export class HSGameData extends HSModule {
     /**
      * Updates game data and notifies all subscribers.
      * Also triggers initial loadout match if needed.
-     * @returns void
      */
     #gameDataUpdated() {
         if (this.#gameDataAPI && this.#gameData) {
@@ -390,7 +385,6 @@ export class HSGameData extends HSModule {
 
     /**
      * Updates pseudo data in the game data API.
-     * @returns void
      */
     #pseudoDataUpdated() {
         if (this.#gameDataAPI && this.#playerPseudoUpgrades) {
@@ -400,7 +394,6 @@ export class HSGameData extends HSModule {
 
     /**
      * Updates me bonuses in the game data API.
-     * @returns void
      */
     #meDataUpdated() {
         if (this.#gameDataAPI && this.#meBonuses) {
@@ -410,7 +403,6 @@ export class HSGameData extends HSModule {
 
     /**
      * Updates event data in the game data API.
-     * @returns void
      */
     #eventDataUpdated() {
         if (this.#gameDataAPI && this.#gameEvents) {
@@ -425,7 +417,6 @@ export class HSGameData extends HSModule {
      * (window.__HS_consumables, exposed by the patcher; filled by the game's consumables WebSocket).
      * The mod no longer opens a connection of its own: the server refuses a second one for the same account.
      * Without the patcher's capture (bookmarklet, older patch) the bells stay at 0.
-     * @returns void
      */
     #startConsumablesPoll() {
         if (!window.__HS_consumables) {
@@ -462,7 +453,6 @@ export class HSGameData extends HSModule {
      * window.__HS_globalEvent, read here once because the game's first fetch comes before the mod loads.
      * The mod doesn't fetch it (the game's dev asked for less traffic). Without the patch (bookmarklet, older patch)
      * there is no global event. A save without dayCheck makes the game skip its fetch: no event, as in the game.
-     * @returns void
      */
     #startGlobalEventCapture() {
         const w = window;
@@ -564,7 +554,6 @@ export class HSGameData extends HSModule {
      * Enables Game Data Sniffing (GDS) mode, sets up intervals, hooks DOM elements,
      * hooks btoa/atob and starts save processing.
      * Does nothing while the engine is paused (see pauseGDS()).
-     * @returns Promise<void>
      */
     async enableGDS() {
         if (this.#gdsEnabled) return;
@@ -654,7 +643,6 @@ export class HSGameData extends HSModule {
     /**
      * Disables Game Data Sniffing (GDS) mode, clears intervals
      * and removes injected styles.
-     * @returns Promise<void>
      */
     async disableGDS() {
         // Cancels a start still waiting in #startEngine()
@@ -678,7 +666,6 @@ export class HSGameData extends HSModule {
 
     /**
      * Prepares for autosing by hacking native btoa and atob functions.
-     * @returns Promise<void>
      */
     async prepareForAutosing() {
         this.#hackJSNativebtoa();
@@ -687,7 +674,6 @@ export class HSGameData extends HSModule {
 
     /**
      * Dispatches a save event and extracts autosing's quark figures from the latest save data.
-     * @returns Promise<{ quarks: number; goldenQuarks: number; quarksFromAnts: number; quarksThisSingularity: number } | null>
      */
     async getLatestAutosingData(): Promise<{ quarks: number; goldenQuarks: number; quarksFromAnts: number; quarksThisSingularity: number } | null> {
         const saveButton = await HSElementHooker.HookElement<HTMLButtonElement>('#savegame');
@@ -714,7 +700,6 @@ export class HSGameData extends HSModule {
 
     /**
      * Hacks the native atob function to capture decoded save data.
-     * @returns void
      */
     #hackJSNativeAtob() {
         if (this.#atobHacked) return;
@@ -736,7 +721,6 @@ export class HSGameData extends HSModule {
 
     /**
      * Hacks the native btoa function to capture encoded save data.
-     * @returns void
      */
     #hackJSNativebtoa() {
         if (this.#btoaHacked)
@@ -774,8 +758,6 @@ export class HSGameData extends HSModule {
      * then restores the active ambrosia loadout.
      * The GDS engine keeps running: the game loads the save without letting a timer in, and refuses
      * to save while the offline popup is up (G.timeWarp), so a save from the engine can't write over it.
-     * @param e MouseEvent from the import button click.
-     * @returns Promise<void>
      */
     async #loadFromFileHandler(e: MouseEvent) {
         this.#mitm_atob_data = undefined; // Clear stale save data
@@ -895,8 +877,6 @@ export class HSGameData extends HSModule {
 
     /**
      * Subscribes a callback to game data changes.
-     * @param callback Function to call when game data changes.
-     * @returns Subscription ID string or undefined.
      */
     subscribeGameDataChange(callback: (data: GameData) => void): string | undefined {
         const id = HSUtils.uuidv4();
@@ -906,8 +886,6 @@ export class HSGameData extends HSModule {
 
     /**
      * Unsubscribes a callback from game data changes by ID.
-     * @param id Subscription ID to remove.
-     * @returns void
      */
     unsubscribeGameDataChange(id: string) {
         if (this.#gameDataSubscribers.has(id)) {

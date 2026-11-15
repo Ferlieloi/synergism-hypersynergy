@@ -102,6 +102,9 @@ the mod's own small elements (a settings block, a table cell) is fine.
 
 - Each class has a header doc comment (`Class / IsExplicitHSModule / Description / Author`); private fields use `#`
   names. File names follow `hs-<name>.ts`, class names the `HS` prefix.
+- `@param` / `@returns` only when the name and type don't say it all: units, what an absent optional or a `null`
+  means, a format the type can't express, what a boolean flag does. Never restate the type (`@returns void`). Added as
+  code is touched, no sweep.
 - `Author:` names: Shewchou (git `maenhiir`), XxMolkxX (= Ferlieloi, git `XxmolkxX`), Swiffy (git `Jonah`). Several
   authors go on one line, comma-separated, original author first, no "Editor" line; when XxMolkxX and Shewchou are
   both authors, XxMolkxX goes first. A name is added when that person wrote a real part of the class (about 25% of
