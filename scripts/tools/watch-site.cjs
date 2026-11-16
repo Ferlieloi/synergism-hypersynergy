@@ -18,6 +18,8 @@ const watchedFiles = [
   'scripts/tools/build-docs.py',
   'src/mod/resource/json/hs-settings.json',
   'src/mod/resource/json/hs-settings-control-pages.json',
+  'src/mod/resource/json/hs-settings-control-groups.json',
+  'src/mod/class/hs-core/hs-global.ts',
   'src/mod/class/hs-core/gds/hs-calculation-definition.ts'
 ]
 

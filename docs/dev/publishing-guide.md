@@ -6,7 +6,7 @@ The site uses GitHub Pages, matching the original project. No Sites/Cloudflare p
 
 1. Review the relevant mod implementation and developer feature docs.
 2. Edit `docs/data/feature-catalogue.json`. It is the shared source for the public site, inventory and wiki; do not edit generated pages by hand.
-3. Step-by-step guides are hand-written Markdown in `docs/data/guides/<category id>.md`, starting with a `# Title` line. Each becomes `docs/wiki/<category id>-guide.html`, linked from its category and the wiki index. Use only headings (`#` to `####`), paragraphs, flat `-` and `1.` lists, `---` rules (blank line above), `**bold**`, `` `code` ``, `[links](url)` (to the site's own pages: a full URL, made relative on the site; the build stops on a page or anchor that doesn't exist, `docs/features/website.md`), a screenshot's mark as ① or Ⓐ outside bold (see "Images"), a mod setting as `**⚙ Label**` (its label as the Settings tab shows it, a trailing "(…)" optional; the build stops when no panel setting has that label), GitHub's alerts (a `> [!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]` or `[!CAUTION]` line, then `> ` lines of paragraphs or flat lists, then a blank line) and images (see "Images" below): the generator refuses anything else.
+3. Step-by-step guides are hand-written Markdown in `docs/data/guides/<category id>.md`, starting with a `# Title` line. Each becomes `docs/wiki/<category id>-guide.html`, linked from its category and the wiki index. Use only headings (`#` to `####`), paragraphs, flat `-` and `1.` lists, `---` rules (blank line above), `**bold**`, `` `code` ``, `[links](url)` (to the site's own pages: a full URL, made relative on the site; the build stops on a page or anchor that doesn't exist, `docs/features/website.md`), a screenshot's mark as ① or Ⓐ outside bold (see "Images"), a mod setting as `**⚙ Label**` (its label as the Settings tab shows it, a trailing "(…)" optional; the build stops when no panel setting has that label), GitHub's alerts (a `> [!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]` or `[!CAUTION]` line, then `> ` lines of paragraphs or flat lists, then a blank line) and images (see "Images" below): the generator refuses anything else, inline too (italics, raw HTML, `\` escapes, bare addresses, link titles), and what GitHub would read another way: leave a blank line after a list and above an image, start a numbered list at `1.`, give two headings different titles, keep links out of headings (`docs/features/website.md`, "Players' guides").
 
 ## Images
 
@@ -29,7 +29,7 @@ Screenshots go in `docs/res/guides/` (guides) or `docs/res/features/` (catalogue
    node --check docs/js/guide.js
    ```
 
-The generator refuses duplicate feature IDs, unknown settings, unmapped settings and missing source references. It does not access the network or change the mod. `--validate` runs only those catalogue checks and writes nothing: on Dev, use it instead of generating (`docs/dev/releasing.md`, "Porting a change to Live").
+The generator refuses duplicate feature IDs, unknown settings, unmapped settings, missing source references, unknown keys and broken links between its pages (the full list: `docs/features/website.md`). It does not access the network or change the mod. A page it no longer generates (a category or guide removed or renamed) is deleted by a build and reported by `--check`. `--validate` runs those checks, building the pages in memory, and writes nothing: on Dev, use it instead of generating (`docs/dev/releasing.md`, "Porting a change to Live").
 
 ## Update the changelog
 
@@ -45,6 +45,7 @@ At a Live release, regenerate the whole site (step 5 above) and run the changelo
 python scripts/tools/build-docs.py --changelog-only
 python scripts/tools/build-docs.py --changelog-only --check
 python scripts/tests/test-changelog-validation.py
+python scripts/tests/test-build-docs.py
 node --check docs/js/changelog.js
 ```
 
@@ -75,7 +76,7 @@ The attribution helper does not fetch or publish. Review any new identity before
 
 Open `docs/index.html` directly in a browser: the complete site, wiki, relative assets and feature search work without a server. Alternatively run `python -m http.server 8080 --directory docs` and visit `http://localhost:8080/`. No game save is needed.
 
-On Dev, whose checked-in pages lag the data, preview without touching `docs/`: `python scripts/tools/build-docs.py --out local/site` builds the site into the git-ignored `local/site/` and copies `css/`, `js/`, `res/` and the mod's images (`src/mod/resource/img/`) next to it; open `local/site/docs/index.html`. `npm run site` rebuilds that preview at each change of the site's sources (catalogue, guides, changelog, `css/`, `js/`, `res/`, the mod's images, the generator, the settings, the calculations, the version); `start-dev-server.bat` runs it and serves the preview at `http://localhost:8081/docs/` (reload to see a rebuild).
+On Dev, whose checked-in pages lag the data, preview without touching `docs/`: `python scripts/tools/build-docs.py --out local/site` builds the site into the git-ignored `local/site/` and copies `css/`, `js/`, `res/` and the mod's images (`src/mod/resource/img/`) next to it; open `local/site/docs/index.html`. `npm run site` rebuilds that preview at each change of the site's sources (catalogue, guides, changelog, `css/`, `js/`, `res/`, the mod's images, the generator, the settings, the calculations, the version, the Discord thread's address); `start-dev-server.bat` runs it and serves the preview at `http://localhost:8081/docs/` (reload to see a rebuild).
 
 Check these flows at desktop and narrow/mobile widths:
 

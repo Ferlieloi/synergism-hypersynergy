@@ -10,11 +10,14 @@ from __future__ import annotations
 import argparse
 import html
 import json
+import posixpath
 import re
 import shutil
+from collections import Counter
 from datetime import date as date_type
+from html.parser import HTMLParser
 from pathlib import Path
-from urllib.parse import quote, urlparse
+from urllib.parse import quote, unquote, urlparse
 
 ROOT = Path(__file__).resolve().parents[2]
 DOCS = ROOT / "docs"
@@ -61,6 +64,17 @@ def slug(title: str) -> str:
 
 def add(path: str, text: str) -> None:
     OUTPUTS[path] = text.rstrip() + "\n"
+
+
+def known_keys(record: dict, allowed: set[str], where: str) -> None:
+    """A key the generator doesn't know is refused: a misspelled optional one would be ignored, its content lost."""
+    unknown = sorted(set(record) - allowed)
+    if unknown:
+        raise ValueError(f"{where}: unknown key {', '.join(unknown)} (misspelled? known: {', '.join(sorted(allowed))})")
+
+
+def string_list(value: object) -> bool:
+    return isinstance(value, list) and all(isinstance(x, str) for x in value)
 
 
 def ul(items: list[str]) -> str:
@@ -142,6 +156,7 @@ def feature_images(f: dict) -> list[tuple[dict, tuple[str, int, int]]]:
         where = f'{f["id"]}: image {n}'
         if not isinstance(image, dict) or not image.get("src") or not image.get("alt"):
             raise ValueError(f"{where}: needs a src (from docs/) and an alt text")
+        known_keys(image, {"src", "alt", "caption"}, where)
         out.append((image, site_image(DOCS / image["src"], where)))
     return out
 
@@ -417,6 +432,29 @@ def guide_href(cid: str, text: str, href: str) -> str:
     return (page.removeprefix("wiki/") if page.startswith("wiki/") else "../" + page) + (f"#{anchor}" if anchor else "")
 
 
+# Inline Markdown GitHub renders and inline_md wouldn't (it would show as typed): refused, so a guide reads the same
+# on GitHub and on the site.
+UNSUPPORTED_INLINE = [
+    (r"<[A-Za-z/!?]", "raw HTML or an <autolink>"),
+    (r"\\[!-/:-@\[-`{-~]", "a backslash escape"),
+    (r"~~", "strikethrough"),
+    (r"\]\([^)]*\s", "a link title or a space in a link's address"),
+    (r"\]\[|^\[[^\]]+\]:", "a reference link"),
+    (r"(?<!\w)_(?=\S)[^_]*?(?<=\S)_(?!\w)", "_italics_ (only **bold**)"),
+]
+
+
+def check_inline(text: str, where: str) -> None:
+    s = re.sub(r"`[^`]+`", "", text)
+    for pattern, what in UNSUPPORTED_INLINE:
+        if re.search(pattern, s):
+            raise ValueError(f"{where}: {what} isn't supported")
+    if "*" in s.replace("**", ""):
+        raise ValueError(f"{where}: a single * (italics or a rule): only **bold** is supported")
+    if re.search(r"https?://|(?<![\w/.])www\.", re.sub(r"\[[^\]]+\]\([^)\s]+\)", "", s)):
+        raise ValueError(f"{where}: a bare address (a link on GitHub only): write it as [text](url)")
+
+
 def inline_md(text: str, cid: str) -> str:
     out = []
     for part in re.split(r"(`[^`]+`)", text):
@@ -463,6 +501,7 @@ def guide_html(cid: str) -> str:
     callout = False
     # After an image marked #past-headings, until the next image: headings flow beside it (guide.css, .beside-shot)
     beside_shot = False
+    heading_ids: set[str] = set()
 
     def end_para() -> None:
         if para:
@@ -481,16 +520,21 @@ def guide_html(cid: str) -> str:
         if "![" in line:
             raise ValueError(f'{where}: an image goes alone on its line, outside lists and alerts, with a description: ![description](path "optional caption")')
         item = re.match(r"(-|\d+\.) (.+)$", line)
+        check_inline(item[2] if item else line, where)
         if item:
             end_para()
             new_kind = "ul" if item[1] == "-" else "ol"
             if kind != new_kind:
+                if new_kind == "ol" and item[1] != "1.":
+                    # GitHub keeps the first number (and continues a paragraph with it), the site counts from 1
+                    raise ValueError(f"{where}: a numbered list starts at 1. (after an image or a paragraph too)")
                 end_list()
                 out.append(f"<{new_kind}>")
                 kind = new_kind
             out.append(f"<li>{inline_md(item[2], cid)}</li>")
         else:
-            end_list()
+            if kind:
+                raise ValueError(f"{where}: a line right after a list item continues that item on GitHub: leave a blank line")
             para.append(line.strip())
 
     for n, line in enumerate(GUIDES[cid].split("\n"), 1):
@@ -528,8 +572,8 @@ def guide_html(cid: str) -> str:
         # down to the next image
         image = re.match(r'!\[([^\]]+)\]\(([^)\s"#]+)(#past-headings)?(?: "([^"]+)")?\)$', line)
         if image:
-            end_para()
-            end_list()
+            if para or kind:
+                raise ValueError(f"{where}: an image needs a blank line above (GitHub would put it inside the text)")
             site = site_image(DOCS / "data/guides" / image[2], where)
             if image[3] and not is_side_image(site):
                 raise ValueError(f"{where}: #past-headings is for an image that floats ({SIDE_IMAGE_MAX_WIDTH} px wide or less as shown)")
@@ -539,6 +583,8 @@ def guide_html(cid: str) -> str:
         heading = re.match(r"(#{1,4}) (.+)$", line)
         if re.match(r"\s+\S|[>|]|[*+] |```|\d+\) |#{5}", line):
             raise ValueError(f"{where}: Markdown the generator doesn't support")
+        if re.fullmatch(r"\s*(=+|-+)\s*", line) and line != "---":
+            raise ValueError(f"{where}: an underlined heading or another rule: use # headings and --- rules")
         if not line.strip():
             end_para()
             end_list()
@@ -551,8 +597,16 @@ def guide_html(cid: str) -> str:
             end_para()
             end_list()
             level, text = len(heading[1]), heading[2].strip()
+            check_inline(text, where)
+            if "](" in text:
+                raise ValueError(f"{where}: a link in a heading (its id would differ from GitHub's)")
+            heading_id = slug(text)
+            if heading_id in heading_ids:
+                # GitHub numbers the repeats (-1, -2): the site's links would lead elsewhere
+                raise ValueError(f"{where}: two headings with the id {heading_id!r}")
+            heading_ids.add(heading_id)
             beside = ' class="beside-shot"' if beside_shot else ""
-            out.append(f'<h{level} id="{esc(slug(text))}"{beside}>{inline_md(text, cid)}</h{level}>')
+            out.append(f'<h{level} id="{esc(heading_id)}"{beside}>{inline_md(text, cid)}</h{level}>')
         else:
             text_line(line)
     end_para()
@@ -572,15 +626,24 @@ def validate_guides() -> None:
 
 def validate_catalogue() -> None:
     validate_guides()
+    known_keys(CATALOGUE, {"repository", "audited_commit", "branch", "categories"}, "Catalogue")
     ids = [c["id"] for c in CATEGORIES] + [f["id"] for f in FEATURES]
     if len(ids) != len(set(ids)):
         raise ValueError("Duplicate category or feature ID")
     mapped = set()
     for c in CATEGORIES:
+        known_keys(c, {"id", "title", "color", "intro", "icon", "sources", "features"}, f'Category {c.get("id")}')
+        if not string_list(c.get("sources")):
+            raise ValueError(f'Category {c.get("id")}: sources must be a list of paths')
         for f in c["features"]:
             for required in ("id", "title", "summary", "where", "details"):
                 if not f.get(required):
                     raise ValueError(f'{f.get("id")}: missing {required}')
+            known_keys(f, {"id", "title", "summary", "where", "details", "limits", "settings", "sources", "images"}, f["id"])
+            for key in ("details", "limits", "settings", "sources"):
+                # A string would be read one character at a time (one bullet per character)
+                if key in f and not string_list(f[key]):
+                    raise ValueError(f'{f["id"]}: {key} must be a list of strings')
             feature_images(f)
             for key in f.get("settings", []):
                 if key not in SETTINGS:
@@ -595,12 +658,23 @@ def validate_catalogue() -> None:
                     raise ValueError(f"Missing source: {p}")
     if set(SETTINGS) != mapped:
         raise ValueError(f"Unmapped settings: {sorted(set(SETTINGS) - mapped)}")
+    for key, s in SETTINGS.items():
+        for platform in s.get("platforms", []):
+            if platform not in PLATFORM_NOTES:
+                raise ValueError(f"Setting {key}: platform {platform!r} has no note in PLATFORM_NOTES")
+
+
+# Every key a changelog entry may have; research_notes and contributor_range are not read (docs/features/website.md).
+CHANGELOG_ENTRY_KEYS = {"id", "version", "channel", "repository", "commit", "previous_commit", "date", "date_kind",
+                        "status", "release_url", "sources", "changes", "notes", "contributors", "merges", "aliases",
+                        "earlier_changes", "included_version_records", "research_notes", "contributor_range"}
 
 
 def validate_changelog(data: object) -> list[dict]:
     """Validate player-facing history before interpolating any catalogue values into HTML."""
     if not isinstance(data, dict) or data.get("schema_version") != 1:
         raise ValueError("Changelog must be an object with schema_version 1")
+    known_keys(data, {"schema_version", "methodology", "display_policy", "contributor_profiles", "entries"}, "Changelog")
     methodology = data.get("methodology")
     entries = data.get("entries")
     if not isinstance(methodology, list) or any(not isinstance(x, str) or not x.strip() for x in methodology):
@@ -639,6 +713,7 @@ def validate_changelog(data: object) -> list[dict]:
         for change in changes:
             if not isinstance(change, dict) or change.get("type") not in change_types:
                 raise ValueError(f"{where}: each change needs a valid type")
+            known_keys(change, {"type", "text", "evidence"}, f"{where} change")
             nonempty(change, "text", where)
             evidence = change.get("evidence", [])
             if not isinstance(evidence, list) or any(not isinstance(item, str) or not item.strip() for item in evidence):
@@ -647,6 +722,7 @@ def validate_changelog(data: object) -> list[dict]:
     for identifier, profile in profiles.items():
         if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]*", identifier) or not isinstance(profile, dict):
             raise ValueError("Invalid contributor profile")
+        known_keys(profile, {"name", "url", "aliases", "identity_commits"}, f"contributor profile {identifier}")
         nonempty(profile, "name", "contributor profile")
         aliases = profile.get("aliases", [])
         if not isinstance(aliases, list) or any(not isinstance(name, str) or not name.strip() for name in aliases):
@@ -663,6 +739,7 @@ def validate_changelog(data: object) -> list[dict]:
         where = f"changelog entry {i + 1}"
         if not isinstance(entry, dict):
             raise ValueError(f"{where} must be an object")
+        known_keys(entry, CHANGELOG_ENTRY_KEYS, where)
         identifier = nonempty(entry, "id", where)
         if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", identifier) or identifier in ids:
             raise ValueError(f"{where}: invalid or duplicate id {identifier!r}")
@@ -713,6 +790,7 @@ def validate_changelog(data: object) -> list[dict]:
         for credit in contributors:
             if not isinstance(credit, dict) or credit.get("id") not in profiles or credit["id"] in credited:
                 raise ValueError(f"{where}: unknown or duplicate contributor")
+            known_keys(credit, {"id", "roles", "commits"}, f"{where} contributor {credit['id']}")
             credited.add(credit["id"])
             roles = credit.get("roles")
             if not isinstance(roles, list) or not roles or any(role not in {"changes", "release", "merge"} for role in roles) or len(roles) != len(set(roles)):
@@ -731,6 +809,8 @@ def validate_changelog(data: object) -> list[dict]:
         for merge in merges:
             if not isinstance(merge, dict) or merge.get("direction") not in {"dev-to-live", "live-to-dev"}:
                 raise ValueError(f"{where}: invalid merge direction")
+            known_keys(merge, {"direction", "from_entry_ids", "partial_entry_ids", "summary", "changes", "commit", "commits",
+                               "evidence"}, f"{where} merge")
             expected_channel = "live" if merge["direction"] == "dev-to-live" else "dev"
             if entry["channel"] != expected_channel:
                 raise ValueError(f"{where}: merge direction does not match the version channel")
@@ -763,6 +843,7 @@ def validate_changelog(data: object) -> list[dict]:
         for source in sources:
             if not isinstance(source, dict):
                 raise ValueError(f"{where}: each source must be an object")
+            known_keys(source, {"label", "url"}, f"{where} source")
             nonempty(source, "label", where)
             github_url(source.get("url"), where)
         validate_changes(entry.get("changes"), where)
@@ -773,11 +854,21 @@ def validate_changelog(data: object) -> list[dict]:
     return entries
 
 
+def version_key(version: str) -> tuple:
+    """A version's place in the release order, as compareVersions (scripts/release-version-tags.mjs) sorts it: digits
+    compared as numbers (2.10 after 2.9, dev10 after dev9), case ignored, a suffix (after the first "-") after the
+    version it extends (2.14.5, then 2.14.5-dev1: a Dev build is named after the version it starts from)."""
+    def parts(text: str) -> tuple:
+        return tuple((0, int(t), "") if t.isdigit() else (1, 0, t.casefold()) for t in re.findall(r"\d+|\D+", text))
+    main, _, suffix = version.partition("-")
+    return parts(main), 1 if suffix else 0, parts(suffix)
+
+
 def displayed_changelog_entries(data: dict) -> list[dict]:
     history = validate_changelog(data)
     released_only = data.get("display_policy") == "released-only"
     return sorted((entry for entry in history if not released_only or entry["status"] in {"published", "tagged"}),
-                  key=lambda entry: (entry["date"], entry["version"], entry["channel"]), reverse=True)
+                  key=lambda entry: (entry["date"], version_key(entry["version"]), entry["channel"]), reverse=True)
 
 
 _VERSION_HREF: list[str] = []
@@ -966,15 +1057,33 @@ def settings_outputs() -> None:
          description="Every Hypersynergism setting, page by page as the Settings tab shows them: its default and the feature it belongs to.")
 
 
-def calculation_outputs() -> None:
-    path = "src/mod/class/hs-core/gds/hs-calculation-definition.ts"
-    text = (ROOT / path).read_text(encoding="utf-8")
+CALCULATIONS = "src/mod/class/hs-core/gds/hs-calculation-definition.ts"
+
+
+def parse_calculations(text: str) -> list[tuple[str, str, bool]]:
+    """The calculation picker's entries (toolingSupport: true) as (name, function, supportsReduce), read by pattern.
+    Each calculationName: block must give its name and fnName as double-quoted strings and its flags as true or false
+    (an absent flag is false): an entry written another way stops the run instead of disappearing from the page."""
     entries = []
     for block in re.split(r"(?=calculationName:)", text)[1:]:
+        where = f'{CALCULATIONS}: {block.split(chr(10), 1)[0].strip()}'
         name = re.match(r'calculationName:\s*"([^"]+)"', block)
         fn = re.search(r'fnName:\s*"([^"]+)"', block)
-        if name and fn and re.search(r"toolingSupport:\s*true", block):
-            entries.append((name[1], fn[1], bool(re.search(r"supportsReduce:\s*true", block))))
+        if not name or not fn:
+            raise ValueError(f"{where}: no double-quoted calculationName and fnName (the calculation scrape reads only those)")
+        flags = {}
+        for flag in ("toolingSupport", "supportsReduce"):
+            value = re.search(rf"\b{flag}:\s*([^,\s}}]+)", block)
+            if value and value[1] not in ("true", "false"):
+                raise ValueError(f"{where}: {flag} must be written true or false (the calculation scrape reads only those)")
+            flags[flag] = bool(value) and value[1] == "true"
+        if flags["toolingSupport"]:
+            entries.append((name[1], fn[1], flags["supportsReduce"]))
+    return entries
+
+
+def calculation_outputs() -> None:
+    entries = parse_calculations((ROOT / CALCULATIONS).read_text(encoding="utf-8"))
     if not entries:
         raise ValueError("Calculation extraction failed")
     if not any(reduce for _, _, reduce in entries):
@@ -1156,10 +1265,69 @@ def build() -> None:
     add("docs/FEATURE-AUDIT.md", audit)
 
 
+class PageRefs(HTMLParser):
+    """A generated page's ids, and the targets of its links and images."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.ids: list[str] = []
+        self.refs: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        for name, value in attrs:
+            if name == "id" and value:
+                self.ids.append(value)
+            elif name in ("href", "src") and value:
+                self.refs.append(value)
+
+
+def check_outputs() -> None:
+    """The pages' own links lead somewhere, the generator's hand-written ones included: a relative href or src names a
+    page of this run or a file of the checkout, an anchor exists on a page of this run (a page this run doesn't build,
+    with --changelog-only, isn't read: on Dev the checked-in pages lag), and no page uses an id twice. Links leaving
+    the site aren't checked (no network)."""
+    pages: dict[str, PageRefs] = {}
+    for name, text in OUTPUTS.items():
+        if name.endswith(".html"):
+            pages[name] = PageRefs()
+            pages[name].feed(text)
+            pages[name].close()
+    problems = []
+    for name, refs in pages.items():
+        problems += [f"{name}: id {i!r} used {n} times" for i, n in Counter(refs.ids).items() if n > 1]
+        for ref in dict.fromkeys(refs.refs):
+            if re.match(r"[a-z][a-z0-9+.-]*:|//", ref, re.I):
+                continue
+            path, _, anchor = ref.partition("#")
+            path = unquote(path.split("?", 1)[0])
+            target = posixpath.normpath(posixpath.join(posixpath.dirname(name), path)) if path else name
+            if path.endswith("/"):
+                target = posixpath.join(target, "index.html")
+            if target.startswith("../") or (target not in OUTPUTS and not (ROOT / target).is_file()):
+                problems.append(f"{name}: {ref} leads to no file")
+            elif anchor and target in pages and unquote(anchor) not in pages[target].ids:
+                problems.append(f"{name}: {ref}: {target} has no #{unquote(anchor)}")
+    if problems:
+        raise ValueError("Broken links in the generated pages:\n" + "\n".join(problems))
+
+
+GENERATED_MARK = "<!-- Generated by scripts/tools/build-docs.py."
+
+
+def orphan_pages(out: Path) -> list[str]:
+    """Pages an earlier run generated (they carry its comment) that no output writes any more: a category or guide
+    removed or renamed. Left in place, they would stay online."""
+    if not (out / "docs").is_dir():
+        return []
+    return sorted(rel for p in (out / "docs").rglob("*.html")
+                  if (rel := p.relative_to(out).as_posix()) not in OUTPUTS
+                  and GENERATED_MARK in p.read_text(encoding="utf-8"))
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", action="store_true", help="Verify generated files are current without writing")
-    parser.add_argument("--validate", action="store_true", help="Validate the catalogue against the checkout and the changelog, without generating anything")
+    parser.add_argument("--validate", action="store_true", help="Validate the catalogue against the checkout, the changelog and every page's links, building in memory without writing anything")
     parser.add_argument("--changelog-only", action="store_true", help="Generate or check only docs/changelog.html")
     parser.add_argument("--out", metavar="DIR", type=Path,
                         help="Write the site to DIR instead of the checkout, with the hand-written css/, js/ and res/ "
@@ -1173,9 +1341,11 @@ def main() -> None:
     if args.out and out == ROOT:
         parser.error("--out must be another folder than the checkout (omit it to write the checkout)")
     if args.validate:
-        validate_catalogue()
-        validate_changelog(json.loads((DOCS / "data/changelog.json").read_text(encoding="utf-8")))
-        print(f"Catalogue valid: {len(FEATURES)} features, {len(CATEGORIES)} categories, {len(SETTINGS)} settings. Changelog valid.")
+        # Every page built in memory, nothing written: the links are checked too (on Dev, the only check run)
+        build()
+        check_outputs()
+        print(f"Catalogue valid: {len(FEATURES)} features, {len(CATEGORIES)} categories, {len(SETTINGS)} settings. "
+              "Changelog valid. Links valid.")
         return
     if args.changelog_only:
         validate_catalogue()
@@ -1183,7 +1353,12 @@ def main() -> None:
         changelog_outputs()
     else:
         build()
-    stale = []
+    check_outputs()
+    orphans = [] if args.changelog_only else orphan_pages(out)
+    stale = [f"{name} (no longer generated: delete it)" for name in orphans] if args.check else []
+    for name in [] if args.check else orphans:
+        (out / name).unlink()
+        print(f"Deleted {name}: no longer generated")
     for name, content in OUTPUTS.items():
         p = out / name
         if args.check:
