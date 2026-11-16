@@ -521,8 +521,6 @@
     flex: 1 1 400px;
     max-height: 400px;
     overflow-y: auto;
-    /* Clip the floating drag rows and connector to the list, including when they scroll past its edges. */
-    clip-path: inset(0 round 3px);
     padding: 10px 10px 10px 6px;
     background-color: #1c1b22;
     border: 1px solid #353439;
@@ -533,6 +531,19 @@
 .hs-challenge-list {
     --hs-jump-gutter: 25px;
     position: relative;
+}
+
+.hs-challenge-drag-layer {
+    position: fixed;
+    z-index: 10000;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.hs-challenge-drag-ghosts {
+    position: absolute;
+    inset: 0 auto auto 0;
+    will-change: transform;
 }
 
 .hs-challenge-list:has(> .hs-jump-lines) {
@@ -575,8 +586,8 @@
 }
 
 .hs-jump-lifted-line {
-    position: fixed;
-    z-index: 10001;
+    position: absolute;
+    z-index: 1;
     pointer-events: none;
     overflow: visible;
 }
@@ -694,18 +705,12 @@
 /* The row or separator being dragged (its size and place are set inline), and its faded copy in the list */
 .hs-challenge-lifted,
 .hs-challenge-item.hs-challenge-lifted {
-    position: fixed;
-    z-index: 10000;
+    position: absolute;
     box-sizing: border-box;
     cursor: grabbing;
     pointer-events: none;
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
-    transform: scale(1.03);
-    transition: transform 0.15s ease;
-}
-
-.hs-challenge-dragging-pair > .hs-challenge-lifted {
-    transform: none;
+    transition: none;
 }
 
 .hs-challenge-placeholder {

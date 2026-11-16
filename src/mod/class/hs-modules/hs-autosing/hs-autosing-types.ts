@@ -202,9 +202,7 @@ export interface IfJumpParams {
     ifJumpOperator: ">" | "<";
     ifJumpValue: number;       // Comparison value (used in challenges mode)
     ifJumpMultiplier?: number; // 10^x multiplier (used in stored_c15 mode)
-    // Distance from the IF. Storage also includes the resolved index so older builds can use the same strategies.
-    ifJumpOffset?: number;
-    ifJumpIndex?: number;
+    ifJumpIndex: number;
     // Jumps taken at most per phase pass, then the IF goes on to the next step (absent or 0: no limit)
     ifJumpMaxJumps?: number;
 };
@@ -323,24 +321,6 @@ declare global {
 }
 
 export type IsJumpChallenge = Challenge & { ifJump: IfJumpParams };
-
-/** Convert a list in place, keeping the same destinations in either representation. */
-export function useIfJumpOffsets(steps: Challenge[], keepIndex = false): void {
-    for (const [index, { challengeNumber, ifJump }] of steps.entries()) {
-        if (challengeNumber !== IF_JUMP_VALUE || ifJump?.ifJumpIndex === undefined) continue;
-        ifJump.ifJumpOffset = ifJump.ifJumpIndex - index;
-        if (!keepIndex) delete ifJump.ifJumpIndex;
-    }
-}
-
-export function resolveIfJumpOffsets(steps: Challenge[]): void {
-    for (const [index, { challengeNumber, ifJump }] of steps.entries()) {
-        if (challengeNumber !== IF_JUMP_VALUE || ifJump?.ifJumpOffset === undefined) continue;
-        // An older editor may have changed the absolute destination without updating the offset.
-        if (ifJump.ifJumpIndex === undefined) ifJump.ifJumpIndex = index + ifJump.ifJumpOffset;
-        delete ifJump.ifJumpOffset;
-    }
-}
 
 /** A valid `ifJumpMaxJumps`: absent, or a whole number ≥ 0 (0: no limit). */
 export const isIfJumpMaxJumps = (value: unknown): boolean =>
