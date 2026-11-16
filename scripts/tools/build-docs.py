@@ -241,6 +241,10 @@ def thumbnail_html(prefix: str, image: tuple[str, int, int]) -> str:
             f'decoding="async"></a>')
 
 
+# The mod's own icon (its panel's), from docs/: the header's picture and the browser tab's icon on every page.
+MOD_ICON = "../src/mod/resource/img/hs-panel-icon.png"
+
+
 def page(path: str, title: str, tab: str, body: str, *, depth: int = 0,
          source: str = "docs/data/feature-catalogue.json",
          scripts: tuple[str, ...] = (),
@@ -253,7 +257,7 @@ def page(path: str, title: str, tab: str, body: str, *, depth: int = 0,
             ("features", "Features", "features.html", "green"),
             ("wiki", "Wiki", "wiki/index.html", "cyan"),
             ("changelog", "Changelog", "changelog.html", "plum"),
-            ("github", "Github", "github.html", "lightskyblue"),
+            ("github", "GitHub", "github.html", "lightskyblue"),
             ("about", "About", "about.html", "white")]
     nav = "".join(
         f'<a id="{key}-btn" href="{prefix}{href}" style="--tab-color:{color}"'
@@ -289,7 +293,7 @@ def page(path: str, title: str, tab: str, body: str, *, depth: int = 0,
   <meta name="description" content="{esc(description)}">
   <meta name="theme-color" content="#18171c">
   <title>{esc(title)} · Hypersynergism</title>
-  <link rel="icon" href="{prefix}res/coin.png" type="image/png">
+  <link rel="icon" href="{prefix}{MOD_ICON}" type="image/png">
   <link rel="stylesheet" href="{prefix}css/original.css">
   <link rel="stylesheet" href="{prefix}css/guide.css">{folding_script}
   <script src="{prefix}js/guide.js" defer{guide_onerror}></script>{extra_scripts}
@@ -300,7 +304,7 @@ def page(path: str, title: str, tab: str, body: str, *, depth: int = 0,
   <header>
     <div id="first-row" aria-label="Guide overview">{counter_html}</div>
     <div id="second-row"><div id="second-row-left-container"><div class="second-row-subcontainer">
-      <img class="res-icon" src="{prefix}res/coin.png" width="32" height="32" alt="">
+      <img class="res-icon" src="{prefix}{MOD_ICON}" width="32" height="32" alt="">
       <div class="second-row-disp">Hypersynergism<br>Guide for <a class="version-link" href="{prefix}{version_entry_href()}"><span id="version_num">v{esc(VERSION)}</span></a></div>
     </div></div><p class="header-credit">A Synergism QoL mod<br><span>Maintained by Ferlieloi, maenhiir &amp; contributors</span></p></div>
     <nav aria-label="Main navigation"><div id="tabs">{nav}</div></nav>
@@ -997,6 +1001,40 @@ def guide_link_md(c: dict, target: str) -> list[str]:
     return [f"Step by step: [{guide_title(c['id'])}]({target})."] if c["id"] in GUIDES else []
 
 
+def latest_live_release() -> str:
+    """The GitHub page's "Latest Live release" line, from the changelog (no network); empty when none is published."""
+    raw = json.loads((DOCS / "data/changelog.json").read_text(encoding="utf-8"))
+    entry = next((e for e in displayed_changelog_entries(raw)
+                  if e["channel"] == "live" and e["status"] == "published" and e.get("release_url")), None)
+    if not entry:
+        return ""
+    return (f'<p>Latest Live release: <a href="changelog.html#{esc(entry["id"])}">v{esc(entry["version"])}</a>, '
+            f'{esc(entry["date"])} (<a href="{esc(entry["release_url"])}">on GitHub</a>).</p>')
+
+
+def github_outputs() -> None:
+    """The GitHub page: the links grouped by what a visitor wants, each saying what it leads to."""
+    dev_repo = "https://github.com/maenhiir/synergism-hypersynergy"
+    page("docs/github.html", "GitHub", "github", f'''<h1 class="logo-heading"><img src="res/github.png" width="108" height="40" alt="GitHub"></h1>
+<p>The mod's code, releases and bug reports are on GitHub. Links lead to Live, the channel players get by default, unless they say otherwise.</p>
+<h2>Get the mod</h2>
+{latest_live_release()}<ul><li><a href="wiki/getting-started-guide.html">Installation guide</a>: Tampermonkey or the Steam loader, step by step.</li>
+<li><a href="{REPO}/releases">Releases</a>: every version's notes, and the Windows loader's installer.</li></ul>
+<h2>Report a bug or ask for a feature</h2>
+<ul><li><a href="{REPO}/issues">Issues</a>: open bugs and requests. Search them before opening a new one.</li>
+<li><a href="index.html#help">Help &amp; bug reports</a>: what to send with a bug, and the Discord thread.</li></ul>
+<h2>Source</h2>
+<ul><li><a href="{REPO}">Live repository</a> (Ferlieloi): the default channel, more stable.</li>
+<li><a href="{dev_repo}">Dev repository</a> (maenhiir): new features first.</li>
+<li><a href="wiki/getting-started.html#channels">Live and Dev channels</a>: what differs and how to switch.</li></ul>
+<h2>Contributing</h2>
+<p><a href="{REPO}/blob/master/docs/README.md">Developer documentation</a>: how the mod and this website are built, and the rules each feature follows.</p>
+<h2>Related</h2>
+<ul><li><a href="https://github.com/ahvonenj/synergism-hypersynergy">Original repository</a> (ahvonenj): the project this mod continues.</li>
+<li><a href="https://github.com/Pseudo-Corp/SynergismOfficial">Synergism's source</a>: the game itself.</li></ul>''',
+         description="Hypersynergism on GitHub: releases, the Windows loader, bug reports, the Live and Dev repositories and the developer docs.")
+
+
 def guide_outputs() -> None:
     for cid in GUIDES:
         c = next(x for x in CATEGORIES if x["id"] == cid)
@@ -1066,8 +1104,10 @@ def build() -> None:
          folding=True, description=f"All {feature_count} Hypersynergism features, searchable: what each does, where to find it and its limits.")
 
     wiki_intro = f'<h1>Hypersynergism wiki</h1><p>Player guides for the maintained mod: what each feature does, where to find it, and its availability and limits.</p>'
-    guides_html = ('<h2>Guides</h2><ul>' + "".join(
-        f'<li><a href="{cid}-guide.html">{esc(guide_title(cid))}</a></li>' for cid in GUIDES) + '</ul>') if GUIDES else ""
+    # In category order (the installation guide first), each with its category's icon.
+    guides_html = ('<h2>Guides</h2><ul class="category-list guide-list">' + "".join(
+        f'<li>{category_icon(c, "../", 24)}<a href="{c["id"]}-guide.html">{esc(guide_title(c["id"]))}</a></li>'
+        for c in CATEGORIES if c["id"] in GUIDES) + '</ul>') if GUIDES else ""
     page("docs/wiki/index.html", "Wiki", "wiki", wiki_intro + category_list("../", "") + guides_html
          + '<h2>Reference</h2><ul><li><a href="settings.html">Every setting and saved preference</a></li>'
          '<li><a href="calculations.html">Calculation picker reference</a></li>'
@@ -1092,11 +1132,7 @@ def build() -> None:
     guide_outputs()
 
     changelog_outputs()
-    page("docs/github.html", "Github", "github", f'''<h1>Github</h1>
-<p>Source, downloads, issues and the original project.</p>
-<a href="{REPO}" aria-label="Open the maintained repository"><img src="res/github.png" id="github-logo" width="180" height="67" alt="GitHub"></a>
-<ul><li><a href="{REPO}">Maintained Live repository</a></li><li><a href="{REPO}/releases">Releases &amp; Windows loader</a></li><li><a href="{REPO}/issues">Bug reports &amp; requests</a></li><li><a href="https://github.com/maenhiir/synergism-hypersynergy">Dev channel</a></li><li><a href="https://github.com/ahvonenj/synergism-hypersynergy">Original repository</a></li><li><a href="https://github.com/Pseudo-Corp/SynergismOfficial">Synergism game source</a></li></ul>''',
-         description="Hypersynergism on GitHub: source, releases, the Windows loader and bug reports.")
+    github_outputs()
     page("docs/about.html", "About", "about", '''<h1>About Hypersynergism</h1>
 <p>A community mod for <a href="https://synergism.cc/">Synergism</a>. Originally created by <a href="https://github.com/ahvonenj">ahvonenj</a>, now maintained by <a href="https://github.com/Ferlieloi">Ferlieloi</a> (XxmolkxX), <a href="https://github.com/maenhiir">maenhiir</a> (Shewchou) and contributors.</p>
 <h2>The original style</h2><p>This guide adapts the <a href="https://ahvonenj.github.io/synergism-hypersynergy/">original Hypersynergism website</a>: the dark background, resource icons, compact colored tabs and straightforward text layout.</p>

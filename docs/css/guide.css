@@ -6,7 +6,11 @@ body { background: #18171c; color: ghostwhite; font-family: Arial, sans-serif; }
 header { min-height: 0; }
 nav { margin-top: 10px; }
 #second-row { align-items: center; }
-#second-row-left-container { flex-basis: 50%; }
+/* The title halfway between the left edge (24 px, the credit line's gap on the right) and the middle of the left half,
+   where the original site centred it (title about 150 px wide). */
+#second-row-left-container { flex-basis: 50%; justify-content: flex-start; padding-left: max(24px, calc(12.5% - 26px)); }
+/* The mod's icon is no pixel art: scaled smoothly at any zoom, as in the game (original.css pixelates the coin). */
+.res-icon { image-rendering: auto; }
 .second-row-subcontainer { width: auto; }
 .header-credit { font-size: 12px; line-height: 1.6; color: #c3c0ce; margin-right: 24px; text-align: right; margin-left: auto; }
 .header-credit span { color: #96939f; }
@@ -42,6 +46,8 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .sources { overflow-wrap: anywhere; }
 .category-sources { margin-top: 2rem; }
 .category-list { columns: 2; column-gap: 40px; max-width: 850px; list-style: none; }
+/* Three guides: one column reads better than two uneven ones. */
+.guide-list { columns: 1; }
 .page-wrapper .category-list { margin-left: 30px; padding-left: 0; }
 /* Padding, not margin: a column break drops the second column's first top margin and misaligns the columns. */
 .category-list li { break-inside: avoid; margin: 0; padding: 2.5px 0; }
@@ -49,6 +55,8 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
    guide.js turns the heading into a toggle. */
 .category-icon { vertical-align: middle; margin: -4px 10px 0 0; }
 .page-wrapper h1 .category-icon { margin-right: 12px; }
+/* The GitHub page's heading is GitHub's logo, at the heading's height (original.css's #github-logo is no longer used). */
+.logo-heading img { display: block; height: 40px; width: auto; padding: 4px 8px; border-radius: 8px; background: ghostwhite; }
 /* 24 px icons in a 25.6 px line: negative vertical margins keep the rows as tall as the text alone. */
 .category-list .category-icon { margin: -5px 8px -3px 0; }
 .fold-toggle .category-icon { align-self: center; margin: 0; }
