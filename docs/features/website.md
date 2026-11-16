@@ -5,11 +5,12 @@ How the player website is built and how it behaves. How to update and publish it
 ## Hosting
 - **GitHub Pages serves Live's `master` from the repository root** (Pages source `/`, not `/docs`): page addresses contain `docs/` (`https://ferlieloi.github.io/synergism-hypersynergy/docs/features.html`). The generated root `index.html` redirects the bare address to `docs/`; the root `.nojekyll` turns Jekyll off for the whole repository.
 - **Links that rely on the root source:** the mod's Tools tab website button (`HSGlobal.General.modWebsiteUrl`, the bare address), the strategy editor's guide link (`modWebsiteUrl` + `docs/wiki/autosing-guide.html#making-or-editing-a-strategy`, `hs-autosing-strategy-modal.ts`), the README, the GitHub Wiki's pages, and the pictures taken from the mod's folder (`src/mod/resource/img/`: the category icons, "Sources and outputs", and the header's icon, "Every page"). Switching Pages to `/docs` breaks them all.
+- **Search engines are pointed to Live's site**, not the original repository's: every page, and the root redirect, has a canonical link to its address on the site (`site_url()`: `SITE` + its path, an index page as its folder), and `docs/sitemap.xml` lists every page (no dates: each run would differ), for Google Search Console. The repository being a fork of ahvonenj's let the original rank first.
 - **The site is served from Live only.** Dev commits the data, never the generated pages (`docs/dev/releasing.md`, "Porting a change to Live"), so the pages in a Dev checkout lag the data and `--check` fails there.
 - **The native GitHub Wiki** (`Ferlieloi/synergism-hypersynergy.wiki`, its own repository) holds only pages pointing to the website since 2026-11-04, written by hand there: one per category page plus Home, Mod-Features, the two references, sidebar and footer. Nothing in the repository generates them (not a generated Markdown wiki: it only duplicated the site).
 
 ## Sources and outputs
-`build-docs.py` writes 26 files (Python, no dependency, no network). HTML pages start with a comment naming their source.
+`build-docs.py` writes 29 files (Python, no dependency, no network). HTML pages start with a comment naming their source.
 
 | Source | Generated from it |
 |---|---|
@@ -20,7 +21,7 @@ How the player website is built and how it behaves. How to update and publish it
 | `src/mod/class/hs-core/gds/hs-calculation-definition.ts` | `wiki/calculations.html` |
 | `package.json` `version` | the header's "Guide for v…" on every page |
 | `src/mod/class/hs-core/hs-global.ts` `modDiscordThreadUrl` | the Discord thread links (home page's Help, wiki index); not found = the run stops |
-| the generator itself | `about.html`, `github.html`, root `index.html`, both `.nojekyll`; every page text that isn't data (intros, the home page's steps, the changelog's introduction, the audit's "Reviewed distinctions" and "Verification limits") |
+| the generator itself | `about.html`, `github.html`, root `index.html`, both `.nojekyll`, `sitemap.xml` (from the pages it built); every page text that isn't data (intros, the home page's steps, the changelog's introduction, the audit's "Reviewed distinctions" and "Verification limits") |
 
 - **Read from the checkout**: version, settings and calculations come from the branch the generator runs on (why Dev's pages would show Dev's version and settings).
 - **The site reads the mod's files, never the reverse:** the mod's build reads nothing in `docs/`, so site work can't break or change a mod release. What both show lives on the mod's side and the site points to it (settings, the mod's own icons in `src/mod/resource/img/`), with no copy.

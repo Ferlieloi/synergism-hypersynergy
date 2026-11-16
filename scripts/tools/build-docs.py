@@ -66,6 +66,21 @@ def add(path: str, text: str) -> None:
     OUTPUTS[path] = text.rstrip() + "\n"
 
 
+def site_url(path: str) -> str:
+    """A page's address on the site, the one search engines are told to show (canonical link, sitemap). An index page
+    is its folder's address, as players get it (the mod's website button, the root redirect)."""
+    rel = path.removeprefix("docs/")
+    return SITE + (rel.removesuffix("index.html") if rel == "index.html" or rel.endswith("/index.html") else rel)
+
+
+def sitemap_output() -> None:
+    """docs/sitemap.xml: every page of the site, for search engines. No dates: each run would differ."""
+    urls = "".join(f"  <url><loc>{esc(site_url(name))}</loc></url>\n" for name in sorted(OUTPUTS)
+                   if name.startswith("docs/") and name.endswith(".html"))
+    add("docs/sitemap.xml", '<?xml version="1.0" encoding="UTF-8"?>\n'
+        f'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n{urls}</urlset>')
+
+
 def known_keys(record: dict, allowed: set[str], where: str) -> None:
     """A key the generator doesn't know is refused: a misspelled optional one would be ignored, its content lost."""
     unknown = sorted(set(record) - allowed)
@@ -314,6 +329,7 @@ def page(path: str, title: str, tab: str, body: str, *, depth: int = 0,
   <meta name="description" content="{esc(description)}">
   <meta name="theme-color" content="#18171c">
   <title>{esc(title)} · Hypersynergism</title>
+  <link rel="canonical" href="{esc(site_url(path))}">
   <link rel="icon" href="{prefix}{MOD_ICON}" type="image/png">
   <link rel="stylesheet" href="{prefix}css/original.css">
   <link rel="stylesheet" href="{prefix}css/guide.css">{folding_script}
@@ -1195,6 +1211,7 @@ def build() -> None:
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="refresh" content="0;url=docs/">
+  <link rel="canonical" href="''' + esc(SITE) + '''">
   <title>Hypersynergism</title>
   <style>body { background: #18171c; color: ghostwhite; font: 16px sans-serif; margin: 3rem; } a { color: #82baff; }</style>
 </head>
@@ -1271,6 +1288,7 @@ def build() -> None:
     audit = "\n\n".join(source_rows)
     audit = re.sub(r"(?<=\|)\n\n(?=\|)", "\n", audit)
     add("docs/FEATURE-AUDIT.md", audit)
+    sitemap_output()
 
 
 class PageRefs(HTMLParser):

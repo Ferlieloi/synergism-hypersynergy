@@ -1,6 +1,7 @@
 """The website generator's logic (scripts/tools/build-docs.py): data in, data out, no page layout.
 Run: python scripts/tests/test-build-docs.py"""
 import importlib.util
+import re
 import sys
 import tempfile
 import unittest
@@ -177,6 +178,21 @@ class CalculationScrapeTests(unittest.TestCase):
             B.parse_calculations('{ calculationName: "A", fnName: FN, toolingSupport: true }')
         with self.assertRaisesRegex(ValueError, 'true or false'):
             B.parse_calculations('{ calculationName: "A", fnName: "f", toolingSupport: ENABLED }')
+
+
+class SiteUrlTests(unittest.TestCase):
+    def test_index_pages_are_their_folder(self):
+        self.assertEqual(B.site_url('docs/index.html'), B.SITE)
+        self.assertEqual(B.site_url('docs/wiki/index.html'), B.SITE + 'wiki/')
+        self.assertEqual(B.site_url('docs/wiki/heater-guide.html'), B.SITE + 'wiki/heater-guide.html')
+        self.assertEqual(B.site_url('docs/reindex.html'), B.SITE + 'reindex.html')
+
+    def test_sitemap_lists_the_site_pages_only(self):
+        outputs = {'index.html': '', 'docs/features.html': '', 'docs/wiki/index.html': '', 'docs/FEATURES.md': ''}
+        with mock.patch.object(B, 'OUTPUTS', outputs):
+            B.sitemap_output()
+        self.assertEqual(re.findall(r'<loc>([^<]+)</loc>', outputs['docs/sitemap.xml']),
+                         [B.SITE + 'features.html', B.SITE + 'wiki/'])
 
 
 class OutputChecksTests(unittest.TestCase):
