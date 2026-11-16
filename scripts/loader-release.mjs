@@ -2,7 +2,9 @@
 // Releases the Windows loader (synergism_modloader): the procedure of docs/dev/releasing.md, "Loader release".
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { join, resolve } from 'path';
-import { askForInput, askYesNo, fatal, info, log, logWait, run, runAndCheck, stop, success, warn } from './release-common.mjs';
+import {
+    askForInput, askYesNo, fatal, findPython, info, log, logWait, run, runAndCheck, stop, success, warn,
+} from './release-common.mjs';
 import {
     LIVE_REPO, TAG_PREFIX, buildChangelogEntry, bumpVersionFiles, changelogId, compareVersions, expectedAssets,
     nextPatch, parseVersion, releaseCommitSubject, releaseTitle, tagMessage,
@@ -305,14 +307,6 @@ function readChangelog() {
     return JSON.parse(readFileSync(changelogPath, 'utf8'));
 }
 
-function pythonCommand() {
-    for (const cmd of ['python', 'python3', 'py']) {
-        const r = run(cmd, ['--version']);
-        if (!r.error && r.status === 0) return cmd;
-    }
-    return null;
-}
-
 /** build-docs.py --validate, its output shown; true when it passes. */
 function validateChangelog(python) {
     const r = run(python, ['scripts/tools/build-docs.py', '--validate'], { cwd: root, stdio: 'inherit' });
@@ -348,7 +342,7 @@ async function changelogStep(version, tagCommit, previous, release, notes) {
         success(`Skeleton entry ${id} written at the top of docs/data/changelog.json's entries.`);
     }
 
-    const python = pythonCommand();
+    const python = findPython();
     if (!python) {
         warn('Python not found: validate the entry with python scripts/tools/build-docs.py --validate');
         return;

@@ -199,6 +199,27 @@ class OutputChecksTests(unittest.TestCase):
                          "id 'x' used 2 times"]:
             self.assertIn(fragment, message)
 
+    def test_markdown_links_to_the_site_and_relative_images(self):
+        with self.assertRaises(ValueError) as caught:
+            self.check({'docs/FEATURES.md': f'[s]({B.SITE}wiki/settings.html#k) [ok]({B.SITE}wiki/settings.html#j) '
+                                            f'[home]({B.SITE}) ![i](res/missing.png) [gh](https://github.com/x/y)',
+                        'docs/index.html': '', 'docs/wiki/settings.html': '<tr id="j"></tr>'})
+        message = str(caught.exception)
+        self.assertIn('docs/wiki/settings.html has no #k', message)
+        self.assertIn('res/missing.png leads to no file', message)
+        self.assertEqual(message.count('\n'), 2, message)
+
+    def test_site_scripts_find_what_they_look_up(self):
+        page = '<script src="js/changelog.js"></script><select id="changelog-channel"></select>'
+        with self.assertRaises(ValueError) as caught:
+            self.check({'docs/changelog.html': page})
+        message = str(caught.exception)
+        self.assertIn('docs/js/changelog.js looks up #changelog-search', message)
+        self.assertIn('docs/js/changelog.js looks up .changelog-entry', message)
+        self.assertNotIn('#changelog-channel', message)
+        with mock.patch.object(B, 'OUTPUTS', {'docs/changelog.html': page}):
+            B.check_outputs(full_site=False)
+
     def test_orphans_are_marked_pages_no_output_writes(self):
         with tempfile.TemporaryDirectory() as folder:
             out = Path(folder)

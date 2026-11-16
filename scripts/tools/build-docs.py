@@ -1266,49 +1266,95 @@ def build() -> None:
 
 
 class PageRefs(HTMLParser):
-    """A generated page's ids, and the targets of its links and images."""
+    """A generated page's ids and classes, the targets of its links and images, and its scripts."""
 
     def __init__(self) -> None:
         super().__init__()
         self.ids: list[str] = []
+        self.classes: set[str] = set()
         self.refs: list[str] = []
+        self.scripts: list[str] = []
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         for name, value in attrs:
-            if name == "id" and value:
+            if not value:
+                continue
+            if name == "id":
                 self.ids.append(value)
-            elif name in ("href", "src") and value:
+            elif name == "class":
+                self.classes.update(value.split())
+            elif name in ("href", "src"):
                 self.refs.append(value)
+                if tag == "script" and name == "src":
+                    self.scripts.append(value)
 
 
-def check_outputs() -> None:
-    """The pages' own links lead somewhere, the generator's hand-written ones included: a relative href or src names a
-    page of this run or a file of the checkout, an anchor exists on a page of this run (a page this run doesn't build,
-    with --changelog-only, isn't read: on Dev the checked-in pages lag), and no page uses an id twice. Links leaving
-    the site aren't checked (no network)."""
+def ref_target(name: str, ref: str) -> tuple[str, str] | None:
+    """Where a link of the output `name` leads: (path from the repository root, anchor), or None for a link leaving
+    the site. A full address of the site itself (SITE, as FEATURES.md and the guides write it) leads into docs/."""
+    if ref.lower().startswith(SITE.lower()):
+        name, ref = "docs/index.html", ref[len(SITE):] or "./"
+    elif re.match(r"[a-z][a-z0-9+.-]*:|//", ref, re.I):
+        return None
+    path, _, anchor = ref.partition("#")
+    path = unquote(path.split("?", 1)[0])
+    target = posixpath.normpath(posixpath.join(posixpath.dirname(name), path)) if path else name
+    if path.endswith("/") or path == ".":
+        target = posixpath.join(target, "index.html")
+    return target, unquote(anchor)
+
+
+# The ids and classes a site script looks up, written as literals there (getElementById('…'), querySelector('.…')).
+SCRIPT_IDS = r"""getElementById\(\s*['"]([^'"]+)['"]\s*\)"""
+SCRIPT_SELECTORS = r"""(?:querySelector(?:All)?|closest)\(\s*['"]([^'"]+)['"]\s*\)"""
+
+
+def check_outputs(*, full_site: bool = True) -> None:
+    """The outputs' own links lead somewhere, the generator's hand-written ones and FEATURES.md's included: a relative
+    href, src or Markdown link names an output of this run or a file of the checkout, an anchor exists on a page of this
+    run (a page this run doesn't build, with --changelog-only, isn't read: on Dev the checked-in pages lag), and no page
+    uses an id twice. Links leaving the site aren't checked (no network). With the full site built, each id and class a
+    site script (docs/js/) looks up exists on a page that loads it: renamed on one side only, the search or the folds
+    would stop working."""
     pages: dict[str, PageRefs] = {}
+    links: dict[str, list[str]] = {}
     for name, text in OUTPUTS.items():
         if name.endswith(".html"):
             pages[name] = PageRefs()
             pages[name].feed(text)
             pages[name].close()
+            links[name] = pages[name].refs
+        elif name.endswith(".md"):
+            links[name] = re.findall(r"\]\(([^)\s]+)\)", text)
     problems = []
     for name, refs in pages.items():
         problems += [f"{name}: id {i!r} used {n} times" for i, n in Counter(refs.ids).items() if n > 1]
-        for ref in dict.fromkeys(refs.refs):
-            if re.match(r"[a-z][a-z0-9+.-]*:|//", ref, re.I):
+    for name, refs in links.items():
+        for ref in dict.fromkeys(refs):
+            resolved = ref_target(name, ref)
+            if resolved is None:
                 continue
-            path, _, anchor = ref.partition("#")
-            path = unquote(path.split("?", 1)[0])
-            target = posixpath.normpath(posixpath.join(posixpath.dirname(name), path)) if path else name
-            if path.endswith("/"):
-                target = posixpath.join(target, "index.html")
+            target, anchor = resolved
             if target.startswith("../") or (target not in OUTPUTS and not (ROOT / target).is_file()):
                 problems.append(f"{name}: {ref} leads to no file")
-            elif anchor and target in pages and unquote(anchor) not in pages[target].ids:
-                problems.append(f"{name}: {ref}: {target} has no #{unquote(anchor)}")
+            elif anchor and target in pages and anchor not in pages[target].ids:
+                problems.append(f"{name}: {ref}: {target} has no #{anchor}")
+    loaded_by: dict[str, list[PageRefs]] = {}
+    for name, refs in pages.items() if full_site else ():
+        for src in refs.scripts:
+            target, _ = ref_target(name, src) or ("", "")
+            if target.startswith("docs/js/") and (ROOT / target).is_file():
+                loaded_by.setdefault(target, []).append(refs)
+    for script, loaders in sorted(loaded_by.items()):
+        code = (ROOT / script).read_text(encoding="utf-8")
+        ids = set().union(*(set(p.ids) for p in loaders))
+        classes = set().union(*(p.classes for p in loaders))
+        problems += [f"{script} looks up #{i}, which no page loading it has"
+                     for i in sorted(set(re.findall(SCRIPT_IDS, code)) - ids)]
+        wanted = {c for selector in re.findall(SCRIPT_SELECTORS, code) for c in re.findall(r"\.([A-Za-z_][\w-]*)", selector)}
+        problems += [f"{script} looks up .{c}, which no page loading it has" for c in sorted(wanted - classes)]
     if problems:
-        raise ValueError("Broken links in the generated pages:\n" + "\n".join(problems))
+        raise ValueError("Broken links or lookups in the outputs:\n" + "\n".join(problems))
 
 
 GENERATED_MARK = "<!-- Generated by scripts/tools/build-docs.py."
@@ -1353,7 +1399,7 @@ def main() -> None:
         changelog_outputs()
     else:
         build()
-    check_outputs()
+    check_outputs(full_site=not args.changelog_only)
     orphans = [] if args.changelog_only else orphan_pages(out)
     stale = [f"{name} (no longer generated: delete it)" for name in orphans] if args.check else []
     for name in [] if args.check else orphans:
