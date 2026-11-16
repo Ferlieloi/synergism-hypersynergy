@@ -407,6 +407,18 @@ export class HSStrategyManager {
         return strategy;
     }
 
+    /**
+     * Why a strategy can't be saved as it ends, or null. Its last phase must be "singularity → end": the one autosing runs
+     * after AOAG, and no stage before AOAG falls in it. A wider final phase would also run before AOAG, without stopping
+     * when AOAG starts. Checked at save and import only: older stored strategies that end otherwise still load and run.
+     */
+    static finalPhaseProblem(strategy: HSAutosingStrategy): string | null {
+        const last = strategy.strategy.at(-1);
+        return !last || last.startPhase === "singularity"
+            ? null
+            : `The last phase must be "singularity → end", not "${last.startPhase} → ${last.endPhase}"`;
+    }
+
     static getMergedStrategyOptions() {
         const defaultNames = HSStrategyManager.getDefaultStrategyNames();
         const manifestSet = new Set(defaultNames);
@@ -429,6 +441,8 @@ export class HSStrategyManager {
         const strategies = storedStrategyList(storageMod.getData<unknown>(HSGlobal.HSSettings.strategiesKey));
 
         const normalizedStrategy = HSStrategyManager.validateStrategy(strategy, context);
+        const finalPhaseProblem = HSStrategyManager.finalPhaseProblem(normalizedStrategy);
+        if (finalPhaseProblem) throw new Error(finalPhaseProblem);
         const isUpdate = !!strategyName;
         const nameExists = strategies.some(entry => {
             const name = storedStrategyName(entry);

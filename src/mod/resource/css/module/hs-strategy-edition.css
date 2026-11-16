@@ -235,7 +235,7 @@
     cursor: help;
 }
 
-/* In place of the × the AOAG row doesn't have, so that its ✎ lines up with the phases' */
+/* In place of the × a row doesn't have (AOAG, the last phase, the only one before it), so that its ✎ lines up */
 .hs-strategy-btn-spacer {
     flex: none;
     width: 28px;
@@ -257,30 +257,11 @@
     outline: none;
 }
 
-/* "Add phase until…", below the last phase */
-.hs-strategy-add-select {
-    display: block;
-    padding: 4px 10px;
-    background-color: #101828;
-    border: 1px dashed #888;
-    border-radius: 3px;
-    color: #c8c8c8;
-    font-weight: 600;
-    font-size: 12px;
-    cursor: pointer;
-}
-
-.hs-strategy-add-select:hover,
-.hs-strategy-add-select:focus {
-    background-color: #005;
-    border-color: cyan;
-    color: white;
-    outline: none;
-}
-
-.hs-strategy-add-select option {
-    background-color: #101828;
-    color: white;
+/* The last two phases' ends are fixed */
+.hs-strategy-end-select:disabled {
+    border-color: #666;
+    color: #aaa;
+    cursor: default;
 }
 
 
@@ -363,13 +344,6 @@
 
 .hs-strategy-btn-delete:hover {
     background-color: maroon;
-}
-
-.hs-strategy-empty-state {
-    text-align: center;
-    color: #888;
-    padding: 40px 20px;
-    font-style: italic;
 }
 
 /* ===== CHALLENGES MODAL ===== */

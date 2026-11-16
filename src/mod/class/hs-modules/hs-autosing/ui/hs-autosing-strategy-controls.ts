@@ -268,7 +268,10 @@ export class HSAutosingStrategyControls {
                 }
 
                 try {
-                    HSStrategyManager.validateStrategy(parsedStrategy, HSAutosingStrategyControls.#context);
+                    const checked = HSStrategyManager.validateStrategy(parsedStrategy, HSAutosingStrategyControls.#context);
+                    // Also refused by the save below, whose errors aren't shown
+                    const finalPhaseProblem = HSStrategyManager.finalPhaseProblem(checked);
+                    if (finalPhaseProblem) throw new Error(finalPhaseProblem);
                 } catch (error) {
                     HSUI.Notify(`Invalid strategy: ${(error as Error).message}`, {
                         notificationType: "error"

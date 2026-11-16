@@ -53,10 +53,10 @@ The edits players make most often:
 
 A strategy is a list of **phases**. Each phase covers a part of the singularity, from one game stage to another. To see your current stage: the game's Settings → Stats for Nerds → Miscellaneous.
 
-- Phases follow each other: the first starts at "start", each one starts where the previous one ends, and the last one ends at "end".
+- Phases follow each other: the first starts at "start", each one starts where the previous one ends, and the last one is "singularity → end".
 - Auto-Sing reads the current stage, runs the steps of the phase that covers it from top to bottom, then reads the stage again. A phase runs again as long as the stage stays in its range.
 - A phase doesn't reset by itself. Only Ascend, Exit Ascension challenge, entering an ascension challenge and "Set corruption level" (with Ascend immediately) do.
-- **AOAG phase:** once the AOAG rune is unlocked (P4x5), Auto-Sing stops the current phase and runs the AOAG phase, then the phase that ends at "end". It starts with "Set corruption level" 0: no offering penalty to buy the AoAG rune.
+- **AOAG phase:** once the AOAG rune is unlocked (P4x5), Auto-Sing stops the current phase and runs the AOAG phase, then singularity → end. It starts with "Set corruption level" 0: no offering penalty to buy the AoAG rune.
 - At the end, Auto-Sing switches to your Quark loadout, ascends and exports the save for the bonus quarks, then starts a new singularity.
 
 ### The strategy window
@@ -70,11 +70,11 @@ In Settings → Auto-Sing:
 
 In the window:
 - **Strategy Name** at the top.
-- Each row is a phase: **Phase N: start → [end ▾] [✎ k steps] [×]**. Change a phase's end with its dropdown, open its steps with ✎, delete it with ×.
-- The dashed **AOAG Unlocked Phase** row sits right before the phase that ends at "end", which is where it runs. Hover its **?** to see when it starts.
-- **Add phase until… ▾** adds the next phase. The round **+** on a phase's left border inserts a phase inside it.
+- Each row is a phase: **Phase N: start → [end ▾] [✎ k steps] [×]**. Change a phase's end with its dropdown, open its steps with ✎, delete it with ×. The last two phases' ends are fixed, and the last phase can't be deleted.
+- The dashed **AOAG Unlocked Phase** row sits right before the last phase, singularity → end, which is where it runs. Hover its **?** to see when it starts.
+- The round **+** on a phase's left border adds a phase: it splits that phase in two.
 - "0 steps" in red: a phase needs at least one step.
-- **Create Strategy** / **Update Strategy** saves. A strategy must go all the way to "end".
+- **Create Strategy** / **Update Strategy** saves.
 
 ### The actions window (✎)
 

@@ -125,8 +125,16 @@ async function main() {
         assert.equal(first(migrated).ascendAfterCorruption, true);
         assert.equal(migrated.aoagPhase.phaseId, 'aoag');
         for (const file of fs.readdirSync(directory).filter(f => f.endsWith('.json') && f !== 'manifest.json')) {
-            manager.validateStrategy(JSON.parse(fs.readFileSync(path.join(directory, file), 'utf8')));
+            const checked = manager.validateStrategy(JSON.parse(fs.readFileSync(path.join(directory, file), 'utf8')));
+            assert.equal(manager.finalPhaseProblem(checked), null, `${file} ends with singularity → end`);
         }
+        // A final phase wider than singularity → end: refused at save, still loaded from storage (older strategies)
+        const wide = valid();
+        wide.strategy.splice(-2, 2, {...wide.strategy.at(-2), endPhase: 'end'});
+        assert.match(manager.finalPhaseProblem(manager.validateStrategy(wide)), /singularity → end.*challenge10 → end/);
+        assert.throws(() => manager.saveStrategyToStorage(wide), /singularity → end/);
+        stored = [wide];
+        assert.equal(manager.parseStoredStrategies().length, 1, 'a stored strategy with a wider final phase still loads');
         const bad = valid(); first(bad).challengeNumber = 123456;
         stored = [valid(), bad, null];
         const diskBefore = structuredClone(stored);
