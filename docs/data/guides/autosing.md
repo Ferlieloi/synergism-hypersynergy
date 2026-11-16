@@ -12,7 +12,7 @@ Auto-Sing plays singularities for you, following a strategy. It's for the end ga
 1. Open the mod panel (the mod's icon, top left), then Settings → **Auto-Sing**.
 2. **Strategy:** pick one. The default strategies are a place to start; some of them are meant for the very end of the game. Those under **Old Strategies** (named "-temp") haven't been retuned by their authors since the game's corruption rework. To adapt one or make your own, see [Making or editing a strategy](#making-or-editing-a-strategy).
 3. **Ambrosia loadouts:** for each role (pre-AOAG cubes, post-AOAG cubes, quarks, obtainium, offerings, luck), pick the game slot that holds that loadout. The [Ambrosia Heater](https://ferlieloi.github.io/synergism-hypersynergy/docs/wiki/heater-guide.html) (Tools tab) finds the best ones for your save. Each loadout switch resets the ambrosia bars' progress. If you don't want that, tick **⚙ Don't switch ambrosia loadouts**: Auto-Sing then never switches.
-4. Turn on **⚙ Start/Stop Auto-Sing**, or click ▶ in the [menu by the mod's icon](https://ferlieloi.github.io/synergism-hypersynergy/docs/wiki/interface.html#quick-menu).
+4. Turn on **⚙ Start/Stop Auto-Sing**, or click **Start Auto-Sing** in the [menu by the mod's icon](https://ferlieloi.github.io/synergism-hypersynergy/docs/wiki/interface.html#quick-menu).
 
 The Auto-Sing window shows the time per singularity, the quarks and golden quarks gained per second, and how much of your quarks came from the Ants to Quark Corner. Its buttons: ⏸️ pause, 🔄 restart the singularity, 🟠 stop at the end of this singularity, 🔴 stop now, 📋 step timings (with **⚙ Record step timings** on), 📊 details.
 

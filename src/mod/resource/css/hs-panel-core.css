@@ -354,8 +354,6 @@ select::-webkit-scrollbar-corner {
     text-align: left;
     width: 100%;
 }
-#hs-quick-access-menu button[data-type="autosing"] > span:first-child { color: green; }
-
 #hs-quick-access-menu button[data-type="autosing"]:hover    { background: rgba(76, 175, 80, 0.25); }
 #hs-quick-access-menu button[data-type="amb-heater"]:hover  { background: rgba(255, 152, 0, 0.25); }
 
