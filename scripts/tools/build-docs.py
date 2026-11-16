@@ -323,12 +323,13 @@ def page(path: str, title: str, tab: str, body: str, *, depth: int = 0,
 <a class="skip-link" href="#content">Skip to content</a>
 <div id="wrapper">
   <header>
-    <div id="first-row" aria-label="Guide overview">{counter_html}</div>
     <div id="second-row"><div id="second-row-left-container"><div class="second-row-subcontainer">
       <div class="quick-menu"><button type="button" class="quick-menu-btn" aria-label="Guides and help"><img class="res-icon" src="{prefix}{MOD_ICON}" width="32" height="32" alt=""></button>
         <div class="quick-menu-list">{quick_links}</div></div>
       <div class="second-row-disp">Hypersynergism<br>Guide for <a class="version-link" href="{prefix}{version_entry_href()}"><span id="version_num">v{esc(VERSION)}</span></a></div>
-    </div></div><p class="header-credit">A Synergism QoL mod<br><span>Maintained by Ferlieloi, maenhiir &amp; contributors</span></p></div>
+    </div></div>
+    <div id="first-row" aria-label="Guide overview">{counter_html}</div>
+    <p class="header-credit">A Synergism QoL mod<br><span>Maintained by Ferlieloi, maenhiir &amp; contributors</span></p></div>
     <nav aria-label="Main navigation"><div id="tabs">{nav}</div></nav>
   </header>
   <div id="border" style="background:{color}"></div>
