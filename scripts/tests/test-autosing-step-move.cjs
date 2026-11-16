@@ -95,6 +95,25 @@ async function main() {
     moved = move(steps, 1, 1);
     assert.equal(view(moved), 'A IF>2 [IF>2@1] B');
 
+    // Shift-drag carries the IF's marker and its offset, including a self-loop.
+    let paired = { id: steps[1].ifJump.id, offset: 0 };
+    moved = moveStep(structuredClone(steps), NONE, 1, 2, paired).steps;
+    assert.equal(view(moved), 'A B [IF>2@2] IF>2');
+    assert.equal(stepSlot(moved, NONE, 2, paired), 2);
+
+    // Shift-drag still leaves other markers and Add Here in their drop slots.
+    steps = list('A', 'IF>0', 'B', 'IF>2', 'C');
+    paired = { id: steps[1].ifJump.id, offset: -1 };
+    const shifted = moveStep(structuredClone(steps), 2, 1, 6, paired);
+    assert.equal(view(shifted.steps, shifted.separatorIndex), 'A | [IF>1@2] B IF>1 [IF>3@4] C IF>3');
+
+    // Moving back from a clamped destination restores the original distance during the same drag.
+    steps = list('A', 'IF>3', 'B');
+    paired = { id: steps[1].ifJump.id, offset: 2 };
+    moved = moveStep(structuredClone(steps), NONE, 1, 2, paired).steps;
+    assert.equal(view(moved), 'A B IF>3 [IF>3@2]');
+    assert.deepEqual(moveStep(moved, NONE, 2, 1, paired).steps, steps);
+
     // "Add Here": drawn above the "Jump here" rows of its place, at the top for an index at or below 0
     steps = list('A', 'IF>0', 'IF>2');
     assert.equal(view(steps, 0), '| [IF>0@1] A IF>0 [IF>2@2] IF>2');

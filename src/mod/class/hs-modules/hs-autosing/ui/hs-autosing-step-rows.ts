@@ -10,6 +10,12 @@ export type StepListRow =
     | { kind: 'target'; ifStep: IsJumpChallenge; ifIndex: number }
     | { kind: 'separator' };
 
+/** The IF and the distance to its destination when a Shift-drag begins. */
+export interface PairedJump {
+    id: string;
+    offset: number;
+}
+
 // The list's rows, top to bottom: before each step the "Add Here" separator if new steps go there, then the "Jump
 // here" rows that jump to it, in the order of their IFs; after the last step, the same for the end of the phase.
 // A target outside the list has no row
@@ -29,17 +35,21 @@ export function stepListRows(steps: readonly Challenge[], separatorIndex: number
     return rows;
 }
 
-// The number of rows above a step
-export function stepSlot(steps: readonly Challenge[], separatorIndex: number, index: number): number {
-    return stepListRows(steps, separatorIndex).findIndex(row => row.kind === 'step' && row.index === index);
+function dragRows(steps: readonly Challenge[], separatorIndex: number, paired?: PairedJump): StepListRow[] {
+    const rows = stepListRows(steps, separatorIndex);
+    return paired ? rows.filter(row => row.kind !== 'target' || row.ifStep.ifJump.id !== paired.id) : rows;
 }
 
-// Moves steps[from] so that `slot` of the other rows are above it. Every other row keeps its place, the separator
-// and "Jump here" rows included (also the dragged step's own one: it stays before the next step). Each IF's target,
-// and the separator's index, become the index of the step below their row (none: the phase's length). Changes the
-// targets in place
-export function moveStep(steps: readonly Challenge[], separatorIndex: number, from: number, slot: number): { steps: Challenge[]; separatorIndex: number } {
-    const rows = stepListRows(steps, separatorIndex).filter(row => !(row.kind === 'step' && row.index === from));
+// The number of stationary rows above a step
+export function stepSlot(steps: readonly Challenge[], separatorIndex: number, index: number, paired?: PairedJump): number {
+    return dragRows(steps, separatorIndex, paired).findIndex(row => row.kind === 'step' && row.index === index);
+}
+
+// Stationary markers and the separator go before the next step. A Shift-dragged IF's marker keeps its original
+// distance from that IF, limited by the start and end of the phase. Changes the targets in place.
+export function moveStep(steps: readonly Challenge[], separatorIndex: number, from: number, slot: number,
+    paired?: PairedJump): { steps: Challenge[]; separatorIndex: number } {
+    const rows = dragRows(steps, separatorIndex, paired).filter(row => !(row.kind === 'step' && row.index === from));
     rows.splice(Math.max(0, Math.min(slot, rows.length)), 0, { kind: 'step', index: from });
     const moved: Challenge[] = [];
     let movedSeparator = separatorIndex;
@@ -48,6 +58,10 @@ export function moveStep(steps: readonly Challenge[], separatorIndex: number, fr
         if (row.kind === 'step') moved.push(steps[row.index]);
         else if (row.kind === 'target') row.ifStep.ifJump.ifJumpIndex = moved.length;
         else movedSeparator = moved.length;
+    }
+    const jump = steps[from].ifJump;
+    if (paired && jump?.id === paired.id) {
+        jump.ifJumpIndex = Math.max(0, Math.min(moved.length, moved.indexOf(steps[from]) + paired.offset));
     }
     return { steps: moved, separatorIndex: movedSeparator };
 }

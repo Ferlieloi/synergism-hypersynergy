@@ -4,7 +4,7 @@ import { HSUI } from "../../../hs-core/hs-ui";
 import { HSUtils } from "../../../hs-utils/hs-utils";
 import { HSUIXY } from "../../../../types/module-types/hs-ui-types";
 import { escapeHtml } from "../../../hs-utils/hs-escape";
-import { isIfJumpStep, moveStep, stepListRows, stepSlot } from "./hs-autosing-step-rows";
+import { isIfJumpStep, moveStep, stepListRows, stepSlot, type PairedJump } from "./hs-autosing-step-rows";
 
 type IfJumpMode = NonNullable<IfJumpParams["ifJumpMode"]>;
 
@@ -253,7 +253,8 @@ const HELP_LINES: readonly [string, string][] = [
     ["", "Shortcuts work after a click in this window, not while typing in a field"],
     ["⋮⋮", "Drag a step, a \"Jump here\" row, or \"Add Here\" (where new steps go)"],
     ["Double-click", "On a step: \"Add Here\" goes below it"],
-    ["IF targets", "Follow an added, duplicated or deleted step. A dragged step leaves \"Jump here\" rows in place and lands on the side of them where you drop it"],
+    ["Shift + drag", "Press Shift while dragging an IF to pick up its jump marker. Release Shift to leave the marker in place"],
+    ["IF targets", "Drag the colored arrow or its \"Jump here\" row to change the destination"],
     ["→ step N", "Click: shows the other row of the IF"],
     ["↺", "A loop: the IF jumps back"],
     ["Max jumps", "An IF jumps at most this many times per phase pass, then goes on to the next step"],
@@ -264,21 +265,43 @@ const HELP_LINES: readonly [string, string][] = [
 // What is being dragged: a step, an IF jump's "Jump here" row, or the "Add Here" separator
 type DragTarget = { kind: 'step'; index: number } | { kind: 'jumpTarget'; ifId: string } | { kind: 'separator' };
 
-interface DragState {
-    target: DragTarget;
-    // The dragged element (replaced at each re-render of the list) and its copy left in the list
+interface LiftedRow {
     element: HTMLElement;
-    placeholder: HTMLElement;
+    placeholder?: HTMLElement;
     // Where the element was grabbed, and its size
     offsetX: number;
     offsetY: number;
     width: number;
     height: number;
+}
+
+interface DragViewport {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+    listTopAtZero: number;
+}
+
+interface DragState {
+    target: DragTarget;
+    pairedJump?: PairedJump;
+    primary: LiftedRow;
+    companion?: LiftedRow;
+    connector?: SVGSVGElement;
+    layer: HTMLElement;
+    ghosts: HTMLElement;
+    stepRows: Map<Challenge, HTMLElement>;
+    jumpRows: Map<string, HTMLElement>;
+    separator: HTMLElement;
     // The last mouse position, for the auto-scroll (no mousemove while the mouse stays still)
     mouseX: number;
     mouseY: number;
-    // The auto-scroll's next frame (0: none)
-    scrollFrame: number;
+    frame: number;
+    geometry?: { midpoints: number[]; slot: number };
+    viewport: DragViewport;
+    viewportDirty: boolean;
+    scrollTop: number;
     // The list before the drag, for Undo
     before: Snapshot;
 }
@@ -298,6 +321,14 @@ export const canonicalJson = (value: unknown) => JSON.stringify(value, (_key, it
 // Auto-scroll while dragging: the zone along the list's top and bottom edges, and the speed at its edge (and past it)
 const AUTO_SCROLL_ZONE_PX = 40;
 const AUTO_SCROLL_MAX_PX_PER_FRAME = 12;
+const JUMP_COLORS = ["#a996ff", "#6cddce", "#ffa770", "#86bbff", "#f395bc", "#d8df76", "#80daa2"];
+
+function jumpLine(from: number, to: number, edge: number, x: number, targetEdge = edge): string {
+    const direction = Math.sign(to - from) || 1;
+    const radius = Math.min(4, Math.floor(Math.abs(to - from) / 2));
+    const path = `M ${edge} ${from} H ${x + radius} Q ${x} ${from} ${x} ${from + direction * radius} V ${to - direction * radius} Q ${x} ${to} ${x + radius} ${to} H ${targetEdge - 3}`;
+    return `<path d="${path}"/><circle cx="${edge}" cy="${from}" r="2.6"/><path class="hs-jump-arrow" d="M ${targetEdge - 5} ${to - 3.5} L ${targetEdge} ${to} L ${targetEdge - 5} ${to + 3.5} Z"/>`;
+}
 
 /**
  * Class: HSAutosingChallengeModal
@@ -308,11 +339,10 @@ const AUTO_SCROLL_MAX_PX_PER_FRAME = 12;
  *     - The fields above the list are described by FIELD_ROWS: which action shows them, and which value of a step
  *       they hold. ✎ loads every value of a step, so an Update keeps the values its action doesn't show.
  *     - Steps, IF jump targets ("Jump here" rows) and the "Add Here" separator (where new steps go) are dragged
- *       with the mouse. The list is drawn again whenever the drop place changes, and the dragged row found again.
+ *       with the mouse. The preview moves existing rows as the drop place changes.
  *       A double-click on a step moves the separator below it.
- *     - An IF jump's target is a step index (the step it jumps before): adding, duplicating or deleting a step
- *       shifts the targets after it. A dragged step leaves every "Jump here" row (its own one too) and the separator
- *       between the same rows (hs-autosing-step-rows.ts). An IF and its "Jump here" row link to each other.
+ *     - Jump markers and Add Here stay between rows during a drag. Shift-drag moves an IF and its marker together.
+ *       Colored lines connect the IFs to their draggable destinations.
  *     - The fields the action shows are checked as they are typed: a bad value turns red and Add/Update says why
  *       and refuses. Never corrected. Enter in a field = Add/Update.
  *     - Edit mode follows the edited step through drags, duplicates and deletes (renumbered); Undo/Redo leave it.
@@ -342,6 +372,10 @@ export class HSAutosingChallengeModal {
     #fields = new Map<FieldKey, HTMLInputElement | HTMLSelectElement>();
     #rows: { row: FieldRow; element: HTMLElement }[] = [];
     #list!: HTMLElement;
+    #jumpColors = new Map<string, string>();
+    #jumpFrame = 0;
+    #jumpResize?: ResizeObserver;
+    #highlightedJump?: string;
     // The list's scrolling box
     #listContainer!: HTMLElement;
     #addButton!: HTMLElement;
@@ -422,13 +456,28 @@ export class HSAutosingChallengeModal {
         this.#list.addEventListener("mousedown", e => this.#onListMouseDown(e));
         this.#list.addEventListener("dblclick", e => this.#onListDoubleClick(e));
         // An IF jump and its target are highlighted together
-        this.#list.addEventListener("mouseover", e => this.#highlightJump((e.target as HTMLElement).closest<HTMLElement>("[data-if-id]")?.dataset.ifId));
-        this.#list.addEventListener("mouseleave", () => this.#highlightJump(undefined));
+        this.#list.addEventListener("mouseover", e => {
+            if (!this.#drag) this.#highlightJump((e.target as HTMLElement).closest<HTMLElement>("[data-if-id]")?.dataset.ifId);
+        });
+        this.#list.addEventListener("mouseleave", () => {
+            if (!this.#drag) this.#highlightJump(undefined);
+        });
+        this.#jumpResize = new ResizeObserver(() => {
+            if (this.#drag) {
+                this.#drag.geometry = undefined;
+                this.#drag.viewportDirty = true;
+                this.#requestDragFrame();
+            }
+            this.#queueJumpLines();
+        });
+        this.#jumpResize.observe(this.#list);
+        this.#jumpResize.observe(this.#listContainer);
         document.addEventListener("mousedown", this.#onPageMouseDown, true);
         document.addEventListener("keydown", this.#onPageKeyDown);
 
         this.#fillFields(null);
         this.#showFooter();
+        this.#queueJumpLines();
     }
 
     // ----- Window and list HTML -----
@@ -483,7 +532,9 @@ export class HSAutosingChallengeModal {
 
     // The steps, with each IF jump's target before the step it jumps to and the separator where new steps go
     #renderList(): string {
-        return stepListRows(this.#steps, this.#separatorIndex).map(row => {
+        const rows = stepListRows(this.#steps, this.#separatorIndex);
+        const connectors = rows.some(row => row.kind === 'target') ? '<svg class="hs-jump-lines" aria-hidden="true"></svg>' : '';
+        return connectors + rows.map(row => {
             switch (row.kind) {
                 case 'step': return this.#renderStep(this.#steps[row.index], row.index);
                 case 'target': return this.#renderJumpTarget(row.ifStep, row.ifIndex);
@@ -495,7 +546,61 @@ export class HSAutosingChallengeModal {
     // After any change of the steps or of the separator
     #redrawList(): void {
         this.#list.innerHTML = this.#renderList();
-        this.#showFooter();
+        if (this.#drag) this.#drag.geometry = undefined;
+        else this.#showFooter();
+        this.#highlightJump(this.#highlightedJump);
+        this.#queueJumpLines();
+    }
+
+    #jumpRowAttrs(id: string): string {
+        let color = this.#jumpColors.get(id);
+        if (color === undefined) {
+            const index = this.#jumpColors.size;
+            color = JUMP_COLORS[index] ?? `hsl(${(index * 137.508) % 360} 72% 72%)`;
+            this.#jumpColors.set(id, color);
+        }
+        return `data-if-id="${escapeHtml(id)}" style="--hs-jump-color:${color}"`;
+    }
+
+    #queueJumpLines(): void {
+        if (this.#jumpFrame || !this.#list.querySelector(".hs-jump-lines")) return;
+        this.#jumpFrame = requestAnimationFrame(() => {
+            this.#jumpFrame = 0;
+            this.#drawJumpLines();
+        });
+    }
+
+    #drawJumpLines(): void {
+        const svg = this.#list.querySelector<SVGSVGElement>(".hs-jump-lines");
+        if (!svg) return;
+        const listTop = this.#list.getBoundingClientRect().top;
+        const mid = (row: Element) => {
+            const rect = row.getBoundingClientRect();
+            return Math.round(rect.top - listTop + rect.height / 2);
+        };
+        const targets = new Map(Array.from(this.#list.querySelectorAll<HTMLElement>(".hs-if-target:not(.hs-challenge-lifted)"),
+            row => [row.dataset.ifId!, mid(row)]));
+        const pairs = Array.from(this.#list.querySelectorAll<HTMLElement>(".hs-if-block:not(.hs-challenge-lifted)"), row => {
+            const id = row.dataset.ifId!;
+            const from = mid(row);
+            const to = targets.get(id)!;
+            return { id, from, to, top: Math.min(from, to), bottom: Math.max(from, to) };
+        }).sort((a, b) => a.top - b.top || b.bottom - a.bottom);
+        const lanes: number[] = [];
+        const routed = pairs.map(pair => {
+            const free = lanes.findIndex(bottom => bottom + 3 < pair.top);
+            const lane = free === -1 ? lanes.length : free;
+            lanes[lane] = pair.bottom;
+            return { ...pair, lane };
+        });
+        const gutter = svg.clientWidth;
+        const edge = gutter - 3;
+        const spacing = Math.min(5, Math.max(0, gutter - 15) / Math.max(1, lanes.length - 1));
+        svg.innerHTML = routed.map(({ id, from, to, lane }) => {
+            const x = 3 + (lanes.length - 1 - lane) * spacing;
+            const highlight = id === this.#highlightedJump ? " hs-jump-highlight" : "";
+            return `<g class="hs-jump-line${highlight}" ${this.#jumpRowAttrs(id)}>${jumpLine(from, to, edge, x)}</g>`;
+        }).join("");
     }
 
     #showFooter(): void {
@@ -513,11 +618,12 @@ export class HSAutosingChallengeModal {
     #renderStep(step: Challenge, index: number): string {
         const isIfJump = isIfJumpStep(step);
         const classes = `hs-challenge-item${isIfJump ? " hs-if-block" : ""}${index === this.#editingIndex ? " hs-challenge-item-editing" : ""}`;
-        const ifId = isIfJump ? ` data-if-id="${step.ifJump.id}"` : "";
+        const ifId = isIfJump ? ` ${this.#jumpRowAttrs(step.ifJump.id)}` : "";
+        const dragHint = isIfJump ? ' title="Hold Shift while dragging this IF to move its jump marker too"' : "";
         return `
         <div class="${classes}" data-index="${index}"${ifId}>
             <div class="hs-challenge-step-no">${index + 1}</div>
-            <div class="hs-challenge-drag-handle">⋮⋮</div>
+            <div class="hs-challenge-drag-handle"${dragHint}>⋮⋮</div>
             <div class="${isIfJump ? "hs-if-content" : "hs-challenge-item-text"}">
                 ${this.#renderStepText(step, index)}
                 <div class="hs-challenge-meta">${this.#renderStepMeta(step)}</div>
@@ -530,12 +636,18 @@ export class HSAutosingChallengeModal {
     }
 
     // An IF jump that jumps back, to its own step or one before it
-    #isLoop(step: IsJumpChallenge, ifIndex: number): boolean {
-        return step.ifJump.ifJumpIndex <= ifIndex;
+    #renderLoopMark(step: IsJumpChallenge, ifIndex: number): string {
+        return step.ifJump.ifJumpIndex <= ifIndex ? ` <span class="hs-challenge-loop" title="Loop: jumps back">↺</span>` : "";
     }
 
-    #renderLoopMark(step: IsJumpChallenge, ifIndex: number): string {
-        return this.#isLoop(step, ifIndex) ? ` <span class="hs-challenge-loop" title="Loop: jumps back">↺</span>` : "";
+    #jumpLabel(step: IsJumpChallenge, index: number): string {
+        const target = step.ifJump.ifJumpIndex;
+        const destination = target === this.#steps.length ? "end of phase" : `step ${target + 1}`;
+        return `→ ${destination}${this.#renderLoopMark(step, index)}`;
+    }
+
+    #jumpMarkerLabel(step: IsJumpChallenge, index: number): string {
+        return `(IF step ${index + 1}${this.#renderLoopMark(step, index)})`;
     }
 
     #renderStepText(step: Challenge, index: number): string {
@@ -546,9 +658,8 @@ export class HSAutosingChallengeModal {
                 ? `challenge ${jump.ifJumpChallenge} ${jump.ifJumpOperator} ${jump.ifJumpValue}`
                 : `Stored C15${jump.ifJumpMultiplier ? ` × 10^${jump.ifJumpMultiplier}` : ""} ${jump.ifJumpOperator} Current C15`;
             // The step that runs next when the condition holds (the logs' "jump to step N"); a click shows its "Jump here" row
-            const jumpTo = jump.ifJumpIndex >= this.#steps.length ? "end of phase" : `step ${jump.ifJumpIndex + 1}`;
             return `<strong>IF</strong> ${escapeHtml(condition)} `
-                + `<span class="hs-challenge-jump-to hs-challenge-jump-link" data-action="show-target">→ ${jumpTo}${this.#renderLoopMark(step, index)}</span> `
+                + `<span class="hs-challenge-jump-to hs-challenge-jump-link" data-action="show-target">${this.#jumpLabel(step, index)}</span> `
                 + actionId(IF_JUMP_VALUE);
         }
         const labelClass = stepLabelClass(step);
@@ -576,10 +687,11 @@ export class HSAutosingChallengeModal {
     // ifIndex: the IF jump's index, shown as its step number (a click shows the IF)
     #renderJumpTarget(step: IsJumpChallenge, ifIndex: number): string {
         return `
-        <div class="hs-challenge-item hs-if-target" data-if-id="${step.ifJump.id}">
+        <div class="hs-challenge-item hs-if-target" ${this.#jumpRowAttrs(step.ifJump.id)}>
+            <span class="hs-challenge-drag-handle hs-jump-endpoint" title="Drag to change jump destination"></span>
             <div class="hs-challenge-step-no"></div>
             <div class="hs-challenge-drag-handle">⋮⋮</div>
-            ↳ Jump here <span class="hs-challenge-jump-to hs-challenge-jump-link" data-action="show-if">(IF step ${ifIndex + 1}${this.#renderLoopMark(step, ifIndex)})</span>
+            ↳ Jump here <span class="hs-challenge-jump-to hs-challenge-jump-link" data-action="show-if">${this.#jumpMarkerLabel(step, ifIndex)}</span>
         </div>`;
     }
 
@@ -593,9 +705,10 @@ export class HSAutosingChallengeModal {
     }
 
     #highlightJump(ifId: string | undefined): void {
+        this.#highlightedJump = ifId;
         for (const element of this.#list.querySelectorAll(".hs-jump-highlight")) element.classList.remove("hs-jump-highlight");
         if (ifId === undefined) return;
-        for (const element of this.#list.querySelectorAll(`[data-if-id="${ifId}"]`)) element.classList.add("hs-jump-highlight");
+        for (const element of this.#list.querySelectorAll(`[data-if-id="${CSS.escape(ifId)}"]`)) element.classList.add("hs-jump-highlight");
     }
 
     // Flashes a row, after scrolling the list just enough to show it and the row past it (a row already in view: no scroll)
@@ -700,7 +813,6 @@ export class HSAutosingChallengeModal {
             const mode = this.#field('ifJumpMode').value as IfJumpMode;
             const isChallengesMode = mode === "challenges";
             // A new IF jumps to the step after it
-            const newTarget = (this.#editingIndex ?? this.#separatorIndex) + 1;
             // Written only when set: an old IF updated without one stays unchanged
             const maxJumps = this.#number('ifJumpMaxJumps');
             step = {
@@ -717,7 +829,7 @@ export class HSAutosingChallengeModal {
                     ifJumpOperator: this.#field('ifJumpOperator').value as IfJumpParams["ifJumpOperator"],
                     ifJumpValue: isChallengesMode ? this.#number('ifJumpValue') : 0,
                     ifJumpMultiplier: isChallengesMode ? 0 : this.#number('ifJumpMultiplier'),
-                    ifJumpIndex: previous?.ifJump?.ifJumpIndex ?? newTarget,
+                    ifJumpIndex: previous?.ifJump?.ifJumpIndex ?? (this.#editingIndex ?? this.#separatorIndex) + 1,
                     ...(maxJumps > 0 ? { ifJumpMaxJumps: maxJumps } : {}),
                 },
             };
@@ -764,14 +876,12 @@ export class HSAutosingChallengeModal {
 
     // ----- Steps -----
 
-    // A step was added (delta 1) or removed (delta -1) at index: the IF jump targets after it follow their step.
-    // A target at the index itself sat before the step now there: it moves down when one is added before it,
-    // and stays when the step after it is removed.
+    // Adding and deleting a step shifts the jump destinations that follow it.
     #shiftJumpTargets(index: number, delta: 1 | -1): void {
         for (const step of this.#steps) {
             if (!isIfJumpStep(step)) continue;
             const target = step.ifJump.ifJumpIndex;
-            if (target > index || (delta > 0 && target === index)) step.ifJump.ifJumpIndex += delta;
+            if (target > index || (delta === 1 && target === index)) step.ifJump.ifJumpIndex += delta;
         }
     }
 
@@ -812,7 +922,7 @@ export class HSAutosingChallengeModal {
 
     #addOrUpdate(): void {
         // The button already says why
-        if (this.#badReason !== null) return;
+        if (this.#badReason !== null || this.#drag) return;
         if (this.#editingIndex !== null) {
             const step = this.#buildStep(this.#steps[this.#editingIndex]);
             if (canonicalJson([step]) !== canonicalJson([this.#steps[this.#editingIndex]])) {
@@ -893,10 +1003,10 @@ export class HSAutosingChallengeModal {
                 this.#delete(index);
                 break;
             case "show-target":
-                this.#showRow(this.#list.querySelector<HTMLElement>(`.hs-if-target[data-if-id="${ifId}"]`));
+                this.#showRow(this.#list.querySelector<HTMLElement>(`.hs-if-target[data-if-id="${CSS.escape(ifId!)}"]:not(.hs-challenge-lifted)`));
                 break;
             case "show-if":
-                this.#showRow(this.#list.querySelector<HTMLElement>(`.hs-if-block[data-if-id="${ifId}"]`));
+                this.#showRow(this.#list.querySelector<HTMLElement>(`.hs-if-block[data-if-id="${CSS.escape(ifId!)}"]:not(.hs-challenge-lifted)`));
                 break;
             case "undo":
                 this.#undo();
@@ -976,6 +1086,9 @@ export class HSAutosingChallengeModal {
     // ----- Ctrl+Z, Ctrl+Y -----
 
     #removePageListeners(): void {
+        this.#jumpResize?.disconnect();
+        cancelAnimationFrame(this.#jumpFrame);
+        if (this.#drag) this.#clearDrag();
         document.removeEventListener("mousedown", this.#onPageMouseDown, true);
         document.removeEventListener("keydown", this.#onPageKeyDown);
     }
@@ -1025,57 +1138,214 @@ export class HSAutosingChallengeModal {
         else target = { kind: 'step', index: Number(row!.dataset.index) };
 
         e.preventDefault();
-        const rect = element.getBoundingClientRect();
+        const layer = document.createElement("div");
+        layer.className = "hs-challenge-drag-layer";
+        layer.setAttribute("aria-hidden", "true");
+        const ghosts = document.createElement("div");
+        ghosts.className = "hs-challenge-drag-ghosts";
+        layer.append(ghosts);
+        const scrollTop = this.#listContainer.scrollTop;
         this.#drag = {
-            target, element, placeholder: element,
-            offsetX: e.clientX - rect.left,
-            offsetY: e.clientY - rect.top,
-            width: rect.width,
-            height: rect.height,
+            target,
+            primary: this.#captureLifted(element, e.clientX, e.clientY),
+            layer,
+            ghosts,
+            stepRows: new Map(Array.from(this.#list.querySelectorAll<HTMLElement>(".hs-challenge-item[data-index]"),
+                item => [this.#steps[Number(item.dataset.index)], item])),
+            jumpRows: new Map(Array.from(this.#list.querySelectorAll<HTMLElement>(".hs-if-target"),
+                item => [item.dataset.ifId!, item])),
+            separator: this.#list.querySelector<HTMLElement>(".hs-challenge-separator")!,
             mouseX: e.clientX,
             mouseY: e.clientY,
-            scrollFrame: 0,
+            frame: 0,
+            viewport: this.#measureDragViewport(scrollTop),
+            viewportDirty: false,
+            scrollTop,
             before: this.#snapshot(),
         };
-        this.#lift(element);
+        this.#list.append(layer);
+        this.#positionDragLayer();
+        this.#lift(this.#drag.primary);
+        this.#setPairedDrag(e.shiftKey);
+        this.#moveLifted();
+        this.#highlightJump(row?.dataset.ifId);
+        this.#queueJumpLines();
         document.addEventListener("mousemove", this.#onDragMove);
         document.addEventListener("mouseup", this.#onDragEnd);
+        document.addEventListener("keydown", this.#onDragShift);
+        document.addEventListener("keyup", this.#onDragShift);
+        document.addEventListener("scroll", this.#onDragScroll, true);
+        window.addEventListener("resize", this.#onDragViewportChange);
+    }
+
+    #captureLifted(element: HTMLElement, mouseX: number, mouseY: number): LiftedRow {
+        const { left, top, width, height } = element.getBoundingClientRect();
+        return { element, offsetX: mouseX - left, offsetY: mouseY - top, width, height };
+    }
+
+    #onDragShift = (e: KeyboardEvent): void => {
+        if (!this.#drag || e.key !== "Shift") return;
+        this.#setPairedDrag(e.shiftKey);
+        this.#moveLifted();
+    };
+
+    #setPairedDrag(held: boolean): void {
+        const drag = this.#drag;
+        if (!drag || drag.target.kind !== 'step' || held === !!drag.pairedJump) return;
+        const step = this.#steps[drag.target.index];
+        if (!isIfJumpStep(step)) return;
+
+        if (!held) {
+            // Keep the previewed destination and return its marker to the list.
+            const companion = drag.companion!;
+            companion.element.classList.remove("hs-challenge-lifted");
+            companion.element.style.width = "";
+            companion.element.style.height = "";
+            companion.element.style.left = "";
+            companion.element.style.top = "";
+            companion.placeholder!.replaceWith(companion.element);
+            drag.connector?.remove();
+            drag.pairedJump = undefined;
+            drag.companion = undefined;
+            drag.connector = undefined;
+            drag.geometry = undefined;
+            this.#list.classList.remove("hs-challenge-dragging-pair");
+            this.#queueJumpLines();
+            return;
+        }
+
+        const marker = drag.jumpRows.get(step.ifJump.id);
+        if (!marker) return;
+        // Base the distance on the order currently on screen, even after reordering without Shift.
+        drag.pairedJump = { id: step.ifJump.id, offset: step.ifJump.ifJumpIndex - drag.target.index };
+        drag.companion = this.#captureLifted(marker, drag.mouseX, drag.mouseY);
+        drag.geometry = undefined;
+        this.#liftCompanion();
+        this.#highlightJump(step.ifJump.id);
+        this.#queueJumpLines();
     }
 
     // Takes the element out of the list, under the mouse, and leaves a faded copy in its place
-    #lift(element: HTMLElement): void {
-        const drag = this.#drag!;
+    #lift(row: LiftedRow): void {
+        const { element } = row;
         const placeholder = element.cloneNode(true) as HTMLElement;
         placeholder.classList.add("hs-challenge-placeholder");
-        element.before(placeholder);
+        element.replaceWith(placeholder);
         element.classList.add("hs-challenge-lifted");
-        element.style.width = `${drag.width}px`;
-        element.style.height = `${drag.height}px`;
-        drag.element = element;
-        drag.placeholder = placeholder;
-        this.#moveLifted();
+        element.style.width = `${row.width}px`;
+        element.style.height = `${row.height}px`;
+        element.style.left = `${-row.offsetX}px`;
+        element.style.top = `${-row.offsetY}px`;
+        row.placeholder = placeholder;
+        this.#drag!.ghosts.append(element);
+    }
+
+    #updateDragPreview(): void {
+        const drag = this.#drag!;
+        drag.geometry = undefined;
+        const rows = stepListRows(this.#steps, this.#separatorIndex);
+        let next: HTMLElement = drag.layer;
+        for (let index = rows.length - 1; index >= 0; index--) {
+            const row = rows[index];
+            const element = row.kind === 'step' ? drag.stepRows.get(this.#steps[row.index])!
+                : row.kind === 'target' ? drag.jumpRows.get(row.ifStep.ifJump.id)! : drag.separator;
+            const placeholder = element === drag.primary.element ? drag.primary.placeholder
+                : element === drag.companion?.element ? drag.companion.placeholder : undefined;
+            if (row.kind === 'step') {
+                const step = this.#steps[row.index];
+                const label = isIfJumpStep(step) ? this.#jumpLabel(step, row.index) : undefined;
+                this.#updateDragRow(element, row.index, label);
+                if (placeholder) this.#updateDragRow(placeholder, row.index, label);
+            } else if (row.kind === 'target') {
+                const label = this.#jumpMarkerLabel(row.ifStep, row.ifIndex);
+                this.#updateDragRow(element, undefined, label);
+                if (placeholder) this.#updateDragRow(placeholder, undefined, label);
+            }
+            const inList = placeholder ?? element;
+            if (inList.nextElementSibling !== next) this.#list.insertBefore(inList, next);
+            next = inList;
+        }
+        this.#queueJumpLines();
+    }
+
+    #updateDragRow(row: HTMLElement, index: number | undefined, jumpLabel: string | undefined): void {
+        if (index !== undefined && row.dataset.index !== String(index)) {
+            row.dataset.index = String(index);
+            row.querySelector(".hs-challenge-step-no")!.textContent = String(index + 1);
+        }
+        if (jumpLabel !== undefined) {
+            const link = row.querySelector(".hs-challenge-jump-link")!;
+            if (link.innerHTML !== jumpLabel) link.innerHTML = jumpLabel;
+        }
+    }
+
+    #liftCompanion(): void {
+        const drag = this.#drag!;
+        const companion = drag.companion!;
+        this.#lift(companion);
+        this.#list.classList.add("hs-challenge-dragging-pair");
+        if (!drag.connector) {
+            const from = drag.primary.height / 2 - drag.primary.offsetY;
+            const to = companion.height / 2 - companion.offsetY;
+            const top = Math.min(from, to) - 5;
+            const gutter = this.#list.querySelector<SVGSVGElement>(".hs-jump-lines")!.clientWidth;
+            const left = Math.min(-drag.primary.offsetX, -companion.offsetX) - gutter;
+            const sourceEdge = -drag.primary.offsetX - left - 3;
+            const targetEdge = -companion.offsetX - left - 3;
+            const connector = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            connector.classList.add("hs-jump-line", "hs-jump-lifted-line", "hs-jump-highlight");
+            connector.style.setProperty("--hs-jump-color", this.#jumpColors.get(drag.pairedJump!.id)!);
+            connector.setAttribute("width", String(Math.max(sourceEdge, targetEdge) + 3));
+            connector.setAttribute("height", String(Math.abs(from - to) + 10));
+            connector.setAttribute("aria-hidden", "true");
+            connector.style.left = `${left}px`;
+            connector.style.top = `${top}px`;
+            connector.innerHTML = jumpLine(from - top, to - top, sourceEdge, 3, targetEdge);
+            drag.connector = connector;
+        }
+        drag.ghosts.append(drag.connector);
     }
 
     #moveLifted(): void {
-        const drag = this.#drag!;
-        drag.element.style.left = `${drag.mouseX - drag.offsetX}px`;
-        drag.element.style.top = `${drag.mouseY - drag.offsetY}px`;
+        const { ghosts, viewport, mouseX, mouseY } = this.#drag!;
+        ghosts.style.transform = `translate3d(${mouseX - viewport.left}px, ${mouseY - viewport.top}px, 0)`;
     }
 
-    // The number of rows in the list whose middle is above the mouse (the dragged row left out): steps, plus the
-    // "Jump here" rows and "Add Here" when a step is dragged (it lands on either side of them)
-    #rowsAbove(clientY: number, allRows: boolean): number {
+    #measureDragViewport(scrollTop: number): DragViewport {
+        const container = this.#listContainer;
+        const box = container.getBoundingClientRect();
+        return {
+            left: box.left + container.clientLeft,
+            top: box.top + container.clientTop,
+            width: container.clientWidth,
+            height: container.clientHeight,
+            listTopAtZero: this.#list.getBoundingClientRect().top + scrollTop,
+        };
+    }
+
+    #positionDragLayer(): void {
+        const { layer, viewport } = this.#drag!;
+        layer.style.left = `${viewport.left}px`;
+        layer.style.top = `${viewport.top}px`;
+        layer.style.width = `${viewport.width}px`;
+        layer.style.height = `${viewport.height}px`;
+    }
+
+    // Measure stationary rows only after the preview changes or resizes. List-relative centers survive scrolling.
+    #measureDragGeometry(listTop: number): NonNullable<DragState['geometry']> {
+        const { target, pairedJump } = this.#drag!;
         const shown = ":not(.hs-challenge-lifted):not(.hs-challenge-placeholder)";
-        const rows = this.#list.querySelectorAll<HTMLElement>(allRows
+        const rows = this.#list.querySelectorAll<HTMLElement>(target.kind === 'step'
             ? `.hs-challenge-item${shown}, .hs-challenge-separator${shown}`
             : `.hs-challenge-item[data-index]${shown}`);
-        let count = 0;
-        for (const row of rows) {
+        const midpoints = Array.from(rows, row => {
             const rect = row.getBoundingClientRect();
-            if (clientY < rect.top + rect.height / 2) break;
-            count++;
-        }
-        return count;
+            return rect.top + rect.height / 2 - listTop;
+        });
+        const slot = target.kind === 'step' ? stepSlot(this.#steps, this.#separatorIndex, target.index, pairedJump)
+            : target.kind === 'separator' ? this.#separatorIndex
+            : this.#steps.find(step => isIfJumpStep(step) && step.ifJump.id === target.ifId)?.ifJump?.ifJumpIndex ?? -1;
+        return { midpoints, slot };
     }
 
     // Moves the dragged item to the place under the mouse; false when it is already there. place: the number of rows
@@ -1084,18 +1354,18 @@ export class HSAutosingChallengeModal {
         const target = this.#drag!.target;
         switch (target.kind) {
             case 'step': {
-                if (place === stepSlot(this.#steps, this.#separatorIndex, target.index)) return false;
+                const paired = this.#drag!.pairedJump;
                 const step = this.#steps[target.index];
                 this.#keepEditing(() => {
-                    ({ steps: this.#steps, separatorIndex: this.#separatorIndex } = moveStep(this.#steps, this.#separatorIndex, target.index, place));
+                    ({ steps: this.#steps, separatorIndex: this.#separatorIndex } = moveStep(this.#steps, this.#separatorIndex, target.index, place, paired));
                 });
                 target.index = this.#steps.indexOf(step);
                 return true;
             }
             case 'jumpTarget': {
-                const ifStep = this.#steps.find(step => isIfJumpStep(step) && step.ifJump.id === target.ifId) as IsJumpChallenge | undefined;
-                if (!ifStep || ifStep.ifJump.ifJumpIndex === place) return false;
-                ifStep.ifJump.ifJumpIndex = place;
+                const step = this.#steps.find(step => isIfJumpStep(step) && step.ifJump.id === target.ifId);
+                if (!step?.ifJump || step.ifJump.ifJumpIndex === place) return false;
+                step.ifJump.ifJumpIndex = place;
                 return true;
             }
             case 'separator':
@@ -1105,23 +1375,15 @@ export class HSAutosingChallengeModal {
         }
     }
 
-    #findDragged(target: DragTarget): HTMLElement | null {
-        switch (target.kind) {
-            case 'step': return this.#list.querySelector<HTMLElement>(`.hs-challenge-item[data-index="${target.index}"]`);
-            case 'jumpTarget': return this.#list.querySelector<HTMLElement>(`.hs-if-target[data-if-id="${target.ifId}"]`);
-            case 'separator': return this.#list.querySelector<HTMLElement>(".hs-challenge-separator");
-        }
-    }
-
-    // Moves the dragged item to the place under the mouse, and the lifted element with the mouse
+    // Hit-test the drop preview from cached coordinates. Floating rows move independently in mousemove.
     #followMouse(): void {
         const drag = this.#drag!;
-        if (this.#dropAt(this.#rowsAbove(drag.mouseY, drag.target.kind === 'step'))) {
-            this.#redrawList();
-            const element = this.#findDragged(drag.target);
-            if (element) this.#lift(element);
-        }
-        this.#moveLifted();
+        const listTop = drag.viewport.listTopAtZero - drag.scrollTop;
+        const { midpoints, slot } = drag.geometry ??= this.#measureDragGeometry(listTop);
+        const mouseY = drag.mouseY - listTop;
+        const next = midpoints.findIndex(y => mouseY < y);
+        const place = next < 0 ? midpoints.length : next;
+        if (place !== slot && this.#dropAt(place)) this.#updateDragPreview();
     }
 
     #onDragMove = (e: MouseEvent): void => {
@@ -1129,40 +1391,94 @@ export class HSAutosingChallengeModal {
         if (!drag) return;
         drag.mouseX = e.clientX;
         drag.mouseY = e.clientY;
-        this.#followMouse();
-        if (drag.scrollFrame === 0 && this.#autoScrollSpeed() !== 0) drag.scrollFrame = requestAnimationFrame(this.#autoScroll);
+        this.#setPairedDrag(e.shiftKey);
+        this.#moveLifted();
+        this.#requestDragFrame();
+    };
+
+    #requestDragFrame(): void {
+        const drag = this.#drag!;
+        if (!drag.frame) drag.frame = requestAnimationFrame(this.#renderDragFrame);
+    }
+
+    #onDragViewportChange = (): void => {
+        if (!this.#drag) return;
+        this.#drag.viewportDirty = true;
+        this.#requestDragFrame();
+    };
+
+    #onDragScroll = (e: Event): void => {
+        const drag = this.#drag;
+        if (!drag) return;
+        if (e.target !== this.#listContainer) {
+            if (e.target === document || (e.target instanceof Element && e.target.contains(this.#listContainer))) {
+                this.#onDragViewportChange();
+            }
+            return;
+        }
+        drag.scrollTop = this.#listContainer.scrollTop;
+        this.#requestDragFrame();
     };
 
     // Pixels per frame to scroll the list by (negative: up): faster as the mouse nears the list's edge, or goes past it
     #autoScrollSpeed(): number {
-        const box = this.#listContainer.getBoundingClientRect();
-        const y = this.#drag!.mouseY;
-        const depth = Math.max(box.top + AUTO_SCROLL_ZONE_PX - y, y - (box.bottom - AUTO_SCROLL_ZONE_PX));
+        const { viewport, mouseY } = this.#drag!;
+        const depth = Math.max(viewport.top + AUTO_SCROLL_ZONE_PX - mouseY,
+            mouseY - (viewport.top + viewport.height - AUTO_SCROLL_ZONE_PX));
         if (depth <= 0) return 0;
         const speed = Math.ceil(Math.min(1, depth / AUTO_SCROLL_ZONE_PX) * AUTO_SCROLL_MAX_PX_PER_FRAME);
-        return y < box.top + box.height / 2 ? -speed : speed;
+        return mouseY < viewport.top + viewport.height / 2 ? -speed : speed;
     }
 
-    // Runs each frame while the mouse is in the auto-scroll zone (a mousemove starts it again)
-    #autoScroll = (): void => {
+    // Coalesce pointer moves and auto-scroll into one update per frame.
+    #renderDragFrame = (): void => {
         const drag = this.#drag;
         if (!drag) return;
-        drag.scrollFrame = 0;
+        drag.frame = 0;
+        if (drag.viewportDirty) {
+            drag.scrollTop = this.#listContainer.scrollTop;
+            drag.viewport = this.#measureDragViewport(drag.scrollTop);
+            drag.viewportDirty = false;
+            this.#positionDragLayer();
+            this.#moveLifted();
+        }
+        const beforeScroll = drag.scrollTop;
         const speed = this.#autoScrollSpeed();
-        if (speed === 0) return;
-        this.#listContainer.scrollTop += speed;
+        if (speed) {
+            this.#listContainer.scrollTop = beforeScroll + speed;
+            drag.scrollTop = this.#listContainer.scrollTop;
+        }
         this.#followMouse();
-        drag.scrollFrame = requestAnimationFrame(this.#autoScroll);
+        if (beforeScroll !== drag.scrollTop) this.#requestDragFrame();
     };
 
-    #onDragEnd = (): void => {
-        const drag = this.#drag;
+    #clearDrag(): void {
         document.removeEventListener("mousemove", this.#onDragMove);
         document.removeEventListener("mouseup", this.#onDragEnd);
-        if (drag) cancelAnimationFrame(drag.scrollFrame);
+        document.removeEventListener("keydown", this.#onDragShift);
+        document.removeEventListener("keyup", this.#onDragShift);
+        document.removeEventListener("scroll", this.#onDragScroll, true);
+        window.removeEventListener("resize", this.#onDragViewportChange);
+        if (this.#drag) {
+            cancelAnimationFrame(this.#drag.frame);
+            this.#drag.layer.remove();
+        }
         this.#drag = null;
+        this.#list.classList.remove("hs-challenge-dragging-pair");
+    }
+
+    #onDragEnd = (e: MouseEvent): void => {
+        const drag = this.#drag;
+        if (!drag) return;
+        // A fast drop can happen before the queued frame sees the last mouse position.
+        if (drag.frame || drag.mouseX !== e.clientX || drag.mouseY !== e.clientY) {
+            drag.mouseX = e.clientX;
+            drag.mouseY = e.clientY;
+            this.#followMouse();
+        }
+        this.#clearDrag();
         // One change per drag, if the steps differ at the end (a step dropped back in its place: none)
-        if (drag && canonicalJson(drag.before.steps) !== canonicalJson(this.#steps)) this.#saveForUndo(drag.before);
+        if (canonicalJson(drag.before.steps) !== canonicalJson(this.#steps)) this.#saveForUndo(drag.before);
         this.#redrawList();
     };
 }

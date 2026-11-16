@@ -27,6 +27,119 @@
   ],
   "entries": [
     {
+      "id": "live-2.14.8b",
+      "version": "2.14.8b",
+      "channel": "live",
+      "repository": "Ferlieloi/synergism-hypersynergy",
+      "commit": "452d72be2f29fc4f2c10e8f86014932a0d5f0a0f",
+      "previous_commit": "a27bb118416471440fc762b060d6944615fda292",
+      "date": "2026-11-16",
+      "date_kind": "tag",
+      "status": "tagged",
+      "release_url": null,
+      "sources": [
+        {
+          "label": "Git tag",
+          "url": "https://github.com/Ferlieloi/synergism-hypersynergy/tree/v2.14.8b"
+        },
+        {
+          "label": "Release build",
+          "url": "https://github.com/Ferlieloi/synergism-hypersynergy/commit/452d72be2f29fc4f2c10e8f86014932a0d5f0a0f"
+        },
+        {
+          "label": "Dev release",
+          "url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.14.8a-dev1"
+        }
+      ],
+      "notes": [],
+      "changes": [
+        {
+          "type": "fixed",
+          "text": "Auto-Sing jump markers stay between steps during a normal drag. Hold Shift at any point while dragging an IF to move its jump marker with it, and release Shift to leave the marker in place. A colored arrow connects the two and can be dragged separately to retarget the jump.",
+          "evidence": [
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/5cc58e2284d9acac817785e95f12f9dd6523ec3f",
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/70c43ec0bae4cfe1514c0c3cc9aba43189a4eb50"
+          ]
+        },
+        {
+          "type": "changed",
+          "text": "The strategy editor follows the mouse more smoothly while dragging. Add Here stays in place while you reorder steps, and you can drop a step on either side of it.",
+          "evidence": [
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/5cc58e2284d9acac817785e95f12f9dd6523ec3f",
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/8d11ae69e5e4c4e7793c19ddf2f49a35eb9522d2"
+          ]
+        },
+        {
+          "type": "changed",
+          "text": "The quick access menu uses the Singularity icon for Start Auto-Sing and blue flames for the Heater.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/9168f3b78aed4255445787e049c99a56fa415bab",
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/b25810ed8eda5aa380239b76ac718960d070a6ab"
+          ]
+        },
+        {
+          "type": "changed",
+          "text": "The player website has a redesigned guide, illustrated Installation and Heater walkthroughs, improved feature search, and a Settings reference in the same order as the Settings tab.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/f76419c1ffdc068229503e6ae11aab13e73476d3",
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/e9e0cb467b3b8758392f59cb31f307dc9fa9b02a",
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/3e658d4b2f61fc5355a825de6b79fd03ef292e77",
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/e8823a0b6fd553dfe2093660acfbca8f4e4c30c9",
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/01590396b3bd1143cc9f4ae47110f1fcefe09c1b"
+          ]
+        }
+      ],
+      "contributors": [
+        {
+          "id": "Ferlieloi",
+          "roles": [
+            "changes",
+            "merge"
+          ],
+          "commits": [
+            "5cc58e2284d9acac817785e95f12f9dd6523ec3f",
+            "28345a9e23314ca263c68f16e85ba9d0f72a840b",
+            "f12653ff50f0b78aa77f35943553499cf6ba85bb"
+          ]
+        },
+        {
+          "id": "maenhiir",
+          "roles": [
+            "changes"
+          ],
+          "commits": [
+            "70c43ec0bae4cfe1514c0c3cc9aba43189a4eb50",
+            "8d11ae69e5e4c4e7793c19ddf2f49a35eb9522d2",
+            "9168f3b78aed4255445787e049c99a56fa415bab",
+            "f76419c1ffdc068229503e6ae11aab13e73476d3",
+            "e9e0cb467b3b8758392f59cb31f307dc9fa9b02a",
+            "01590396b3bd1143cc9f4ae47110f1fcefe09c1b"
+          ]
+        }
+      ],
+      "contributor_range": {
+        "base": "a27bb118416471440fc762b060d6944615fda292",
+        "head": "452d72be2f29fc4f2c10e8f86014932a0d5f0a0f",
+        "scope": "repository"
+      },
+      "merges": [
+        {
+          "direction": "dev-to-live",
+          "commit": "28345a9e23314ca263c68f16e85ba9d0f72a840b",
+          "summary": "Includes Dev v2.14.8a-dev1 and follow-up changes through the website header layout update.",
+          "evidence": [
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/28345a9e23314ca263c68f16e85ba9d0f72a840b",
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/f12653ff50f0b78aa77f35943553499cf6ba85bb",
+            "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.14.8a-dev1",
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/01590396b3bd1143cc9f4ae47110f1fcefe09c1b"
+          ],
+          "from_entry_ids": [
+            "dev-2.14.8a-dev1"
+          ]
+        }
+      ]
+    },
+    {
       "id": "loader-0.2.11",
       "version": "0.2.11",
       "channel": "loader",
