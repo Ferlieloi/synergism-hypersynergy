@@ -7,13 +7,13 @@ header { min-height: 0; }
 nav { margin-top: 10px; }
 /* One row at the top: the title on the left, the counters in the middle, the credit on the right; the tabs under the counters.
    A grid on the header (#second-row's box dropped): both side columns stay equal whatever their padding, so the middle stays
-   centred, and the counters share the tabs' column, spread to its width: their ends line up with the tabs' (the tabs are the
-   wider). Below 1320 px (from 1308 the title's column outgrows the credit's and moves the middle), the counters go on their own line above the other two, the original
+   centred, and the counters share the tabs' column (the tabs are the wider), at their own width, centred: same centre as the
+   tabs. Below 1320 px (from 1308 the title's column outgrows the credit's and moves the middle), the counters go on their own line above the other two, the original
    site's layout. */
 header { display: grid; grid-template-columns: 1fr auto 1fr; column-gap: 16px; align-items: center; padding-top: 8px; }
 #second-row { display: contents; }
 #second-row-left-container { grid-column: 1; grid-row: 1; }
-#first-row { grid-column: 2; grid-row: 1; margin: 0; justify-content: space-between; }
+#first-row { grid-column: 2; grid-row: 1; margin: 0; justify-self: center; }
 .header-credit { grid-column: 3; grid-row: 1; }
 nav { grid-column: 2; grid-row: 2; }
 /* The title halfway between the left edge (24 px, the credit line's gap on the right) and the middle of the left half,
