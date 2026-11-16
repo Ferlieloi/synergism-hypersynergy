@@ -279,10 +279,13 @@ def page(path: str, title: str, tab: str, body: str, *, depth: int = 0,
          source: str = "docs/data/feature-catalogue.json",
          scripts: tuple[str, ...] = (),
          folding: bool = False,
+         accent: str = "",
          description: str = "Hypersynergism: current feature guide, installation and wiki for the Synergism quality-of-life mod.") -> None:
     """folding: the features page's categories (the settings page's sections) stay hidden until guide.js has folded them, so the full list never
-    shows for a frame first. guide.js lifts it when done, or the script tag's onerror or a timeout if it never runs."""
+    shows for a frame first. guide.js lifts it when done, or the script tag's onerror or a timeout if it never runs.
+    accent: a category's colour, for its wiki page and its guide (faded lines by the headings, guide.css .accented)."""
     prefix = "../" * depth
+    wrapper = f' accented" style="--accent:{accent}' if accent else ""
     tabs = [("home", "Home", "index.html", "orange"),
             ("features", "Features", "features.html", "green"),
             ("wiki", "Wiki", "wiki/index.html", "cyan"),
@@ -349,7 +352,7 @@ def page(path: str, title: str, tab: str, body: str, *, depth: int = 0,
     <nav aria-label="Main navigation"><div id="tabs">{nav}</div></nav>
   </header>
   <div id="border" style="background:{color}"></div>
-  <main id="page-container"><div class="page-wrapper visible" id="content" tabindex="-1">
+  <main id="page-container"><div class="page-wrapper visible{wrapper}" id="content" tabindex="-1">
     {body}
     <footer>Hypersynergism · <a href="{REPO}">Source</a> · <a href="{prefix}about.html">Credits</a> · <a href="#content">Back to top</a></footer>
   </div></main>
@@ -1173,7 +1176,7 @@ def guide_outputs() -> None:
         c = next(x for x in CATEGORIES if x["id"] == cid)
         page(f"docs/wiki/{cid}-guide.html", guide_title(cid), "wiki",
              f'<p class="breadcrumb"><a href="index.html">Wiki</a> / <a href="{cid}.html">{esc(c["title"])}</a> / Guide</p>'
-             + guide_html(cid), depth=1, source=f"docs/data/guides/{cid}.md",
+             + guide_html(cid), depth=1, source=f"docs/data/guides/{cid}.md", accent=c["color"],
              description=f"{guide_title(cid)}: a players' guide for Hypersynergism, the Synergism quality-of-life mod.")
 
 
@@ -1259,7 +1262,7 @@ def build() -> None:
              f'<h1>{category_icon(c, "../", 32)}{esc(c["title"])}</h1><p>{esc(c["intro"])}</p>'
              f'{guide_link(c, c["id"] + "-guide.html")}{toc}'
              + "".join(feature_html(c, f) for f in c["features"])
-             + sources_html("Sources for this category", c["sources"]).replace('class="sources"', 'class="sources category-sources"', 1), depth=1, description=category_description(c))
+             + sources_html("Sources for this category", c["sources"]).replace('class="sources"', 'class="sources category-sources"', 1), depth=1, accent=c["color"], description=category_description(c))
     add("docs/FEATURES.md", "\n\n".join(inventory))
     settings_outputs()
     calculation_outputs()
