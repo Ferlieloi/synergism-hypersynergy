@@ -6,6 +6,7 @@ import { HSLogger } from "../../hs-core/hs-logger";
 import { HSUI } from "../../hs-core/hs-ui";
 import manifest from '../../../resource/json/strategies/manifest.json';
 import { escapeLogText } from '../../hs-utils/hs-escape';
+import { resolveIfJumpOffsets, useIfJumpOffsets } from "./hs-autosing-types";
 
 // Fields of older strategy formats: 8 corruption values before the game's 4.4.0 (corruptions, loadout), named
 // corruption loadouts, that phases (corruptionLoadoutName) and "Load Corruption Loadout" steps (loadoutName) referred to,
@@ -104,6 +105,10 @@ export class HSStrategyManager {
         const cloned = JSON.parse(JSON.stringify(strategy)) as HSAutosingStrategy;
 
         if (!Array.isArray(cloned.strategy)) cloned.strategy = [];
+        // The historical migrations below adjust absolute destinations.
+        for (const phase of HSStrategyManager.#getPhases(cloned)) {
+            if (Array.isArray(phase?.strat)) resolveIfJumpOffsets(phase.strat);
+        }
 
         let ownPhase = true;
         if (!cloned.aoagPhase) {
@@ -153,7 +158,7 @@ export class HSStrategyManager {
         }
         phase.strat.unshift(levelStep);
         for (const step of phase.strat) {
-            if (step.ifJump) step.ifJump.ifJumpIndex++;
+            if (step.ifJump?.ifJumpIndex !== undefined) step.ifJump.ifJumpIndex++;
         }
     }
 
@@ -174,7 +179,7 @@ export class HSStrategyManager {
             if (!isRemoved(phase.strat[i])) continue;
             phase.strat.splice(i, 1);
             for (const step of phase.strat) {
-                if (step.ifJump && step.ifJump.ifJumpIndex > i) step.ifJump.ifJumpIndex--;
+                if (step.ifJump?.ifJumpIndex !== undefined && step.ifJump.ifJumpIndex > i) step.ifJump.ifJumpIndex--;
             }
         }
     }
@@ -245,7 +250,7 @@ export class HSStrategyManager {
                 challengeMaxTime: 0,
             });
             for (const step of phase.strat) {
-                if (step.ifJump) step.ifJump.ifJumpIndex++;
+                if (step.ifJump?.ifJumpIndex !== undefined) step.ifJump.ifJumpIndex++;
             }
         }
     }
@@ -295,6 +300,12 @@ export class HSStrategyManager {
                 }
                 if (step.comment !== undefined && typeof step.comment !== 'string') throw new Error(`${tag}: comment must be text`);
                 if (step.ifJump !== undefined && !isRecord(step.ifJump)) throw new Error(`${tag}: ifJump must be an object`);
+                const offset = step.challengeNumber === IF_JUMP_VALUE && isRecord(step.ifJump)
+                    && step.ifJump.ifJumpIndex === undefined ? step.ifJump.ifJumpOffset : undefined;
+                if (offset !== undefined && (typeof offset !== 'number' || !Number.isInteger(offset)
+                    || index + offset < 0 || index + offset > phase.strat.length)) {
+                    throw new Error(`${tag}: IF offset must point to a step or the end of the phase`);
+                }
             }
         }
     }
@@ -315,7 +326,8 @@ export class HSStrategyManager {
             if (jump.ifJumpMode === undefined) jump.ifJumpMode = 'challenges';
             if (jump.ifJumpMode !== 'challenges' && jump.ifJumpMode !== 'stored_c15') throw new Error(`${tag}: invalid IF mode`);
             if (jump.ifJumpOperator !== '>' && jump.ifJumpOperator !== '<') throw new Error(`${tag}: IF operator must be > or <`);
-            if (!Number.isInteger(jump.ifJumpIndex) || jump.ifJumpIndex < 0 || jump.ifJumpIndex > phase.strat.length) {
+            const destination = jump.ifJumpIndex;
+            if (destination === undefined || !Number.isInteger(destination) || destination < 0 || destination > phase.strat.length) {
                 throw new Error(`${tag}: IF destination must be a step index from 0 to ${phase.strat.length} (end of phase)`);
             }
             if (jump.ifJumpMode === 'challenges') {
@@ -416,6 +428,12 @@ export class HSStrategyManager {
         return { defaultStrategiesOptions, userStrategiesOptions };
     }
 
+    static #strategyForStorage(strategy: HSAutosingStrategy): HSAutosingStrategy {
+        const stored = structuredClone(strategy);
+        for (const phase of HSStrategyManager.#getPhases(stored)) useIfJumpOffsets(phase.strat, true);
+        return stored;
+    }
+
     static saveStrategyToStorage(
         strategy: HSAutosingStrategy,
         strategyName?: string,
@@ -445,7 +463,7 @@ export class HSStrategyManager {
             updatedStrategies = strategies.filter(entry => storedStrategyName(entry) !== strategyName);
         }
 
-        updatedStrategies = updatedStrategies.concat(normalizedStrategy);
+        updatedStrategies = updatedStrategies.concat(HSStrategyManager.#strategyForStorage(normalizedStrategy));
 
         const defaultNames = HSStrategyManager.getDefaultStrategyNames();
         const saved = storageMod.setData(
@@ -519,7 +537,7 @@ export class HSStrategyManager {
             try {
                 const checked = HSStrategyManager.validateStrategy(strategy, context);
                 normalized.push(checked);
-                if (!isSameJsonData(strategy, checked)) didMigrate = true;
+                if (!isSameJsonData(strategy, HSStrategyManager.#strategyForStorage(checked))) didMigrate = true;
                 // Validation checked the original structure before normalizing the copy.
                 if (HSStrategyManager.hasLegacyCorruptions(strategy as HSAutosingStrategy)) legacyNames.push(checked.strategyName);
             } catch (error) {
@@ -531,7 +549,7 @@ export class HSStrategyManager {
         // Migrated strategies are written back, so a migration can go once every stored copy has been loaded
         // (docs/dev/compat-code.md). Not when an entry was rejected: it stays on disk for repair, a load must not delete it.
         if ((didMigrate || didDropDefaults) && !rejected) {
-            const saved = storageMod.setData(HSGlobal.HSSettings.strategiesKey, normalized);
+            const saved = storageMod.setData(HSGlobal.HSSettings.strategiesKey, normalized.map(HSStrategyManager.#strategyForStorage));
             if (didMigrate) HSLogger.debug(() => `Stored strategies brought to the current format${saved ? '' : ' (not saved: storage refused the write)'}`, context);
         }
         if (legacyNames.length > 0) HSStrategyManager.warnLegacyCorruptions(legacyNames, context);

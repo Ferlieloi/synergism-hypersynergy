@@ -107,6 +107,24 @@ async function main() {
             first(s).ifJump.ifJumpIndex = destination;
             manager.validateStrategy(s); // backward jumps and the end-of-phase sentinel remain valid
         }
+        const relative = jumpStrategy();
+        const relativeSteps = relative.strategy[0].strat;
+        [relativeSteps[0], relativeSteps[1]] = [relativeSteps[1], relativeSteps[0]];
+        const relativeJump = relativeSteps[1].ifJump;
+        delete relativeJump.ifJumpIndex;
+        for (const [offset, destination] of [[-1, 0], [0, 1], [2, 3], [relativeSteps.length - 1, relativeSteps.length]]) {
+            relativeJump.ifJumpOffset = offset;
+            const resolved = manager.validateStrategy(relative).strategy[0].strat[1].ifJump;
+            assert.equal(resolved.ifJumpIndex, destination);
+            assert.equal(resolved.ifJumpOffset, undefined);
+        }
+        for (const invalid of [-2, relativeSteps.length, 0.5, '0', null]) {
+            relativeJump.ifJumpOffset = invalid;
+            assert.throws(() => manager.validateStrategy(relative), /step 2: IF offset/);
+        }
+        // An old build can change the stored index while leaving the prototype's offset behind.
+        relativeJump.ifJumpIndex = 1;
+        assert.equal(manager.validateStrategy(relative).strategy[0].strat[1].ifJump.ifJumpIndex, 1);
         first(s).ifJump.ifJumpMode = 'stored_c15';
         first(s).ifJump.ifJumpMultiplier = -2.5;
         delete first(s).ifJump.ifJumpValue;

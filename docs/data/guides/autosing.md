@@ -104,7 +104,7 @@ An If-jump step (an IF row ① in the list) jumps to its **Jump here** row ② w
 - **Stored C15 value** mode: compares C15's current score with the stored score × 10^Multiplier.
 - **Max jumps** ③: the IF jumps at most this many times per phase run, then continues below it even if its condition still holds (0 = no limit). It keeps an account that never reaches a C15 target from looping forever. The default strategies' last C15 loop has 5.
 - The IF row says where it jumps (→ step N), and the Jump here row which IF it belongs to: click either one to see the other. ↺ means the IF jumps back (a loop).
-- Drag the Jump here row to choose where it jumps. If you move a step, the IF doesn't follow it.
+- Follow the colored line from an IF to its **Jump here** row. Drag the arrow or the row’s handle to change the destination. Drag the IF to move its destination with it.
 
 #### Editing steps
 
