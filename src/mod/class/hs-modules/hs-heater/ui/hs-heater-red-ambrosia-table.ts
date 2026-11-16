@@ -8,8 +8,8 @@ import type { RedAmbrosiaUpgradeCalculationConfig, RedAmbrosiaUpgradeKey } from 
 import { applyHeaterBells, normalizeHeaterFusion, computeHeaterFusionValue, computeHeaterFusionGain, computeHeaterRedAmbrosiaSheetValue } from "../hs-heater-utils";
 import { escapeHtml } from "../../../hs-utils/hs-escape";
 
-export type RedAmbrosiaUpgradeCategoryEffectValue = number | "N / A" | "-";
-export type RedAmbrosiaUpgradeCefLogValue = number | "-" | "N / A" | "Never";
+export type RedAmbrosiaUpgradeCategoryEffectValue = number | "-";
+export type RedAmbrosiaUpgradeCefLogValue = number | "-";
 
 export interface RedAmbrosiaUpgradeTableRow {
     upgradeKey: RedAmbrosiaUpgradeKey;
@@ -391,14 +391,14 @@ function getRedAmbrosiaUpgradeCategoryEffect(
             return value;
         }
     }
-    return 'N / A';
+    return '-';
 }
 
 function buildRedAmbrosiaUpgradeCefLog(
     effect: RedAmbrosiaUpgradeCategoryEffectValue,
     cost: number | "Maxed",
 ): RedAmbrosiaUpgradeCefLogValue {
-    if (effect === 'N / A' || effect === '-') {
+    if (effect === '-') {
         return effect;
     }
     if (typeof cost !== 'number' || cost <= 0) {
@@ -458,7 +458,7 @@ function buildRedAmbrosiaUpgradeRow(
 }
 
 function formatRedAmbrosiaUpgradeCategoryValue(value: RedAmbrosiaUpgradeCategoryEffectValue | undefined): string {
-    if (value === undefined || value === 'N / A' || value === '-') { return value === undefined ? '-' : value; }
+    if (value === undefined || value === '-') { return '-'; }
     return value.toFixed(9);
 }
 

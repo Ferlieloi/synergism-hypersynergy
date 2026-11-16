@@ -574,11 +574,9 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         const pseudoData = this.getPseudoData?.() ?? this.pseudoData;
         if (!pseudoData) return 0;
 
-        // The current endpoint separates upgrade metadata from the player's
-        // purchased levels.  Player-level entries are not guaranteed to carry
-        // internalName, so resolve the requested game name to its stable ID
-        // first and use that ID for the level lookup.  Keep the name lookup as
-        // a compatibility path for older responses.
+        // The endpoint separates upgrade metadata (upgrades) from the player's levels (playerUpgrades). Vanilla's
+        // PlayerUpgrades (purchases/UpgradesSubtab.ts) carries both internalName, which the game itself reads, and
+        // upgradeId: matched by either.
         const metadata = pseudoData.upgrades?.find((upgrade) =>
             typeof upgrade === 'object' && upgrade !== null && 'internalName' in upgrade
                 && upgrade.internalName === name

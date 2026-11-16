@@ -8,7 +8,6 @@ import { HSSettings } from "../settings/hs-settings";
 import { HSMouse } from "../hs-mouse";
 import { HSStorage } from "../hs-storage";
 import { HSAmbrosia } from "../../hs-modules/hs-ambrosia/hs-ambrosia";
-import { HSStats } from "../../hs-modules/hs-stats";
 import { HSGameState } from "../hs-gamestate";
 import { HSGameData } from "../gds/hs-gamedata";
 import { HSGameDataAPI } from "../gds/hs-gamedata-api";
@@ -70,12 +69,6 @@ export const HS_MODULE_DEFINITIONS = [
         moduleClass: HSMouse,
         context: 'HSMouse',
         moduleColor: 'gold',
-    },
-    {
-        className: 'HSStats',
-        moduleClass: HSStats,
-        context: 'HSStats',
-        moduleColor: 'lawngreen',
     },
     {
         className: 'HSGameState',

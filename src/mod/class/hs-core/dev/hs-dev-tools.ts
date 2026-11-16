@@ -4,6 +4,7 @@ import { HSStorage } from "../hs-storage";
 import { HSTooltip } from "../hs-tooltip";
 import { HSUI } from "../hs-ui";
 import { HSBackup } from "../hs-backup";
+import { HSSettings } from "../settings/hs-settings";
 
 import { HSModuleRegistry } from "../module/hs-module-registry";
 
@@ -128,6 +129,7 @@ const ROW_GROUPS: { title: string, rows: HSDevRowDefinition[] }[] = [
  *     Dev builds only: rows on the Debug tab that edit the live player object (quarks, cubes, hepteracts,
  *     ambrosia, any field by path), to set up a save for a test, and snapshots of the save to go back to
  *     (automatic and named, restored through HSBackup with a page reload).
+ *     Also prints the mod settings and the game data the mod read to the browser console.
  *     Never reaches players: its only use is under `if (HS_DEV_BUILD)`, a build-time constant that is false
  *     in the release build, so esbuild drops this file from the release bundle (the release build checks it).
  *     For that to hold, keep this class free of static fields and of imports that run code when loaded.
@@ -180,6 +182,14 @@ export class HSDevTools {
             restore: (name: string) => this.#restoreNamed(String(name)),
         };
         (window as any).hsDev = hsDev;
+
+        root.append(this.#el('div', 'hs-dev-tools-group', 'Browser console'));
+        const dumps = this.#el('div', 'hs-dev-tools-buttons');
+        dumps.append(
+            this.#button('Dump Settings', () => HSSettings.dumpToConsole()),
+            this.#button('Dump Game vars', () => this.#dumpGameData()),
+        );
+        root.append(dumps);
 
         if (!HSGlobal.exposedPlayer) {
             root.append(this.#el('div', '', 'No player object: these tools need the patched game.'));
@@ -416,6 +426,24 @@ export class HSDevTools {
         if (className) element.className = className;
         if (text !== undefined) element.textContent = text;
         return element;
+    }
+
+    /** The data the mod fetched or read, printed to the browser console. */
+    #dumpGameData(): void {
+        const dataModule = HSModuleRegistry.getModule('HSGameDataAPI');
+        if (!dataModule) return;
+
+        console.log('----- GAME DATA -----');
+        console.log(dataModule.getGameData());
+        console.log('----- PSEUDO DATA -----');
+        // Patched game: the game's own levels, which the mod reads instead
+        console.log(window.__HS_pcoinLevelsLoaded ? window.__HS_pcoinLevels : dataModule.getPseudoData());
+        console.log('----- CAMPAIGN DATA -----');
+        console.log(dataModule.getCampaignData());
+        console.log('----- ME DATA -----');
+        console.log(dataModule.getMeData());
+        console.log('----- EVENT DATA -----');
+        console.log(dataModule.getEventData());
     }
 
     #button(text: string, onClick: () => void): HTMLElement {

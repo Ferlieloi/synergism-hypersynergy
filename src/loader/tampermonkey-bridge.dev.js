@@ -12,11 +12,20 @@
 
 // Generated from src/loader/shared by npm run build:loaders.
 (() => {
+  'use strict';
+
+  // The code comes from the local dev server. repo only sets which repository the version check reads:
+  //   'Ferlieloi' = Live
+  //   'maenhiir'  = Dev (default)
+  const repo = 'maenhiir';
+
+  // Not used by the dev server; shown in backups.
+  const version = 'master';
+
+  // ---- Nothing to edit below this line ----
+
   // src/loader/shared/loader-urls.mjs
   var DEV_SERVER_ORIGIN = "http://127.0.0.1:8080";
-  function defaultRepo(dev) {
-    return dev ? "maenhiir" : "Ferlieloi";
-  }
   function repositoryRoot(repo2, version2) {
     return `https://cdn.jsdelivr.net/gh/${repo2}/synergism-hypersynergy@${version2}`;
   }
@@ -52,7 +61,5 @@
   }
 
   // src/loader/shared/bridge-entry.js
-  var repo = defaultRepo(true);
-  var version = "master";
   runBridge(true, repo, version);
 })();

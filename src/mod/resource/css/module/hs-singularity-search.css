@@ -1,17 +1,13 @@
 /* The Singularity tab's search fields (HSSingularitySearch). Injected only while its setting is on. */
 
-/* The field, its Clear button and its count: the same on every subtab */
+/* The field, its count and its Clear button: the same on every subtab */
 .hs-sing-search-field {
     position: relative;
     flex: none;
     align-self: center;
-    width: min(260px, 100%);
+    width: min(320px, 100%);
     margin-top: 4px;
     pointer-events: auto;
-}
-
-.hs-sing-search-box {
-    position: relative;
 }
 
 .hs-sing-search-input {
@@ -31,31 +27,34 @@
     border-color: var(--gold-color);
 }
 
-/* Beside the field, out of the flow: the field stays centred. The game's button, at the field's height. */
-.hs-sing-search-clear {
+/* Inside the field, at its right end: the count, then the Clear button. Over the text box, which never resizes. */
+.hs-sing-search-end {
     position: absolute;
-    top: 0;
-    left: 100%;
-    height: 26px;
-    min-height: 0;
-    margin-left: 8px;
-    padding: 0 10px;
-    border: 1px solid #666;
-    border-radius: 4px;
+    top: 2px;
+    right: 2px;
+    bottom: 2px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    pointer-events: none;
+}
+
+.hs-sing-search-count {
+    color: #888;
     font-size: 0.85em;
     white-space: nowrap;
 }
 
-/* Inside the field, at its right end */
-.hs-sing-search-count {
-    position: absolute;
-    top: 50%;
-    right: 8px;
-    transform: translateY(-50%);
-    color: #888;
-    font-size: 0.85em;
+/* The game's button, nearly the field's height: not a cross, too small a target */
+.hs-sing-search-clear {
+    height: 100%;
+    min-height: 0;
+    padding: 0 8px;
+    border: 1px solid #666;
+    border-radius: 3px;
+    font-size: 0.8em;
     white-space: nowrap;
-    pointer-events: none;
+    pointer-events: auto;
 }
 
 /* Perks / Penalties */
@@ -76,16 +75,22 @@
     pointer-events: none;
 }
 
-/* One row, in the room above the penalties text */
-#hs-sing-search-perks-subjects {
+/* The clickable words under a field */
+.hs-sing-search-words {
     display: flex;
     flex: none;
+    flex-wrap: wrap;
     justify-content: center;
     gap: 3px;
+}
+
+/* One row, in the room above the penalties text */
+#hs-sing-search-perks .hs-sing-search-words {
+    flex-wrap: nowrap;
     height: 20px;
 }
 
-#hs-sing-search-perks-subjects button {
+.hs-sing-search-words button {
     min-height: 0;
     height: 20px;
     padding: 0 3px;
@@ -100,24 +105,28 @@
     pointer-events: auto;
 }
 
-#hs-sing-search-perks-subjects button:hover {
+.hs-sing-search-words button:hover {
     border-color: #999;
     color: var(--white-color);
 }
 
-#hs-sing-search-perks-results {
+/* The results, on every subtab: one column of cards, scrolled inside */
+.hs-sing-search-results {
     display: flex;
-    flex: 1;
     flex-direction: column;
     gap: 6px;
-    min-height: 0;
     overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: #666 transparent;
 }
 
-#hs-sing-search-perks-results:not(:empty) {
+.hs-sing-search-results:not(:empty) {
     pointer-events: auto;
+}
+
+#hs-sing-search-perks-results {
+    flex: 1;
+    min-height: 0;
 }
 
 /* Down to the window's bottom, out of the flow: nothing moves. Not when the game stacks the tree under the penalties
@@ -174,9 +183,22 @@
 }
 
 .hs-sing-search-empty {
+    flex: none;
     margin-top: 16px;
     color: #888;
     text-align: center;
+}
+
+/* Under the last card, or under the empty list's text */
+.hs-sing-search-hint {
+    flex: none;
+    color: #888;
+    font-size: 0.8em;
+    text-align: center;
+}
+
+.hs-sing-search-empty > .hs-sing-search-hint {
+    margin-top: 6px;
 }
 
 /* The game's stacked layout (its own breakpoint) has no room above the penalties text: make the field's and the words' */
@@ -203,30 +225,17 @@
    the game does for that line; min-width fills the row. */
 .hs-sing-search-row {
     display: flex;
-    justify-content: center;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
     width: 0;
     min-width: 100%;
     margin: 0 0 8px;
 }
 
-/* The Clear button in the flow beside the field, its room kept while hidden: the box can be narrow (octeracts with the
-   maxed upgrades hidden) */
 .hs-sing-search-row .hs-sing-search-field {
-    display: flex;
-    gap: 8px;
     width: min(360px, 100%);
     margin-top: 0;
-}
-
-.hs-sing-search-row .hs-sing-search-box {
-    flex: 1;
-    min-width: 0;
-}
-
-.hs-sing-search-row .hs-sing-search-clear {
-    position: static;
-    flex: none;
-    margin-left: 0;
 }
 
 #actualSingularityUpgradeContainer.hs-sing-search-active .singularityUpgrade:not(.hs-sing-search-hit),
@@ -239,4 +248,68 @@
 #octeractUpgradeContainer.hs-sing-search-active .octeractUpgradeSpine,
 #octeractUpgradeContainer.hs-sing-search-active .octeractUpgradeTrack::before {
     opacity: 0.2;
+}
+
+/* Golden Quarks: the cards left of the box (placed by HSUpgradeGridSearch), out of the flow: nothing moves.
+   Octeracts: the cards over the column beside the box, its stats hidden. Down to the window's bottom. */
+#singularityUpgradeContainer:has(> .hs-sing-search-results),
+#octeractResourceContainer:has(> .hs-sing-search-row) {
+    position: relative;
+}
+
+#singularityUpgradeContainer > .hs-sing-search-results,
+#octeractResourceContainer > .hs-sing-search-results {
+    position: absolute;
+    z-index: 2;
+    max-height: calc(100vh - var(--hs-sing-search-results-top, 100vh) - 8px);
+}
+
+#octeractResourceContainer > .hs-sing-search-results {
+    right: 0;
+    left: 0;
+}
+
+#octeractResourceContainer.hs-sing-search-covered > :not(.hs-sing-search-row, .hs-sing-search-results) {
+    visibility: hidden;
+}
+
+/* The field level with the box's top, not halfway down a tall box: the game centres the column and the box against
+   each other, and the field's row would push the box down */
+#singularityOcteracts:has(> #octeractResourceContainer > .hs-sing-search-row) {
+    align-items: flex-start;
+}
+
+#octeractResourceContainer > .hs-sing-search-row {
+    margin: 5px 0 12px;
+}
+
+/* An upgrade's tooltip, compact, the same look as the perks' cards: name and level on one row, description, effect */
+.hs-sing-search-card {
+    flex: none;
+    padding: 4px 8px;
+    border: 1px solid var(--gold-color);
+    border-radius: 5px;
+    background-color: var(--alert-color);
+    font-size: 0.875em;
+    line-height: 1.25;
+    text-align: left;
+}
+
+.hs-sing-search-card-title {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 1.05em;
+}
+
+.hs-sing-search-card-level {
+    flex: none;
+    font-size: 0.75em;
+    white-space: nowrap;
+}
+
+.hs-sing-search-card-description,
+.hs-sing-search-card-effect {
+    margin-top: 2px;
 }

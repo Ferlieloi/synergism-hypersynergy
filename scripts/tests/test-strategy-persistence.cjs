@@ -102,7 +102,46 @@ async function main() {
         manager.setStrategies(manager.parseStoredStrategies());
         assert.equal(manager.saveStrategyToStorage(added).saved, true);
         assert.deepEqual(state.stored, [kept, added], 'writing retains a legacy strategy stored outside an array');
-        console.log('Passed strategy persistence checks for write failures, retries, mixed stored entries and the legacy single-strategy format.');
+
+        // A load writes migrated strategies back once (so the migrations can be removed later), and a current list never
+        const current = manager.validateStrategy(strategy('Current strategy'));
+        state.stored = [current];
+        let writesBefore = state.writes;
+        manager.parseStoredStrategies();
+        assert.equal(state.writes, writesBefore, 'a current strategy is not written back');
+        const reordered = Object.fromEntries(Object.entries(current).reverse());
+        state.stored = [reordered];
+        manager.parseStoredStrategies();
+        assert.equal(state.writes, writesBefore, 'key order alone is not a migration');
+
+        // Format 1 (no AOAG level step), a retired 404 step, a missing IF mode: migrated in memory before, now stored
+        const old = strategy('Old strategy');
+        delete old.formatVersion;
+        old.strategy[0].strat.push({ challengeNumber: 404, corruptionLevel: 20, challengeCompletions: 0, challengeWaitTime: 0, challengeMaxTime: 0 });
+        state.stored = [old, current];
+        const loaded = manager.parseStoredStrategies();
+        assert.equal(state.writes, writesBefore + 1, 'a migrated strategy is written back');
+        assert.deepEqual(state.stored, loaded);
+        assert.equal(state.stored[0].formatVersion, 2);
+        assert.ok(!state.stored[0].strategy[0].strat.some(step => step.challengeNumber === 404));
+        writesBefore = state.writes;
+        assert.deepEqual(manager.parseStoredStrategies(), loaded, 'the stored migration loads the same');
+        assert.equal(state.writes, writesBefore, 'the migrated list is not written again: migrations are idempotent');
+
+        state.stored = [old, null];
+        manager.parseStoredStrategies();
+        assert.equal(state.writes, writesBefore, 'no write back while an entry is rejected (kept for repair)');
+
+        // The defaults as stored by an older version: each one migrates to a list that loads unchanged
+        for (const file of fs.readdirSync(path.join(root, 'src/mod/resource/json/strategies')).filter(f => f.endsWith('.json') && f !== 'manifest.json')) {
+            const stored = { ...JSON.parse(fs.readFileSync(path.join(root, 'src/mod/resource/json/strategies', file), 'utf8')), strategyName: `Copy of ${file}` };
+            state.stored = [stored];
+            manager.parseStoredStrategies();
+            writesBefore = state.writes;
+            manager.parseStoredStrategies();
+            assert.equal(state.writes, writesBefore, `${file}: a second load writes nothing`);
+        }
+        console.log('Passed strategy persistence checks for write failures, retries, mixed stored entries, the legacy single-strategy format and migration write-back.');
     } finally {
         if (originalState === undefined) delete globalThis.__strategyPersistenceTest;
         else globalThis.__strategyPersistenceTest = originalState;

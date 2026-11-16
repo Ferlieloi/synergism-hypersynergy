@@ -42,9 +42,16 @@
   },
   "keepHeaderLayoutOnImport": {
     "settingName": "keepHeaderLayoutOnImport",
-    "settingDescription": "Keep my header layout when a save is loaded (checkbox under Load from file)",
+    "settingDescription": "Keep my header layout when a save is loaded (checkbox under Load from file, and in Tools > Import from file)",
     "settingType": "boolean",
     "enabled": false,
+    "hidden": true
+  },
+  "calculationToolsGrouped": {
+    "settingName": "calculationToolsGrouped",
+    "settingDescription": "Calculation tools: list grouped by theme (List order radio buttons above the Tools tab's list)",
+    "settingType": "boolean",
+    "enabled": true,
     "hidden": true
   },
   "headerAmbrosiaSlotsShown": {

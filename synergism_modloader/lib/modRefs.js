@@ -24,9 +24,11 @@ async function listModRefs(repo, cachedDates = {}, fetchImpl = fetch) {
 
     try {
         const releases = await githubJson(repo, 'releases?per_page=100', fetchImpl)
+        // created_at is the date of the release's tag (or commit), not of the release itself: a release
+        // made later for an old tag keeps that tag's date. published_at would put old tags first.
         for (const release of releases) {
-            if (!release.draft && release.published_at) {
-                releaseDates.set(release.tag_name, release.published_at)
+            if (!release.draft && release.created_at) {
+                releaseDates.set(release.tag_name, release.created_at)
             }
         }
     } catch {

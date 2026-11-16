@@ -243,11 +243,7 @@ export interface SparklineDom {
  *
  * Returns a SparklineDom object with references to all key elements for efficient updates.
  *
- * @param container The parent HTML element to contain the sparkline chart.
- * @param color The color to use for the chart lines and labels.
- * @param isTime Whether this chart is for time/duration (true) or for rates (false).
- * @param dataKey The data key identifying which metric fields to use ('time', 'quarks', or 'goldenQuarks').
- * @returns SparklineDom object with references to SVG, polylines, marker lines, and labels, or null if container is missing.
+ * @param isTime true: times (durations), false: rates
  */
 export function buildSparklineDom(container: HTMLElement | null, color: string, isTime: boolean, dataKey: SparklineDataKey = 'time'): SparklineDom | null {
     if (!container) return null;

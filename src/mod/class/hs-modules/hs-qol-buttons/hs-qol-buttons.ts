@@ -4,10 +4,7 @@ import { HSModule, type HSModuleOptions } from "../../hs-core/module/hs-module";
 import { HSModuleRegistry } from "../../hs-core/module/hs-module-registry";
 import { HSSettings } from "../../hs-core/settings/hs-settings";
 import { HSSettingsUI } from "../../hs-core/settings/hs-settings-ui";
-import { HSUtils } from "../../hs-utils/hs-utils";
 import { HSGameDialogs } from "../../hs-core/dialogs/hs-game-dialogs";
-import { HSGlobal } from "../../hs-core/hs-global";
-import { HSUI } from "../../hs-core/hs-ui";
 import { HSGQDistributor } from "./hs-gq-distributor";
 import { HSAutomationQuickbarPlacement } from "../hs-qol-quickbar/hs-automation-quickbar-placement";
 
@@ -16,12 +13,6 @@ const MAXED_UPGRADE_TOGGLES = {
     toggleMaxedOcteractUpgrades: 'hideMaxedOctUpgrades',
 } as const;
 type MaxedUpgradeToggleId = keyof typeof MAXED_UPGRADE_TOGGLES;
-
-const POTIONS = {
-    offering: 'Offering',
-    obtainium: 'Obtainium',
-} as const;
-type PotionKind = keyof typeof POTIONS;
 
 /**
  *  Class: HSQOLButtons
@@ -58,74 +49,8 @@ export class HSQOLButtons extends HSModule {
 
         // Any settings-driven feature activation is handled by HSSettings.syncSettings().
         // Only perform module-specific DOM setup here if not settings-driven.
-        this.#injectPotionButtons('offering');
-        this.#injectPotionButtons('obtainium');
         this.#injectAdd10Button();
         this.#injectPurchaseBuyMaxButton();
-    }
-
-    /** CONSUME 10x and BUY 10x next to the game's own potion buttons (in the game's page from the start). */
-    #injectPotionButtons(potion: PotionKind) {
-        if (document.getElementById(`${potion}PotionMultiUseButton`)) return;
-
-        const usePotionButton = document.getElementById(`use${potion}potion`);
-        const buyPotionButton = document.getElementById(`buy${potion}potion`);
-        if (!usePotionButton?.parentNode || !buyPotionButton?.parentNode) {
-            HSLogger.warn(`Could not find native buttons for use/buy ${potion} potions`, this.context);
-            return;
-        }
-
-        // The clones lose the game's i18n attribute: a language switch would put the game's text back on them
-        const clone = usePotionButton.cloneNode(true) as HTMLElement;
-        clone.id = `${potion}PotionMultiUseButton`;
-        clone.removeAttribute('i18n');
-        clone.textContent = 'CONSUME 10x';
-        clone.addEventListener('click', () => {
-            for (let i = 0; i < 10; i++) usePotionButton.click();
-        });
-        usePotionButton.parentNode.insertBefore(clone, usePotionButton.nextSibling);
-
-        const clone2 = buyPotionButton.cloneNode(true) as HTMLElement;
-        clone2.id = `${potion}PotionMultiBuyButton`;
-        clone2.removeAttribute('i18n');
-        clone2.textContent = 'BUY 10x';
-        clone2.addEventListener('click', () => { void this.#buyPotions10(buyPotionButton); });
-        buyPotionButton.parentNode.insertBefore(clone2, buyPotionButton.nextSibling);
-
-        HSLogger.log(`${POTIONS[potion]} potion multi buy / consume buttons injected`, this.context);
-    }
-
-    /**
-     * Buys 10 potions, whatever the shop's buy mode: Buy ANY asks the amount in a Prompt (answered 10),
-     * Buy 10 buys up to 10 per click, Buy 1 needs 10 clicks. Buy MAX can't buy exactly 10: refused.
-     * The purchase Confirms are answered (shown when the game's shop confirmations are on).
-     */
-    async #buyPotions10(buyButton: HTMLElement): Promise<void> {
-        const mode = await this.#getShopBuyMode();
-        if (mode === true) {
-            HSUI.Notify('BUY 10x: the shop is in Buy MAX mode. Switch it to Buy 1, Buy 10 or Buy ANY', { notificationType: 'warning' });
-            return;
-        }
-        // Unknown mode: as Buy 1
-        const clicks = mode === 'ANY' || mode === 'TEN' ? 1 : 10;
-        HSGameDialogs.act('potionBuy10', { confirm: 'ok', prompt: { ok: '10' } }, () => {
-            for (let i = 0; i < clicks; i++) buyButton.click();
-        });
-    }
-
-    /** The shop's buy mode, as the game stores it: false (Buy 1), 'TEN', true (Buy MAX) or 'ANY'. */
-    async #getShopBuyMode(): Promise<boolean | 'TEN' | 'ANY' | undefined> {
-        const mode = HSGlobal.exposedPlayer?.shopBuyMaxToggle;
-        if (mode !== undefined) return mode;
-
-        // Without the patched game: the toggle's text, compared with the game's own labels
-        const text = document.getElementById('toggleBuyMaxShopText')?.textContent?.trim();
-        if (!text) return undefined;
-        const labels = [[false, 'shop.buy1'], ['TEN', 'shop.buy10'], [true, 'shop.buyMax'], ['ANY', 'shop.buyAny']] as const;
-        for (const [labelMode, key] of labels) {
-            if ((await HSUtils.getGameTranslation(key))?.trim() === text) return labelMode;
-        }
-        return undefined;
     }
 
     // TODO: Make the 'add10' feature a 'addX' instead,

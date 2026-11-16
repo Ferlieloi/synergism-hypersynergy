@@ -41,8 +41,6 @@ export interface PhaseHistoryEntry {
 
 /**
  * Creates 5 cell divs for a phase row.
- * @param phaseName
- * @param phaseCount
  */
 export function createPhaseRowDom(phaseName = '', phaseCount = 0): PhaseRowDom {
     // Name cell
@@ -76,8 +74,6 @@ export function createPhaseRowDom(phaseName = '', phaseCount = 0): PhaseRowDom {
 
 /**
  * Updates a phase row DOM with new statistics and phase info.
- * @param dom The PhaseRowDom to update
- * @param stats Object with phaseCount, phaseName, avgInnerLoops, avg, sd, last values to display
  */
 export function updatePhaseRowDom(
     dom: PhaseRowDom,
@@ -100,9 +96,6 @@ export function updatePhaseRowDom(
 
 /**
  * Utility to compute phase statistics from a phaseHistory map.
- * @param phaseHistory Map of phase name to PhaseHistoryEntry
- * @param phase The phase name to compute stats for
- * @returns Object with phaseCount, avgInnerLoops, avg, sd, last values
  */
 export function getPhaseStats(
     phaseHistory: Map<string, PhaseHistoryEntry>,

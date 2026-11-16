@@ -21,7 +21,8 @@ one clone to another: check `git remote -v`.
 ## Mod release: `npm run release-and-tag-helper`
 
 - **Patch notes are required for every mod or loader release.** Follow [Writing patch notes](publishing-guide.md#writing-patch-notes) for the website, tag and GitHub release. Record verified version, date and source evidence in `docs/data/changelog.json`.
-  - **On Live:** regenerate the whole site with `python scripts/tools/build-docs.py`, run `python scripts/tools/build-docs.py --check` and `python scripts/tests/test-changelog-validation.py`, and include the data and every regenerated page in the published changes. The whole site, not just the changelog page: it then describes the released build, and a PR of Dev's whole `master` carries no pages. A Live release is not finished until its changelog is visible on the website.
+  - **On Live:** regenerate the whole site with `python scripts/tools/build-docs.py`, run `python scripts/tools/build-docs.py --check`, `python scripts/tests/test-changelog-validation.py` and `python scripts/tests/test-build-docs.py`, and include the data and every regenerated page in the published changes. The whole site, not just the changelog page: it then describes the released build, and a PR of Dev's whole `master` carries no pages. A Live release is not finished until its changelog is visible on the website.
+  - **The helper runs `build-docs.py --validate` and both Python tests** before its first question and stops on a failure, or when Python isn't found (`PYTHON` sets its command). It doesn't regenerate the site nor run `--check`: on Live, that stays a step above.
   - **On Dev:** check the entry with `python scripts/tools/build-docs.py --validate`, but never commit `docs/changelog.html`: like the site's other pages ("Porting a change to Live"), it is built from its checkout and the site is served from Live only. Dev entries appear on the website at Live's next regeneration.
 - `package.json` holds the name of the **next** release; the helper only bumps when that tag already exists. Set a name
   by hand in `package.json` and `package-lock.json` (two version lines).
@@ -123,10 +124,13 @@ Use this procedure for a full Dev catch-up. For a single change, see [Porting a 
 
 ## Loader release (`synergism_modloader`)
 
-No script: the release helper is for the mod only and ignores `loader-v` tags.
+`npm run release-loader -- [X.Y.Z] --notes-file <path> [--dry-run]` (`scripts/loader-release.mjs`, `--help` for the
+details) runs the steps below after the loader change is committed, asking before each push. A rerun continues where a
+run stopped. It ends with a skeleton entry in `docs/data/changelog.json` and validates it when you have filled it in. The
+mod's release helper ignores `loader-v` tags.
 1. Commit the loader change, then a separate commit "release: Hypersynergism Loader X.Y.Z" bumping
-   `synergism_modloader/package.json`, `package-lock.json` (the two top version lines only: a dependency further down
-   has a similar version) and the example tag in `synergism_modloader/README.md`.
+   `synergism_modloader/package.json` and `package-lock.json` (the two top version lines only: a dependency further
+   down has a similar version).
 2. Push `master`.
 3. `git tag -a loader-vX.Y.Z` with a message: a title line ("Hypersynergism Loader X.Y.Z"), an empty line, then the
    player-facing notes (Markdown rendered; bold lines as section titles; `--cleanup=whitespace` if a line starts with
@@ -136,8 +140,11 @@ No script: the release helper is for the mod only and ignores `loader-v` tags.
 4. The build takes about 2 minutes and the release is marked Latest; installed loaders update themselves from it.
    Watch it through the public API (no credentials needed, 60 requests per hour): `actions/runs?per_page=3`,
    `actions/runs/<id>/jobs`, `releases/tags/<tag>` (notes and the 3 assets), `releases/latest`.
+5. Changelog entry (`channel: "loader"`, as the entries before it): the script fills in what git and the API know,
+   with the carried commits as sources and their authors as contributors. You fill in each change's type and evidence
+   and the wording, and remove commits that aren't player-facing.
 - What a release carries: `git log loader-v<last>..HEAD -- synergism_modloader`, minus `patcher.js` (downloaded at
-  each patch) and tests.
+  each patch), tests and docs.
 - The Windows installer is unsigned: not worth it for this project (cost, a real name as publisher; Shewchou,
   2026-10-10).
 - `npm run dist` needs a Windows account that can create symlinks (electron-builder's code-signing tools archive holds

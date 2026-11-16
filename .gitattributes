@@ -7,3 +7,5 @@ release/** linguist-generated -diff
 *.jpg binary
 *.jpeg binary
 *.gif binary
+*.webp binary
+*.ico binary

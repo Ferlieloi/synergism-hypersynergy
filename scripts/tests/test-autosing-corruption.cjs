@@ -433,7 +433,7 @@ async function main() {
             assert.equal(validated.aoagPhase.strat.length, strategy.aoagPhase.strat.length, filename);
             for (const entry of [...strategy.strategy, strategy.aoagPhase].filter(Boolean)) {
                 assert.ok(entry.strat.every(action => action.challengeNumber !== 404), filename);
-                assert.ok(entry.strat.filter(action => action.challengeNumber === 403).every(action => action.ascendAfterCorruption === true), filename);
+                assert.ok(entry.strat.filter(action => action.challengeNumber === 403).every(action => typeof action.ascendAfterCorruption === 'boolean'), filename);
             }
             const invalid = structuredClone(strategy);
             const corruption = invalid.strategy.flatMap(entry => entry.strat).find(action => action.challengeNumber === 403);

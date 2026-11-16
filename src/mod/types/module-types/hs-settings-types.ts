@@ -28,6 +28,9 @@ export interface HSSettingsDefinition {
     // Save import
     keepHeaderLayoutOnImport: KeepHeaderLayoutOnImportSetting;
 
+    // Tools tab
+    calculationToolsGrouped: CalculationToolsGroupedSetting;
+
     // Header loadout slots shown
     headerAmbrosiaSlotsShown: HeaderAmbrosiaSlotsShownSetting;
 
@@ -218,6 +221,9 @@ export interface HepteractDistributorKeepSetting extends HSSettingBase<number> {
 
 // Save import
 export interface KeepHeaderLayoutOnImportSetting extends HSSettingBase<boolean> { }
+
+// Tools tab
+export interface CalculationToolsGroupedSetting extends HSSettingBase<boolean> { }
 
 // Header loadout slots shown
 export interface HeaderAmbrosiaSlotsShownSetting extends HSSettingBase<number> { }

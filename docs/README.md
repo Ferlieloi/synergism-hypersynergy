@@ -1,8 +1,7 @@
 # Developer docs
 
 Player documentation: [complete feature inventory](FEATURES.md), [feature audit](FEATURE-AUDIT.md),
-and [public website](index.html). The website includes a browsable wiki; native GitHub Wiki pages are generated
-in `wiki-source/`. Publishing and updates: [publishing the guide](dev/publishing-guide.md).
+and [public website](index.html). The website includes a browsable wiki; the GitHub Wiki only points to it. Publishing and updates: [publishing the guide](dev/publishing-guide.md); how the site behaves: [website](features/website.md).
 
 What the code doesn't say: how the game behaves where the mod depends on it, and each feature's rules and the
 decisions behind them. Read a feature's file before changing that feature.

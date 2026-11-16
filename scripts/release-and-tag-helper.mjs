@@ -2,7 +2,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { join, relative, resolve } from 'path';
 import {
-    askForInput, askYesNo, fatal, getOriginRepo, info, log, logWait, purgeAndCheckServedFiles, purgeUrlFor, run, runAndCheck,
+    askForInput, askYesNo, fatal, findPython, getOriginRepo, info, log, logWait, purgeAndCheckServedFiles, purgeUrlFor, run, runAndCheck,
     setSkipPrompts, skipPrompts, stop, success, warn,
 } from './release-common.mjs';
 import { parseTagList, semverSort } from './release-version-tags.mjs';
@@ -23,7 +23,8 @@ function printHelp() {
     log('');
     log('Description:');
     log('  Every choice is asked before any change (unless --yes), then the release runs:');
-    log('    1) checks git state: no merge/rebase, not detached, branch not behind its upstream');
+    log('    1) checks git state: no merge/rebase, not detached, branch not behind its upstream; runs the website checks');
+    log('       (build-docs.py --validate and the two Python tests; Python required, PYTHON sets its command)');
     log('    2) chooses the tag: the package.json version, a bump when that tag exists, or resuming a release whose tag is on HEAD');
     log('    3) dirty working tree: asks to stage all of it into the release commit (No stops the script)');
     log('    4) checks loader versions (offers to bump the bridge @version and the patcher loaderVersion when the file changed)');
@@ -731,6 +732,25 @@ async function purgeModCache(status) {
     await purgeAndCheckServedFiles(originRepo, purgePaths.map(purgePath => purgePath.split('@master/')[1]));
 }
 
+/**
+ * The website's checks every release needs (docs/dev/releasing.md): catalogue, changelog and links
+ * (build-docs.py --validate, which writes nothing), then the generator's and the changelog's tests.
+ * Run before the first question, so a failure stops the release before any change.
+ */
+function runSiteChecks() {
+    const python = findPython();
+    if (!python) {
+        fatal('Python not found (install it, or set PYTHON to its command): it runs the website checks a release needs (docs/dev/releasing.md).');
+    }
+    const checks = [
+        ['scripts/tools/build-docs.py', '--validate'],
+        ['scripts/tests/test-changelog-validation.py'],
+        ['scripts/tests/test-build-docs.py'],
+    ];
+    for (const args of checks) runAndCheck(python, args, { cwd: root });
+    success('Website checks passed: catalogue, changelog, links, generator and changelog tests.');
+}
+
 // ==========================
 // ---------- Main ----------
 // ==========================
@@ -739,6 +759,7 @@ async function purgeModCache(status) {
     const status = collectStatus();
     printStatus(status);
     checkUpstream(status);
+    runSiteChecks();
 
     // Every choice first, so the answers can't come after a build, a commit or a bump
     const target = await chooseTarget(status);

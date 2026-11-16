@@ -14,7 +14,8 @@ const STYLE_ID = 'hs-singularity-search-css';
  * IsExplicitHSModule: Yes
  * Description:
  *     The search fields of the Singularity tab: Perks / Penalties (the matching perks' tooltips cover the penalties
- *     text), Golden Quarks and Octeracts (the upgrades that don't match are dimmed).
+ *     text), Golden Quarks and Octeracts (the upgrades that don't match are dimmed, the matching ones' tooltips are
+ *     listed left of the grid).
  *     The game gives no access to that data, so each tooltip is read by hovering its element through events and
  *     closing it in the same task: nothing is painted, and it works without a patch.
  *     Rules: docs/features/singularity-search.md.
@@ -36,14 +37,17 @@ export class HSSingularitySearch extends HSModule {
             upgradeSelector: '.singularityUpgrade',
             maxedToggleId: 'toggleMaxedGoldenQuarkUpgrades',
             placeholder: '[HS] Find an upgrade (cube, ambrosia...)',
+            words: ['quark', 'cube', 'amb', 'oct', 'ascension', 'corrupt', 'off', 'obt', 'platonic', 'cookie', 'talisman'],
         }, this.context);
         this.#octeracts = new HSUpgradeGridSearch({
             name: 'Octeract',
             containerId: 'octeractUpgradeContainer',
             apLineId: 'octeractUpgradeAP',
+            columnId: 'octeractResourceContainer',
             upgradeSelector: '.octeractUpgrade',
             maxedToggleId: 'toggleMaxedOcteractUpgrades',
-            placeholder: '[HS] Find an upgrade (cube, ambrosia...)',
+            placeholder: '[HS] Find an upgrade (quark, ambrosia...)',
+            words: ['quark', 'amb', 'free', 'oct', 'ascension', 'cap', 'speed', 'token', 'potion', 'off', 'obt', 'golden'],
         }, this.context);
     }
 

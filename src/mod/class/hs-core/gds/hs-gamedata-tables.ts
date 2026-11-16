@@ -461,7 +461,7 @@ export const redAmbrosiaUpgradeCalculationCollection: RedAmbrosiaUpgradeCalculat
         freeAccumulatorLevelCapIncrease: 0.1 * n
       }
     },
-    url: 'Pictures/RedAmbrosia/RedAmbrosiaRedAmbrosiaFreeAccumulator.png'
+    url: 'Pictures/RedAmbrosia/RedAmbrosiaFreeAccumulator.png'
   },
   // Row 2
   freeLevelsRow2: {
@@ -683,7 +683,7 @@ export const redAmbrosiaUpgradeCalculationCollection: RedAmbrosiaUpgradeCalculat
         redLuckBonus: 25 * n
       }
     },
-    url: 'Pictures/RedAmbrosia/RedAmbrosiaTutorial.png'
+    url: 'Pictures/RedAmbrosia/RedAmbrosiaViscount.png'
   },
   freeLevelsRow5: {
     label: 'More Blueberry Quark Module Levels!',
@@ -720,7 +720,7 @@ export const redAmbrosiaUpgradeCalculationCollection: RedAmbrosiaUpgradeCalculat
         blueberryGenerationSpeed: val
       }
     },
-    url: 'Pictures/RedAmbrosia/RedAmbrosiaBlueberryGenerationSpeed.png'
+    url: 'Pictures/RedAmbrosia/RedAmbrosiaBlueberryGenerationSpeed2.png'
   },
   regularLuck2: {
     label: 'Ossified Blueberry Tactics II',
@@ -732,7 +732,7 @@ export const redAmbrosiaUpgradeCalculationCollection: RedAmbrosiaUpgradeCalculat
         ambrosiaLuck: 2 * n
       }
     },
-    url: 'Pictures/RedAmbrosia/RedAmbrosiaRegularLuck.png'
+    url: 'Pictures/RedAmbrosia/RedAmbrosiaRegularLuck2.png'
   },
   freeSpeedUpgrades: {
     label: 'The Distance',

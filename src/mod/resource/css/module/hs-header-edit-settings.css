@@ -112,6 +112,13 @@ html.hs-header-stats-bottom #mainHeader > :not(#mobileHeaderContent) {
    gap: 4px 16px;
 }
 
+/* A column of the row: one section, or stacked ones (stackBelow), as far apart as wrapped rows */
+#hs-header-edit-settings .hs-hes-column {
+   display: flex;
+   flex-direction: column;
+   gap: 4px;
+}
+
 #hs-header-edit-settings .hs-hes-section {
    display: flex;
    flex-direction: column;
@@ -135,6 +142,7 @@ html.hs-header-stats-bottom #mainHeader > :not(#mobileHeaderContent) {
    cursor: pointer;
 }
 
+#hs-header-edit-settings .hs-hes-column[hidden],
 #hs-header-edit-settings .hs-hes-section[hidden],
 #hs-header-edit-settings .hs-hes-width[hidden],
 #hs-header-edit-settings .hs-hes-toggle[hidden],

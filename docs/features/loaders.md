@@ -3,7 +3,7 @@
 ## Source and generated files
 
 - `src/loader/shared/` holds the implementation. `scanner.mjs` walks delimiters, `patch-finders.mjs` locates anchors, `patch-bundle.mjs` applies the rules, and `browser-loader.mjs` starts the game and mod in the browser. The scanner recognises regex literals in common expression and control-header positions, division, comments and nested template expressions. Function-header finders still target the shapes emitted by the game minifier.
-- `userscript-entry.mjs` holds the shared bridge and bootstrap code for Live and local Dev. The generated scripts keep their own install URLs and metadata, including the editable `repo` and `version` in the bridge. Steam uses the same `patchBundle` through `patcher-entry.cjs` and injects the mod through its preload.
+- `userscript-entry.mjs` holds the shared bridge and bootstrap code for Live and local Dev. The generated scripts keep their own install URLs and metadata. The bridge starts with its editable `repo` and `version`, as plain strings with a comment for players (`bridgeSettings()` in `build-loaders.cjs`): the Live bridge keeps `const repo = 'Ferlieloi';`, the line older installs have too, so the guide's switch sentence fits both. Changing the bridge's layout doesn't bump its `@version`: an update would put Dev players back on Live. Steam uses the same `patchBundle` through `patcher-entry.cjs` and injects the mod through its preload.
 - Run `npm run build:loaders` after editing source. It writes the four standalone scripts in `src/loader/` and `synergism_modloader/lib/patcher.js`. Keep those files with the source change. Older Steam loaders call the patcher as a function and browsers read its `startBrowserLoader` property from the downloaded file. `npm test` checks that the files match the source. The dev server generates its own copies in `build/`.
 
 ## When each loader picks up patcher.js and the mod
@@ -15,6 +15,7 @@
 - **Steam, when the mod starts: before the save loads.** The injector runs the mod from the preload, and `Hypersynergism.init` only waits for the page (`#buildingstab`), so every module initializes on the game's blank player (empty loadouts, default header layout); the save comes in later through `reloadShit` → `loadSynergy`. The browser loader starts the mod after the game has loaded. `HSUtils.isGameLoaded()` (offline popup shown, or `body.loading` gone) tells the two apart; it is false again during later offline progress (an import, a time skip), so code that only cares about the first load latches it. Bugs it caused: the mod's header modules noted in the tray (`header-modules.md`), no ambrosia loadout guessed at load (`header-loadouts.md`). Harness: start the mod at `DOMContentLoaded` (`scripts/harness/README.md`).
 - Steam, the extraction: the loader ships its own `7za.exe` (`7zip-bin`, copied to `resources/7zip-bin/` by `extraResources`), so players need no 7-Zip. `7za` has no NSIS module, but finds `app-64.7z`, stored uncompressed in the game's installer, and extracts the app in one step; a full `7z.exe` (a player's saved path) still goes through `$PLUGINSDIR/app-64.7z`. `patchGame` extracts the exe into `exe/` and handles both. Not the full 7-Zip from a git-ignored `vendor/`: CI can't bundle it.
 - Steam, the repack: the game keeps its native modules (`steamworks-ffi-node` and `koffi`, 213 files; `steamworks.js` before game build 26392693) outside `app.asar`, in `app.asar.unpacked`, and `steam_api64.dll` in `resources/steamworks_sdk/`. The patch reads those directories from the original archive's header (`readUnpackedDirs` in `lib/archiveWriter.js`) and repacks with the same ones outside. Packed inside (loaders up to 0.2.9), the `.node` is loaded from a copy in `%TEMP%`, away from `steam_api64.dll`: the game still started from the loader (the working folder has that dll), but the login's return (`synergism://` link, a second instance started by Windows from another folder) crashed. `@electron/asar` keeps each archive's file list by path and the staging path is fixed, so the patch calls `asar.uncache` before reading it.
+- Steam, the build list (`lib/modRefs.js`): newest first, a tag dated by its release's `created_at`, which GitHub sets to the tag's date (not `published_at`: a release made later for an old tag would put it first), else by its commit's date (cached by SHA, `refDateCache`). Loaders up to 0.2.10 use `published_at`.
 - Checking what a patch applied: `window.__HS_PATCH_REPORT` (both loaders, see below). What it exposed: `__HS_BACKDOOR__.exposed` exists only in the browser loader (`startBrowserLoader` in `patcher.js`); the Steam injector has no equivalent, so on Steam read the `window.__HS_*` globals directly in the console. Old and new patcher code can print the same `[PATCH]` line: to know which one patched the Steam game, look for its injected text in `dist/dist/out.js` of `__hs_work_current/app/resources/app.asar`.
 
 ## Browser: the game's second address (pseudo-corp.github.io)
@@ -71,8 +72,32 @@ Some patcher globals are also set late. The stage patch sets `__HS_i18next`, `__
 
 `__hs_work_current` in the game folder holds the last patched game, so it is stale after a game update: compare its date with the exe's.
 
+## Taking over in a fork
+
+For when neither repo is maintained anymore. Installed loaders download the mod and `patcher.js` from `Ferlieloi` or
+`maenhiir`, so a fixed fork reaches no one until players point their loader to it. Every URL is
+`<owner>/synergism-hypersynergy`, so only the owner changes: keep the repo's name. `git grep -n -i -E "ferlieloi|maenhiir"`
+lists every place (tests and docs included).
+- **Tampermonkey.** The bridge builds every URL from its `repo` value, the owner (`repositoryRoot` in
+  `src/loader/shared/loader-urls.mjs`): a player can set it to the fork's owner as for Dev (`docs/data/guides/getting-started.md`, "Live or Dev"), with
+  no new script. The bridge still auto-updates from Ferlieloi's repo through its `@updateURL`, so a bridge published
+  there later sets it back. A fork's own bridge: `defaultRepo` in `loader-urls.mjs`, the `@updateURL` and `@namespace`
+  in `scripts/build-loaders.cjs`, then `npm run build:loaders` (it also rebuilds `patcher.js`, which carries
+  `defaultRepo`), and the install links (README, `docs/data/guides/getting-started.md`, `INSTALL_URL` in `hs-core/hs-bookmarklet-notice.ts`).
+- **Steam.** The two channels are fixed in `synergism_modloader/lib/config.js` (`CHANNELS`), and installed loaders
+  update themselves from Ferlieloi's releases (`launcherUpdater.js`, `build.publish` in its `package.json`): players
+  install the fork's loader once. Its release workflow only runs on Ferlieloi's repo (the `if:` in
+  `.github/workflows/loader-release.yml`).
+- **Bookmarklet.** `release/loader/loader.js`, written by hand, loads `Ferlieloi@master`.
+- **The mod.** The version check reads `window.__HS_REPO` (set by both loaders), else `HSGlobal.Release.githubOwner`,
+  which is also the mod's GitHub link; `modWebsiteUrl` is next to it (`hs-core/hs-global.ts`).
+- **Website and wiki.** `repository` in `docs/data/feature-catalogue.json`, the GitHub Wiki's hand-written pointer pages,
+  the GitHub Pages site (`docs/dev/publishing-guide.md`).
+- **Maintainer tools.** `scripts/merge-live-release.mjs` finds Live by the name `Ferlieloi`; the release helper reads
+  `origin`.
+
 ## Decisions
 
 - **One loader at a time** (`app.requestSingleInstanceLock`): a second start brings the first loader to the front and closes, with a line in the console and in `loader-startup.log`. The lock follows the user data folder, which the installed loader and `npm start` share: close one to run the other.
 - **Re-patch banner:** "Launch last played" patches first when a re-patch is needed (a game update too); no stored hash asks for one re-patch; any patcher difference blocks "Launch only" and "Quick switch", switching builds included; a failed download asks for nothing (a console line). Downloading the patcher and the mod by commit id (`@<sha>`) to avoid jsDelivr's lag was refused.
-- **Bookmarklet notice:** shown at every bookmark load, no "don't show again"; the script is always Live (`Ferlieloi`, `master`); only Tampermonkey is named; the README's bookmark loads from `Ferlieloi@master`.
+- **Bookmarklet notice:** shown at every bookmark load, no "don't show again"; the script is always Live (`Ferlieloi`, `master`); only Tampermonkey is named; the installation guide's bookmark loads from `Ferlieloi@master`.

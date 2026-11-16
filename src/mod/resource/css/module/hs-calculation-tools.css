@@ -1,5 +1,26 @@
 /* ===== CALCULATION TOOLS (Tools tab section) ===== */
 
+.hs-calc-order {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #bbb;
+}
+
+.hs-calc-order label {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+}
+
+.hs-calc-order input[type="radio"] {
+    height: 14px;
+    width: 14px;
+    margin: 0;
+    cursor: pointer;
+}
+
 .hs-calc-params {
     display: grid;
     grid-template-columns: auto 1fr;

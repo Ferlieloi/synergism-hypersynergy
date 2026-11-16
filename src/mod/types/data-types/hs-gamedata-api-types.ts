@@ -509,7 +509,13 @@ export interface HSCalculationParams {
     options?: readonly HSCalculationParamOption[] | ((data: GameData | undefined) => readonly HSCalculationParamOption[]);
 }
 
-export interface HSCalculationDefinition {
+// The Tools tab's dropdown groups, in their order there
+export const HS_CALCULATION_GROUPS = [
+    "Ambrosia", "Red Ambrosia", "Ascension & Cubes", "Singularity", "Runes & Talismans", "Ants & Honey", "Other"
+] as const;
+export type HSCalculationGroup = typeof HS_CALCULATION_GROUPS[number];
+
+interface HSCalculationDefinitionBase {
     calculationName: string;
     // fnName is intentionally broad because calculation functions may come
     // from HSGameDataAPI or from registered helper providers.
@@ -518,8 +524,13 @@ export interface HSCalculationDefinition {
     // In the function's order. With supportsReduce, the first one is reduce_vals: the Tools tab's two buttons fill it.
     fnParams: HSCalculationParams[];
     supportsReduce: boolean;
-    toolingSupport: boolean;
 }
+
+// An entry on the Tools tab's list must name its group there
+export type HSCalculationDefinition = HSCalculationDefinitionBase & (
+    | { toolingSupport: true; group: HSCalculationGroup }
+    | { toolingSupport: false; group?: undefined }
+);
 
 export interface StatLine<T = number | Exclude<DecimalSource, string>> {
     i18n: string

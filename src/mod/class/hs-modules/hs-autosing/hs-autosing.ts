@@ -9,11 +9,12 @@ import { HSSettings } from "../../hs-core/settings/hs-settings";
 import { HSStrategyManager } from "./hs-strategy-manager";
 import { HSNumericSetting } from "../../hs-core/settings/hs-setting";
 import { HSUtils } from "../../hs-utils/hs-utils";
-import { HSAutosingStrategy, PhaseOption, phases, AutosingStrategyPhase, Challenge, SPECIAL_ACTION_BY_ID, createDefaultAoagPhase, AOAG_PHASE_ID, AOAG_PHASE_NAME, SET_CORRUPTION_LEVEL_VALUE, IF_JUMP_VALUE, ALLOWED, type HSAutosingPassRecord, type HSAutosingExposureParts } from "./hs-autosing-types";
+import { HSAutosingStrategy, PhaseOption, phases, AutosingStrategyPhase, Challenge, SPECIAL_ACTION_BY_ID, createDefaultAoagPhase, AOAG_PHASE_ID, AOAG_PHASE_NAME, SET_CORRUPTION_LEVEL_VALUE, CLEANSE_CORRUPTION_VALUE, IF_JUMP_VALUE, ALLOWED, type HSAutosingPassRecord, type HSAutosingExposureParts } from "./hs-autosing-types";
 import { HSAutosingModal } from "./hs-autosingModal";
 import { HSAutosingRecorder } from "./hs-autosingRecorder";
 import { HSAutosingStepTimingsWindow } from "./ui/hs-autosing-step-timings-window";
 import { HSGlobal } from "../../hs-core/hs-global";
+import type { PlayerData } from "../../../types/data-types/hs-player-savedata";
 import { HSGameState, MainView } from "../../hs-core/hs-gamestate";
 import { HSAutosingSettingsFixer } from './hs-autosingSettingsFixer';
 import { HSAutosingCorruption } from './hs-autosingCorruption';
@@ -853,12 +854,21 @@ export class HSAutosing extends HSModule {
                 if (challenge.ascendAfterCorruption === false) this.#corruptionManager.setLevel(challenge.corruptionLevel ?? 0);
                 else await this.#setCorruptionLevelAndAscend(challenge.corruptionLevel ?? 0);
                 break;
+            case CLEANSE_CORRUPTION_VALUE:
+                HSLogger.debug(() => `${tag()} - SA: ${actionText()} (${challenge.cleanseToHighest === true ? 'to highest cleared' : 'to 0'})`, this.context);
+                this.#corruptionManager.cleanse(challenge.cleanseToHighest === true);
+                break;
+            case 156:
+            case 157:
+            case 158:
+                this.#setAutoToggle(challenge.challengeNumber, challenge.toggleOn !== false, () => `${tag()} - SA: ${actionText()}`);
+                break;
             case IF_JUMP_VALUE:
                 return this.#handleIfJumpAction(challenge, phaseConfig, actionIndex, jumpCounts, tag);
             default:
                 if (challenge.challengeNumber >= 100) {
                     HSLogger.debug(() => `${tag()} - SA: ${actionText()}`, this.context);
-                    await this.#performSpecialAction(challenge.challengeNumber, challenge.challengeWaitTime, challenge.challengeMaxTime);
+                    await this.#performSpecialAction(challenge.challengeNumber, challenge.challengeWaitTime, challenge.challengeMaxTime, tag);
                 } else {
                     HSLogger.debug(() => `${tag()} - C${challenge.challengeNumber}: waiting for ${challenge.challengeCompletions ?? 0} completions, then wait ${challenge.challengeWaitTime}ms (max time: ${challenge.challengeMaxTime}ms)`, this.context);
                     await this.#waitForCompletion(
@@ -965,7 +975,48 @@ export class HSAutosing extends HSModule {
     // SPECIAL ACTIONS
     // ============================================================================
 
-    async #performSpecialAction(actionId: number, waitTime: number, maxTime: number): Promise<void> {
+    /**
+     * "Set Auto Challenge / Ant-Sac / Ascend" (156-158): the game's buttons only flip their toggle, so the button is
+     * clicked only when the toggle isn't already in the wanted state. The state comes from the live player, else from
+     * a fresh save (bookmarklet players), never from the button's text or colour.
+     */
+    #setAutoToggle(actionId: number, on: boolean, logPrefix: () => string): void {
+        const toggles: Record<number, { read: (player: PlayerData) => unknown; button: () => HTMLButtonElement }> = {
+            156: { read: p => p.autoChallengeRunning, button: () => this.#dom.autoChallengeButton },
+            157: { read: p => p.ants?.toggles?.autoSacrificeEnabled, button: () => this.#dom.autoAntSacrificeButton },
+            158: { read: p => p.autoAscend, button: () => this.#dom.autoAscendButton },
+        };
+        const toggle = toggles[actionId];
+        const wanted = on ? 'ON' : 'OFF';
+        const readState = (): boolean | undefined => {
+            let player: PlayerData | null | undefined = this.#exposedPlayer;
+            if (!player) {
+                const raw = HSModuleRegistry.getModule('HSGameData')?.forceCaptureRawSaveSync();
+                try { player = raw ? JSON.parse(raw) as PlayerData : undefined; } catch { player = undefined; }
+            }
+            const state = player ? toggle.read(player) : undefined;
+            return typeof state === 'boolean' ? state : undefined;
+        };
+        const before = readState();
+        if (before === undefined) {
+            HSLogger.warn(`${logPrefix()} ${wanted}: could not read the game's toggle (offline progress?), left as it is`, this.context);
+            return;
+        }
+        if (before === on) {
+            HSLogger.debug(() => `${logPrefix()} ${wanted}: already ${wanted}`, this.context);
+            return;
+        }
+        toggle.button().click();
+        // Only checked with the live player: without it, a second save capture would slow every such step
+        if (this.#exposedPlayer && readState() !== on) {
+            HSLogger.warn(`${logPrefix()} ${wanted}: the game did not change the toggle`, this.context);
+            return;
+        }
+        HSLogger.debug(() => `${logPrefix()} ${wanted}`, this.context);
+    }
+
+    /** @param stepTag The strategy step's "Step N", for the timeout warning */
+    async #performSpecialAction(actionId: number, waitTime: number, maxTime: number, stepTag: () => string): Promise<void> {
         switch (actionId) {
             case 101: // Exit Transcension challenge
                 this.#clickResetButton(this.#dom.exitTranscBtn);
@@ -1000,7 +1051,7 @@ export class HSAutosing extends HSModule {
             case 212:
             case 213:
             case 214: // Max C11-C14
-                await this.#maxC11to14WithC10((actionId - 200) as 11 | 12 | 13 | 14, maxTime);
+                await this.#maxC11to14WithC10((actionId - 200) as 11 | 12 | 13 | 14, maxTime, stepTag);
                 break;
             case 215: // store C15
                 this.#storedC15 = this.#hasLivePlayer
@@ -1176,15 +1227,20 @@ export class HSAutosing extends HSModule {
         }
     }
 
-    async #maxC11to14WithC10(challengeIndex: 11 | 12 | 13 | 14, maxTime = 2000): Promise<void> {
+    /** @param stepTag The strategy step's "Step N", for the timeout warning (none in the push before stop) */
+    async #maxC11to14WithC10(challengeIndex: 11 | 12 | 13 | 14, maxTime = 2000, stepTag?: () => string): Promise<void> {
         await this.#waitForCompletion(challengeIndex, 0, 0, 0);
         await this.#waitForCompletion(10, 0, 0, 0);
 
         const accessor = this.#dom.getChallengeAccessor(challengeIndex);
         const levelElement = accessor.levelElement;
+        const warnTimeout = (reached: unknown, max: unknown): void => {
+            HSLogger.warn(`-------> ${stepTag ? `${stepTag()} - ` : ""}Timeout: Max C${challengeIndex} only reached ${reached}/${max} completions within ${maxTime} ms`, this.context);
+        };
 
         // Fast path: no DOM text parsing, no Decimal
         if (this.#hasMaxChallenges) {
+            const p = this.#exposedPlayer!;
             const maxPossible = this.#getMaxChallengesFunc!(challengeIndex);
             const deadline = performance.now() + maxTime;
 
@@ -1193,10 +1249,14 @@ export class HSAutosing extends HSModule {
             // even after the challenge had already reached its cap.
             while (
                 this.#autosingEnabled
-                && this.#exposedPlayer!.challengecompletions[challengeIndex] < maxPossible
+                && p.challengecompletions[challengeIndex] < maxPossible
                 && performance.now() < deadline
             ) {
                 await HSUtils.waitForNextTack();
+            }
+
+            if (this.#autosingEnabled && p.challengecompletions[challengeIndex] < maxPossible) {
+                warnTimeout(p.challengecompletions[challengeIndex], maxPossible);
             }
         } else {
             // Fallback: DOM text parsing + Decimal. Once maxed, the game exits the challenge and empties its
@@ -1207,6 +1267,8 @@ export class HSAutosing extends HSModule {
             if (isDone()) return;
 
             await this.#domWaits.waitForChallengeProgress(levelElement!, isDone, maxTime);
+
+            if (this.#autosingEnabled && !isDone()) warnTimeout(getCompletions(), maxPossible);
         }
     }
 

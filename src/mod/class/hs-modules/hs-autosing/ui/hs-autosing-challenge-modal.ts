@@ -1,9 +1,10 @@
-import { AutosingStrategyPhase, Challenge, isCorruptionLevelStep, SPECIAL_ACTIONS, SPECIAL_ACTION_BY_ID, type SpecialAction, IF_JUMP_VALUE, IsJumpChallenge, ModalInput, IfJumpParams } from "../hs-autosing-types";
+import { AutosingStrategyPhase, Challenge, isCorruptionLevelStep, SET_CORRUPTION_LEVEL_VALUE, CLEANSE_CORRUPTION_VALUE, SPECIAL_ACTIONS, SPECIAL_ACTION_BY_ID, type SpecialAction, IF_JUMP_VALUE, FLIP_TOGGLE_VALUES, isSetAutoToggleStep, IsJumpChallenge, ModalInput, IfJumpParams } from "../hs-autosing-types";
 import { HSTooltip } from "../../../hs-core/hs-tooltip";
 import { HSUI } from "../../../hs-core/hs-ui";
 import { HSUtils } from "../../../hs-utils/hs-utils";
 import { HSUIXY } from "../../../../types/module-types/hs-ui-types";
 import { escapeHtml } from "../../../hs-utils/hs-escape";
+import { isIfJumpStep, moveStep, stepListRows, stepSlot } from "./hs-autosing-step-rows";
 
 type IfJumpMode = NonNullable<IfJumpParams["ifJumpMode"]>;
 
@@ -16,7 +17,7 @@ interface FieldContext {
     ifJumpMode: IfJumpMode;
 }
 
-type FieldKey = 'action' | 'challengeNum' | 'forgeItem' | 'completions' | 'corruptionLevel' | 'ascendAfterCorruption' | 'waitBefore' | 'waitInside' | 'maxTime'
+type FieldKey = 'action' | 'challengeNum' | 'forgeItem' | 'completions' | 'corruptionLevel' | 'ascendAfterCorruption' | 'cleanseToHighest' | 'toggleOn' | 'waitBefore' | 'waitInside' | 'maxTime'
     | 'comment' | 'ifJumpMode' | 'ifJumpChallenge' | 'ifJumpMultiplier' | 'ifJumpOperator' | 'ifJumpValue' | 'ifJumpMaxJumps';
 
 interface FieldRowBase {
@@ -55,7 +56,6 @@ type FieldRow = InputRow | NoteRow;
 // The inputs a standard challenge step uses (a special action lists its own)
 const STANDARD_CHALLENGE_INPUTS: ReadonlySet<ModalInput> = new Set<ModalInput>(["challengeNum", "completions", "waitTime", "maxTime"]);
 
-const isIfJumpStep = (step: Challenge): step is IsJumpChallenge => step.challengeNumber === IF_JUMP_VALUE && step.ifJump !== undefined;
 const isSpecialStep = (step: Challenge) => SPECIAL_ACTION_BY_ID.has(step.challengeNumber);
 // A step's own value, for the fields of a standard challenge or special action (not an IF jump)
 const fromAction = (read: (step: Challenge) => string | number | boolean | undefined) =>
@@ -95,11 +95,11 @@ const WHOLE_NOT_NEGATIVE: NumberCheck = { isValid: v => Number.isInteger(v) && v
 // labelClass: the colour of the group's step labels in the list (none: white)
 const ACTION_GROUPS: readonly { label: string; ranges: readonly [number, number][]; labelClass?: string }[] = [
     { label: "Exit and Ascend", ranges: [[101, 104]] },
-    { label: "Game actions", ranges: [[151, 155], [FORGE_FAMILY.first, FORGE_FAMILY.last]] },
+    { label: "Game actions", ranges: [[151, 158], [FORGE_FAMILY.first, FORGE_FAMILY.last]] },
     { label: "Condition", ranges: [[IF_JUMP_VALUE, IF_JUMP_VALUE]] },
     { label: "Challenges", ranges: [[211, 215], [C1_TO_C10_FAMILY.first, C1_TO_C10_FAMILY.last]] },
     { label: "Ambrosia loadouts", ranges: [[301, 306]], labelClass: "hs-step-ambrosia" },
-    { label: "Corruption level", ranges: [[403, 403]], labelClass: "hs-step-corruption" },
+    { label: "Corruption level", ranges: [[SET_CORRUPTION_LEVEL_VALUE, CLEANSE_CORRUPTION_VALUE]], labelClass: "hs-step-corruption" },
     { label: "AOAG and Autosing", ranges: [[901, 903]], labelClass: "hs-step-autosing" },
 ];
 
@@ -125,12 +125,16 @@ function stepLabelClass(step: Challenge): string {
     return (action && ACTION_GROUPS.find(g => inRanges(g.ranges)(action))?.labelClass) ?? "";
 }
 
+// Only flip their game toggle: hidden in the dropdown, still shown when an older strategy's step is loaded
+const isFlipToggle = (id: number) => (FLIP_TOGGLE_VALUES as readonly number[]).includes(id);
+
 // A family's actions show as its one entry, at its first action's place
 function renderActionOptions(): string {
     const group = (label: string, actions: readonly SpecialAction[]) => {
         const options = new Set(actions.map(a => {
             const family = familyOf(a.value);
-            return family ? `<option value="${family.value}">${family.label}</option>` : `<option value="${a.value}">${a.value} - ${a.label}</option>`;
+            return family ? `<option value="${family.value}">${family.label}</option>`
+                : `<option value="${a.value}"${isFlipToggle(a.value) ? " hidden" : ""}>${a.value} - ${a.label}</option>`;
         }));
         return options.size === 0 ? "" : `<optgroup label="${label}">${[...options].join("")}</optgroup>`;
     };
@@ -181,6 +185,15 @@ const FIELD_ROWS: readonly FieldRow[] = [
     {
         key: 'ascendAfterCorruption', label: "Ascend immediately", type: 'checkbox', initial: "true",
         shown: c => c.inputs.has("corruptionLevel"), load: fromAction(step => step.ascendAfterCorruption ?? true),
+    },
+    {
+        key: 'cleanseToHighest', label: "Cleanse to highest cleared level", type: 'checkbox', initial: "false",
+        shown: c => c.inputs.has("cleanseToHighest"), load: fromAction(step => step.cleanseToHighest ?? false),
+    },
+    {
+        key: 'toggleOn', label: "State:", initial: "true",
+        options: `<option value="true">ON</option><option value="false">OFF</option>`,
+        shown: c => c.inputs.has("toggleOn"), load: fromAction(step => step.toggleOn ?? true),
     },
     {
         key: 'waitBefore', label: "Wait before (ms):", attributes: `min="0"`, initial: "0", check: fixedCheck(NOT_NEGATIVE),
@@ -240,7 +253,7 @@ const HELP_LINES: readonly [string, string][] = [
     ["", "Shortcuts work after a click in this window, not while typing in a field"],
     ["⋮⋮", "Drag a step, a \"Jump here\" row, or \"Add Here\" (where new steps go)"],
     ["Double-click", "On a step: \"Add Here\" goes below it"],
-    ["IF targets", "Follow an added, duplicated or deleted step, not a moved one"],
+    ["IF targets", "Follow an added, duplicated or deleted step. A dragged step leaves \"Jump here\" rows in place and lands on the side of them where you drop it"],
     ["→ step N", "Click: shows the other row of the IF"],
     ["↺", "A loop: the IF jumps back"],
     ["Max jumps", "An IF jumps at most this many times per phase pass, then goes on to the next step"],
@@ -298,7 +311,8 @@ const AUTO_SCROLL_MAX_PX_PER_FRAME = 12;
  *       with the mouse. The list is drawn again whenever the drop place changes, and the dragged row found again.
  *       A double-click on a step moves the separator below it.
  *     - An IF jump's target is a step index (the step it jumps before): adding, duplicating or deleting a step
- *       shifts the targets after it, moving a step doesn't. An IF and its "Jump here" row link to each other.
+ *       shifts the targets after it. A dragged step leaves every "Jump here" row (its own one too) and the separator
+ *       between the same rows (hs-autosing-step-rows.ts). An IF and its "Jump here" row link to each other.
  *     - The fields the action shows are checked as they are typed: a bad value turns red and Add/Update says why
  *       and refuses. Never corrected. Enter in a field = Add/Update.
  *     - Edit mode follows the edited step through drags, duplicates and deletes (renumbered); Undo/Redo leave it.
@@ -469,26 +483,13 @@ export class HSAutosingChallengeModal {
 
     // The steps, with each IF jump's target before the step it jumps to and the separator where new steps go
     #renderList(): string {
-        // The IF jumps (and their indices) by the index of the step they jump to
-        const targetsByIndex = new Map<number, { step: IsJumpChallenge; ifIndex: number }[]>();
-        this.#steps.forEach((step, ifIndex) => {
-            if (!isIfJumpStep(step)) return;
-            const index = step.ifJump.ifJumpIndex;
-            targetsByIndex.set(index, [...(targetsByIndex.get(index) ?? []), { step, ifIndex }]);
-        });
-
-        const html: string[] = [];
-        const addTargets = (index: number) => {
-            for (const { step, ifIndex } of targetsByIndex.get(index) ?? []) html.push(this.#renderJumpTarget(step, ifIndex));
-        };
-        if (this.#separatorIndex <= 0) html.push(this.#renderSeparator());
-        this.#steps.forEach((step, index) => {
-            addTargets(index);
-            html.push(this.#renderStep(step, index));
-            if (this.#separatorIndex === index + 1) html.push(this.#renderSeparator());
-        });
-        addTargets(this.#steps.length);
-        return html.join("");
+        return stepListRows(this.#steps, this.#separatorIndex).map(row => {
+            switch (row.kind) {
+                case 'step': return this.#renderStep(this.#steps[row.index], row.index);
+                case 'target': return this.#renderJumpTarget(row.ifStep, row.ifIndex);
+                case 'separator': return this.#renderSeparator();
+            }
+        }).join("");
     }
 
     // After any change of the steps or of the separator
@@ -554,7 +555,10 @@ export class HSAutosingChallengeModal {
         const action = SPECIAL_ACTION_BY_ID.get(step.challengeNumber);
         if (!action) return `<span class="${labelClass}">Challenge ${step.challengeNumber}</span> (${step.challengeCompletions} completions)`;
         const label = isCorruptionLevelStep(step.challengeNumber)
-            ? `${action.label}: ${step.corruptionLevel ?? 0} (${step.ascendAfterCorruption === false ? 'next ascension' : 'ascend now'})` : action.label;
+            ? `${action.label}: ${step.corruptionLevel ?? 0} (${step.ascendAfterCorruption === false ? 'next ascension' : 'ascend now'})`
+            : step.challengeNumber === CLEANSE_CORRUPTION_VALUE
+                ? `${action.label} (${step.cleanseToHighest === true ? 'to highest cleared' : 'to 0'})`
+                : isSetAutoToggleStep(step.challengeNumber) ? `${action.label} (${step.toggleOn === false ? 'OFF' : 'ON'})` : action.label;
         return `<strong class="${labelClass}">${label}</strong> ${actionId(step.challengeNumber)}`;
     }
 
@@ -728,6 +732,12 @@ export class HSAutosingChallengeModal {
             if (isCorruptionLevelStep(step.challengeNumber)) {
                 step.corruptionLevel = this.#number('corruptionLevel');
                 step.ascendAfterCorruption = (this.#field('ascendAfterCorruption') as HTMLInputElement).checked;
+                step.challengeCompletions = 0;
+            } else if (step.challengeNumber === CLEANSE_CORRUPTION_VALUE) {
+                step.cleanseToHighest = (this.#field('cleanseToHighest') as HTMLInputElement).checked;
+                step.challengeCompletions = 0;
+            } else if (isSetAutoToggleStep(step.challengeNumber)) {
+                step.toggleOn = this.#field('toggleOn').value === "true";
                 step.challengeCompletions = 0;
             }
         }
@@ -1052,9 +1062,13 @@ export class HSAutosingChallengeModal {
         drag.element.style.top = `${drag.mouseY - drag.offsetY}px`;
     }
 
-    // The number of steps in the list above the mouse (the dragged step left out)
-    #stepsAbove(clientY: number): number {
-        const rows = this.#list.querySelectorAll<HTMLElement>(".hs-challenge-item[data-index]:not(.hs-challenge-lifted):not(.hs-challenge-placeholder)");
+    // The number of rows in the list whose middle is above the mouse (the dragged row left out): steps, plus the
+    // "Jump here" rows and "Add Here" when a step is dragged (it lands on either side of them)
+    #rowsAbove(clientY: number, allRows: boolean): number {
+        const shown = ":not(.hs-challenge-lifted):not(.hs-challenge-placeholder)";
+        const rows = this.#list.querySelectorAll<HTMLElement>(allRows
+            ? `.hs-challenge-item${shown}, .hs-challenge-separator${shown}`
+            : `.hs-challenge-item[data-index]${shown}`);
         let count = 0;
         for (const row of rows) {
             const rect = row.getBoundingClientRect();
@@ -1064,17 +1078,18 @@ export class HSAutosingChallengeModal {
         return count;
     }
 
-    // Moves the dragged item to the place under the mouse; false when it is already there
+    // Moves the dragged item to the place under the mouse; false when it is already there. place: the number of rows
+    // above it (a step: every row, the others keeping their place; otherwise steps only)
     #dropAt(place: number): boolean {
         const target = this.#drag!.target;
         switch (target.kind) {
             case 'step': {
-                if (place === target.index) return false;
+                if (place === stepSlot(this.#steps, this.#separatorIndex, target.index)) return false;
+                const step = this.#steps[target.index];
                 this.#keepEditing(() => {
-                    const [step] = this.#steps.splice(target.index, 1);
-                    this.#steps.splice(place, 0, step);
+                    ({ steps: this.#steps, separatorIndex: this.#separatorIndex } = moveStep(this.#steps, this.#separatorIndex, target.index, place));
                 });
-                target.index = place;
+                target.index = this.#steps.indexOf(step);
                 return true;
             }
             case 'jumpTarget': {
@@ -1101,7 +1116,7 @@ export class HSAutosingChallengeModal {
     // Moves the dragged item to the place under the mouse, and the lifted element with the mouse
     #followMouse(): void {
         const drag = this.#drag!;
-        if (this.#dropAt(this.#stepsAbove(drag.mouseY))) {
+        if (this.#dropAt(this.#rowsAbove(drag.mouseY, drag.target.kind === 'step'))) {
             this.#redrawList();
             const element = this.#findDragged(drag.target);
             if (element) this.#lift(element);

@@ -5,8 +5,12 @@ How a calculation gets into the list (`toolingSupport`, `fnParams`, `options`, c
 - **Each run forces a save**, so it works with GDS off; an error goes to the result line.
 - **Numbers show 3 decimals**, in scientific notation above 1e6 and below 0.01 (exact 0 stays `0.000`). The formatter is
   local: not `HSUtils.N`, whose other callers keep their format.
-- **Names start with their topic**, a part of a value written "Parent: part" ("Ambrosia Luck: Shop Upgrade"), and the
-  list is sorted A→Z (`#definitions()`). A new entry needs a topic-first name, nothing else to place.
+- **The list is in groups** (`<optgroup>`s, `HS_CALCULATION_GROUPS` gives their order), A→Z inside each
+  (`#definitions()`). Names start with their topic, a part of a value written "Parent: part" ("Ambrosia Luck: Shop
+  Upgrade"), so related entries sit together. A new entry needs a topic-first name and a `group` (the type requires it
+  with `toolingSupport: true`). Not one group per topic: most would hold a single entry. Radio buttons above the list
+  ("List order: By theme / A→Z", hidden setting `calculationToolsGrouped`, by theme by default) give the plain A→Z
+  list instead; switching refills the list and keeps the pick.
 - **Params** get controls from `options` (a `{ label, value }` list, or a function of the save). `reduce_vals` is
   hidden and filled by the two buttons; mode params are shown. A param depending on another param (`effectKey`) is not
   supported: such functions stay off the list.

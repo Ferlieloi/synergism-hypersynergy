@@ -38,6 +38,16 @@ export function run(cmd, args, opts = {}) {
     return spawnSync(cmd, args, { stdio: 'pipe', ...opts });
 }
 
+/** The Python command (PYTHON when set, else python, python3 or py), or null when none runs. */
+export function findPython() {
+    const candidates = process.env.PYTHON ? [process.env.PYTHON] : ['python', 'python3', 'py'];
+    for (const cmd of candidates) {
+        const r = run(cmd, ['--version']);
+        if (!r.error && r.status === 0) return cmd;
+    }
+    return null;
+}
+
 /** Convenience wrapper for commands that must succeed. Uses `fatal()` on any failure. */
 export function runAndCheck(cmd, args, opts = {}) {
     const r = run(cmd, args, opts);

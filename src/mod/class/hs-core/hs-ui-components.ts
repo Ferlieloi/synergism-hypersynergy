@@ -114,12 +114,23 @@ export class HSUIC {
         const propString = this.#getPropString(options.props, options.styles as CSSKeyValueObject);
         const dataString = this.#dataString(options.data);
 
-        const selectOptionsStr = selectOptions.map((option) => {
-            return `<option value="${escapeHtml(String(option.value))}" ${option.selected ? 'selected' : ''}>${escapeHtml(option.text)}</option>`;
-        }
-        ).join('\n');
+        return `<select class="${comp_input_class} ${comp_class}" id="${id}"${propString} ${dataString}>${this.SelectOptions(selectOptions)}</select>`;
+    }
 
-        return `<select class="${comp_input_class} ${comp_class}" id="${id}"${propString} ${dataString}>${selectOptionsStr}</select>`;
+    // A select's inner HTML: also refills one already drawn
+    static SelectOptions(selectOptions: HSUICSelectOption[]): string {
+        const parts: string[] = [];
+        let openGroup: string | undefined;
+        for (const option of selectOptions) {
+            if (option.group !== openGroup) {
+                if (openGroup !== undefined) parts.push('</optgroup>');
+                if (option.group !== undefined) parts.push(`<optgroup label="${escapeHtml(option.group)}">`);
+                openGroup = option.group;
+            }
+            parts.push(`<option value="${escapeHtml(String(option.value))}" ${option.selected ? 'selected' : ''}>${escapeHtml(option.text)}</option>`);
+        }
+        if (openGroup !== undefined) parts.push('</optgroup>');
+        return parts.join('\n');
     }
 
     // Div Component

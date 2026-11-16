@@ -1,13 +1,13 @@
 import { HSElementHooker } from "../../hs-core/hs-elementhooker";
 import { HSLogger } from "../../hs-core/hs-logger";
-import { HSSearchField, readHoverTooltip } from "./hs-singularity-search-field";
+import { HSSearchField, HSSearchResults, HSSearchWords, readHoverTooltip } from "./hs-singularity-search-field";
 import { matchesSearch, normalizeSearchText, searchTerms } from "./hs-singularity-search-match";
 
 const PERK_SELECTOR = '#singularityPerksGrid .singularityPerkNode';
 const ACTIVE_CLASS = 'hs-sing-search-perks-active';
 const HIT_CLASS = 'hs-sing-search-hit';
 // The clickable words under the field: what fits on one row
-const SUBJECTS = ['quark', 'cube', 'octeract', 'ant', 'luck', 'salvage', 'token', 'auto', 'challenge', 'purple'];
+const SUBJECTS = ['quark', 'cube', 'oct', 'ant', 'luck', 'salvage', 'token', 'auto', 'challenge', 'purple'];
 
 interface HSReadPerk {
     perk: HTMLElement;
@@ -25,8 +25,8 @@ export class HSPerksSearch {
     #info?: HTMLElement;
     #root?: HTMLElement;
     #field?: HSSearchField;
-    #results?: HTMLElement;
-    #subjectButtons = new Map<string, HTMLElement>();
+    #results?: HSSearchResults;
+    #words?: HSSearchWords;
 
     constructor(context: string) {
         this.#context = context;
@@ -70,10 +70,7 @@ export class HSPerksSearch {
         if (!this.#root?.isConnected) return;
 
         const perks = HSPerksSearch.#readShownPerks();
-        this.#subjectButtons.forEach((button, word) => {
-            const terms = searchTerms(word);
-            button.style.display = perks.some(({ text }) => matchesSearch(text, terms)) ? '' : 'none';
-        });
+        this.#words?.refresh(perks.map(({ text }) => text));
         this.#showResults(perks);
     }
 
@@ -83,23 +80,15 @@ export class HSPerksSearch {
 
         const field = new HSSearchField('[HS] Find a perk (cube, quark...)', () => this.#search());
 
-        const subjects = document.createElement('div');
-        subjects.id = 'hs-sing-search-perks-subjects';
-        for (const word of SUBJECTS) {
-            const button = document.createElement('button');
-            button.type = 'button';
-            button.textContent = word;
-            button.addEventListener('click', () => field.fill(word));
-            subjects.append(button);
-            this.#subjectButtons.set(word, button);
-        }
+        const words = new HSSearchWords(SUBJECTS, field);
 
-        const results = document.createElement('div');
-        results.id = 'hs-sing-search-perks-results';
+        const results = new HSSearchResults('No perk found');
+        results.element.id = 'hs-sing-search-perks-results';
 
-        root.append(field.element, subjects, results);
+        root.append(field.element, words.element, results.element);
         this.#field = field;
         this.#results = results;
+        this.#words = words;
         return root;
     }
 
@@ -121,18 +110,7 @@ export class HSPerksSearch {
 
         this.#info.classList.toggle(ACTIVE_CLASS, searching);
         this.#field.setCount(searching ? `${cards.length} result${cards.length === 1 ? '' : 's'}` : '');
-        this.#results.scrollTop = 0;
-        // For its height down to the window's bottom (hs-singularity-search.css)
-        this.#results.style.setProperty('--hs-sing-search-results-top', `${this.#results.getBoundingClientRect().top}px`);
-
-        if (searching && cards.length === 0) {
-            const empty = document.createElement('div');
-            empty.className = 'hs-sing-search-empty';
-            empty.textContent = 'No perk found';
-            this.#results.replaceChildren(empty);
-        } else {
-            this.#results.replaceChildren(...cards);
-        }
+        this.#results.show(searching ? cards : null);
     }
 
     /** The perks the game shows. What it hides stays hidden: the perks further than its next previews. */

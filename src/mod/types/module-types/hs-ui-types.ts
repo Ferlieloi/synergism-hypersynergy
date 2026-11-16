@@ -123,4 +123,6 @@ export interface HSUICSelectOption {
     value: string | number;
     text: string;
     selected?: boolean;
+    // Consecutive options with the same group share one <optgroup>
+    group?: string;
 }

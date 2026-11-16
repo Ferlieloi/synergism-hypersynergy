@@ -3,8 +3,9 @@ import { HSUI } from "./hs-ui";
 import { HSUIC } from "./hs-ui-components";
 import { HSModuleRegistry } from "./module/hs-module-registry";
 import { HSGameDataAPI } from "./gds/hs-gamedata-api";
-import { HSInputType } from "../../types/module-types/hs-ui-types";
-import { HSCalculationDefinition, HSCalculationParamOption, HSCalculationParams } from "../../types/data-types/hs-gamedata-api-types";
+import { HSSettings } from "./settings/hs-settings";
+import { HSInputType, HSUICSelectOption } from "../../types/module-types/hs-ui-types";
+import { HS_CALCULATION_GROUPS, HSCalculationDefinition, HSCalculationParamOption, HSCalculationParams } from "../../types/data-types/hs-gamedata-api-types";
 import calculationToolsCSS from "inline:../../resource/css/module/hs-calculation-tools.css";
 
 // Build-time injected by esbuild via `define`: false in the release build only.
@@ -29,6 +30,7 @@ const BOOLEAN_OPTIONS: HSCalculationParamOption[] = [
  */
 export class HSCalculationTools {
     static #context = 'HSCalculationTools';
+    static readonly #orderId = 'hs-panel-calc-order';
     static readonly #selectId = 'hs-panel-test-calc-sel';
     static readonly #paramsId = 'hs-panel-calc-params';
     static readonly #resultId = 'hs-panel-test-calc-latest';
@@ -47,20 +49,25 @@ export class HSCalculationTools {
 
         const definitions = HSCalculationTools.#definitions();
         if (HS_DEV_BUILD) HSCalculationTools.#checkDefinitions(definitions);
+        const grouped = HSCalculationTools.#isGrouped();
 
         return [
             HSUIC.Div({
                 class: 'hs-panel-grid-full-span hs-panel-grid-hint',
-                html: 'Runs a calculation on the current save. "(C)": can also list its components.'
+                html: 'Runs a calculation on the current save.<br>"(C)": can also list its components.'
+            }),
+            HSUIC.Div({
+                id: HSCalculationTools.#orderId,
+                class: 'hs-panel-grid-full-span hs-calc-order',
+                html: `<span>List order:</span>`
+                    + `<label><input type="radio" name="${HSCalculationTools.#orderId}" value="grouped"${grouped ? ' checked' : ''}>By theme</label>`
+                    + `<label><input type="radio" name="${HSCalculationTools.#orderId}" value="az"${grouped ? '' : ' checked'}>A→Z</label>`
             }),
             HSUIC.Select({
                 class: 'hs-panel-setting-block-select-input hs-panel-grid-full-span',
                 id: HSCalculationTools.#selectId,
                 type: HSInputType.TEXT
-            }, definitions.map((def) => ({
-                text: def.supportsReduce ? `${def.calculationName} (C)` : def.calculationName,
-                value: def.fnName,
-            }))),
+            }, HSCalculationTools.#selectOptions(definitions)),
             HSUIC.Div({ id: HSCalculationTools.#paramsId, class: 'hs-panel-grid-full-span hs-calc-params' }),
             HSUIC.Button({ id: HSCalculationTools.#reducedBtnId, text: 'Calc. reduced', class: 'hs-panel-btn-auto-width' }),
             HSUIC.Button({ id: HSCalculationTools.#componentsBtnId, text: 'Calc. components', class: 'hs-panel-btn-auto-width' }),
@@ -70,6 +77,10 @@ export class HSCalculationTools {
     }
 
     static bindToolsSection(): void {
+        document.getElementById(HSCalculationTools.#orderId)?.addEventListener('change', (event) => {
+            HSSettings.getSetting('calculationToolsGrouped')?.setValue((event.target as HTMLInputElement).value === 'grouped');
+            HSCalculationTools.#refillSelect();
+        });
         document.getElementById(HSCalculationTools.#selectId)?.addEventListener('change', () => void HSCalculationTools.#renderParams());
         document.getElementById(HSCalculationTools.#reducedBtnId)?.addEventListener('click', () => void HSCalculationTools.#run('reduced'));
         document.getElementById(HSCalculationTools.#componentsBtnId)?.addEventListener('click', () => void HSCalculationTools.#run('components'));
@@ -87,6 +98,32 @@ export class HSCalculationTools {
     static #definitions(): HSCalculationDefinition[] {
         return HSGameDataAPI.getCalculationDefinitions({ toolingSupport: "true" })
             .sort((a, b) => a.calculationName.localeCompare(b.calculationName, 'en'));
+    }
+
+    // Grouped unless the player unticked it; the setting may not be loaded yet
+    static #isGrouped(): boolean {
+        return HSSettings.getSetting('calculationToolsGrouped')?.getValue() !== false;
+    }
+
+    // Grouped: in the groups' order, A→Z inside each (the sort is stable)
+    static #selectOptions(definitions: HSCalculationDefinition[]): HSUICSelectOption[] {
+        const grouped = HSCalculationTools.#isGrouped();
+        const groupIndex = (def: HSCalculationDefinition) => def.group ? HS_CALCULATION_GROUPS.indexOf(def.group) : HS_CALCULATION_GROUPS.length;
+        const ordered = grouped ? [...definitions].sort((a, b) => groupIndex(a) - groupIndex(b)) : definitions;
+        return ordered.map((def) => ({
+            text: def.supportsReduce ? `${def.calculationName} (C)` : def.calculationName,
+            value: def.fnName,
+            group: grouped ? def.group : undefined,
+        }));
+    }
+
+    // Same pick after the refill: its params stay as they are
+    static #refillSelect(): void {
+        const select = document.getElementById(HSCalculationTools.#selectId) as HTMLSelectElement | null;
+        if (!select) return;
+        const picked = select.value;
+        select.innerHTML = HSUIC.SelectOptions(HSCalculationTools.#selectOptions(HSCalculationTools.#definitions()));
+        select.value = picked;
     }
 
     static #selectedDefinition(): HSCalculationDefinition | undefined {

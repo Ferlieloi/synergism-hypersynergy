@@ -7,6 +7,7 @@ import { HSModuleRegistry } from "./module/hs-module-registry";
 import { HSPlatform } from "./hs-platform";
 
 import { HSGameDialogs } from "./dialogs/hs-game-dialogs";
+import { HSHeaderKeepOnImport } from "./header/hs-header-keep-on-import";
 
 import backupCSS from "inline:../../resource/css/module/hs-backup.css";
 
@@ -17,6 +18,10 @@ const FORMAT_VERSION = 1;
 // stat symbols, tab order, export to the clipboard, dismissed announcements. A missing key is a value too
 // (the default theme, export to a file), so an import removes the ones the file doesn't have.
 const GAME_PREF_KEYS = ['language', 'theme', 'statSymbols', 'synergism-tab-order', 'copyToClipboard', 'dismissedAnnouncements'];
+// The mod's stores (without the prefix) that describe places in the game's header layout: kept with it by
+// "Keep my current header layout". Each file's STORAGE_KEY: HSHeaderModules, HSHeaderCellSettings,
+// HSHeaderGridWidth, HSMinibarResize. The header settings in the settings store are not among them.
+const HEADER_STORE_KEYS = ['header-modules', 'header-cells', 'header-grid-width', 'minibar-dimensions'];
 
 interface HSBackupParts {
     save: boolean;
@@ -75,6 +80,8 @@ interface HSBackupWrite {
     save?: string;
     modData?: Record<string, string>;
     gamePrefs?: Record<string, string>;
+    // With modData: the mod's header stores stay as they are, neither removed nor taken from the file
+    keepHeader?: boolean;
 }
 
 // What a chosen file holds, once checked
@@ -104,6 +111,8 @@ interface HSBackupImport {
  *       as at any page load. Until the page is gone, writes to the imported keys are blocked, so the game's
  *       autosave and the mod's own saves can't put the old values back.
  *     - A save exported by the game itself can be imported too.
+ *     - "Keep my current header layout" (the setting shared with the game's "Load from file" checkbox): the save
+ *       gets the current header layouts, and the mod's header stores are left out of the mod data's restore.
  *     - Refused while autosing is active.
  * Author: Shewchou
  */
@@ -142,7 +151,7 @@ export class HSBackup {
                 html: `${part('save', 'Save')}${part('modData', 'Mod data', HSBackup.#modDataHint)}${part('gamePrefs', 'Game preferences', HSBackup.#gamePrefsHint)}${part('logs', 'Logs')}`
             }),
             HSUIC.Button({ id: HSBackup.#exportBtnId, text: 'Export to file' }),
-            HSUIC.Button({ id: HSBackup.#importBtnId, text: 'Import from file…' }),
+            HSUIC.Button({ id: HSBackup.#importBtnId, text: 'Import from file…', props: { title: 'Also takes a save exported by the game' } }),
         ];
     }
 
@@ -526,11 +535,28 @@ export class HSBackup {
         return dataUrl.slice(dataUrl.indexOf(',') + 1);
     }
 
-    /** The save (base64) with no offline progress at load: only `offlinetick` moves, the rest loads as the game would. */
-    static async #withoutOfflineProgress(save: string): Promise<string> {
+    /**
+     * The save (base64), changed for the import's options.
+     * `skipOffline`: no offline progress at load, only `offlinetick` moves, the rest loads as the game would.
+     * `headerLayouts`: the current layouts in place of the save's.
+     */
+    static async #rewriteSave(save: string, { skipOffline, headerLayouts }: { skipOffline: boolean, headerLayouts?: object }): Promise<string> {
         const data = JSON.parse(atob(save));
-        HSBackup.shiftSaveClock(data, Date.now(), { codeTimers: false, dailyReset: false });
+        if (skipOffline) HSBackup.shiftSaveClock(data, Date.now(), { codeTimers: false, dailyReset: false });
+        if (headerLayouts) data.headerLayouts = headerLayouts;
         return HSBackup.encodeSave(JSON.stringify(data));
+    }
+
+    /**
+     * The current save's header layouts (desktop and mobile), from a save made now: the game writes them without the
+     * mod's module ids (the patcher strips them in saveSynergy). Null when the game did not save (offline progress
+     * running) or the save has none.
+     */
+    static #currentHeaderLayouts(): object | null {
+        const json = HSBackup.captureSave();
+        if (json === null) return null;
+        const layouts = JSON.parse(json)?.headerLayouts;
+        return layouts && typeof layouts === 'object' ? layouts : null;
     }
 
     static async #openImportModal(fileName: string, content: HSBackupImport): Promise<void> {
@@ -549,6 +575,7 @@ export class HSBackup {
                     ${row('save', 'Save', true)}
                     <label class="hs-backup-suboption" title="The save loads as it was made: no offline progress since then"><input type="checkbox" data-part="skipOffline">Skip offline progress</label>
                     ${row('modData', 'Mod data', true)}
+                    <label title="Your header stays as it is now: its layout (from the save) and where the mod's modules sit (from the mod data)"><input type="checkbox" data-part="keepHeader">Keep my current header layout</label>
                     ${row('gamePrefs', 'Game preferences', true)}
                     ${row('backup', 'Download a backup of my current save, mod data and preferences first', true)}
                     <div>Importing replaces what is ticked, then reloads the page.</div>
@@ -615,6 +642,19 @@ export class HSBackup {
             unavailable('modData', '(not in this file)');
         }
 
+        // Only with the save or the mod data: greyed out, in place, when both are unticked or missing.
+        // Shared with the game's "Load from file" checkbox.
+        const keepHeader = box('keepHeader');
+        keepHeader.checked = HSHeaderKeepOnImport.isKeepTicked();
+        keepHeader.addEventListener('change', () => HSHeaderKeepOnImport.setKeep(keepHeader.checked));
+        const syncKeepHeader = () => {
+            keepHeader.disabled = !box('save').checked && !box('modData').checked;
+            (keepHeader.parentElement as HTMLElement).classList.toggle('hs-backup-suboption-off', keepHeader.disabled);
+        };
+        box('save').addEventListener('change', syncKeepHeader);
+        box('modData').addEventListener('change', syncKeepHeader);
+        syncKeepHeader();
+
         if (content.gamePrefs) {
             (box('gamePrefs').parentElement as HTMLElement).title = HSBackup.#gamePrefsHint;
             note('gamePrefs').textContent = content.gamePrefs.language ? `(language: ${text(content.gamePrefs.language)})` : '';
@@ -628,6 +668,7 @@ export class HSBackup {
                 save: box('save').checked ? content.save : undefined,
                 modData: box('modData').checked ? content.modData : undefined,
                 gamePrefs: box('gamePrefs').checked ? content.gamePrefs : undefined,
+                keepHeader: keepHeader.checked,
             };
 
             if (!write.save && !write.modData && !write.gamePrefs) {
@@ -648,17 +689,35 @@ export class HSBackup {
                 return;
             }
 
-            if (write.save && skipOffline.checked) {
+            if (write.save && (skipOffline.checked || write.keepHeader)) {
+                let headerLayouts: object | undefined;
+                if (write.keepHeader) {
+                    try {
+                        headerLayouts = HSBackup.#currentHeaderLayouts() ?? undefined;
+                    } catch (error) {
+                        HSLogger.error(`Import refused: the current header layout could not be read: ${error}`, HSBackup.#context);
+                        status.textContent = 'Your current header layout could not be read (see the Log tab): nothing was imported.';
+                        return;
+                    }
+                    if (!headerLayouts) {
+                        HSLogger.warn('Import refused: the game could not save right now, so the current header layout could not be kept', HSBackup.#context);
+                        status.textContent = 'The game could not save right now (offline progress running?): nothing was imported. Try again in a moment.';
+                        return;
+                    }
+                }
                 try {
-                    write.save = await HSBackup.#withoutOfflineProgress(write.save);
+                    write.save = await HSBackup.#rewriteSave(write.save, { skipOffline: skipOffline.checked, headerLayouts });
                 } catch (error) {
-                    HSLogger.error(`Import refused: the save's offline time could not be skipped: ${error}`, HSBackup.#context);
-                    status.textContent = 'Offline progress could not be skipped (see the Log tab): nothing was imported.';
+                    HSLogger.error(`Import refused: the save could not be changed for the import: ${error}`, HSBackup.#context);
+                    status.textContent = 'The save could not be prepared (see the Log tab): nothing was imported.';
                     return;
                 }
                 // Checked again: the encoding is awaited, and autosing could have started meanwhile
                 if (HSBackup.#refusedDuringAutosing('Import')) return;
-                HSLogger.log('Import: the save loads with no offline progress', HSBackup.#context);
+                if (skipOffline.checked) HSLogger.log('Import: the save loads with no offline progress', HSBackup.#context);
+            }
+            if (write.keepHeader && (write.save || write.modData)) {
+                HSLogger.log('Import: your current header layout is kept', HSBackup.#context);
             }
 
             const failure = HSBackup.#applyImport(write);
@@ -682,21 +741,25 @@ export class HSBackup {
      * Callers refuse first while autosing runs.
      * @returns Why nothing was imported. When it worked, the page reloads.
      */
-    static #applyImport({ save, modData, gamePrefs }: HSBackupWrite): string | null {
+    static #applyImport({ save, modData, gamePrefs, keepHeader }: HSBackupWrite): string | null {
         // From here to the reload nothing is awaited: no timer of the game or the mod runs in between
         const previous = new Map<string, string | null>();
         const remember = (key: string) => {
             if (!previous.has(key)) previous.set(key, localStorage.getItem(key));
         };
+        const prefix = HSGlobal.HSStorage.storagePrefix;
+        const isKept = (key: string) => keepHeader === true && HEADER_STORE_KEYS.some(store => key === `${prefix}${store}`);
 
         try {
             if (modData) {
-                // Exact restore: the mod's keys missing from the file are removed
+                // Exact restore: the mod's keys missing from the file are removed. The kept header stores stay as they are.
                 for (const key of Object.keys(HSBackup.#readModData())) {
+                    if (isKept(key)) continue;
                     remember(key);
                     localStorage.removeItem(key);
                 }
                 for (const [key, value] of Object.entries(modData)) {
+                    if (isKept(key)) continue;
                     remember(key);
                     localStorage.setItem(key, value);
                 }

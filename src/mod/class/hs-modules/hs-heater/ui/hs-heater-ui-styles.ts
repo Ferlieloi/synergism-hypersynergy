@@ -888,11 +888,25 @@ export class HSHeaterUIStyles {
                 color: #c96a00;
             }
 
+            /* Any other unaffordable row: a red light enough for a whole line
+               on the dark background (the ✘ red is too dark for that). */
+            .hs-heater-unaffordable-row td,
+            .hs-heater-unaffordable-row .hs-heater-type-icon-button {
+                color: #e06666;
+            }
+
             /* An unaffordable row's short resource, same red as the ✘. After
-               the rule above, which has the same specificity. */
+               the rules above, which have the same specificity. */
             td.hs-heater-short-cost {
                 color: #962f2f;
+                font-weight: bold;
                 cursor: help;
+            }
+
+            /* An unaffordable row's ✘, bold like its short resource */
+            .hs-heater-unaffordable-row .hs-heater-status-unmaxed,
+            .hs-heater-selected-unaffordable-row .hs-heater-status-unmaxed {
+                font-weight: bold;
             }
 
             .hs-heater-inputs-header { background-color: #472323; }

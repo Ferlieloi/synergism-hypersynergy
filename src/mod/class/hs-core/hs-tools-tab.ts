@@ -2,7 +2,6 @@ import { HSLogger } from "./hs-logger";
 import { HSModuleRegistry } from "./module/hs-module-registry";
 import { HSUI } from "./hs-ui";
 import { HSUIC } from "./hs-ui-components";
-import { HSSettings } from "./settings/hs-settings";
 import { HSGlobal } from "./hs-global";
 import { HSBackup } from "./hs-backup";
 import { HSCalculationTools } from "./hs-calculation-tools";
@@ -10,7 +9,6 @@ import { HSBookmarkletNotice } from "./hs-bookmarklet-notice";
 import { HSGithub } from "./github/hs-github";
 import { HSHeaterInputModalController } from "../hs-modules/hs-heater/ui/hs-heater-input-modal-controller";
 import { HSUtils } from "../hs-utils/hs-utils";
-import { HSNotifyPosition, HSNotifyType } from "../../types/module-types/hs-ui-types";
 
 /**
  * Class: HSToolsTab
@@ -45,13 +43,8 @@ export class HSToolsTab {
                     HSUIC.Button({ id: 'hs-panel-discord-thread-btn', text: 'Discord Thread' }),
                     HSUIC.Button({ id: 'hs-panel-check-version-btn', text: 'CHECK VERSION' }),
                     this.#buildGridSectionHeader('Other tools'),
-                    HSUIC.Button({ id: 'hs-panel-dump-settings-btn', text: 'Dump Settings' }),
-                    HSUIC.Button({ id: 'hs-panel-dump-gamedata-btn', text: 'Dump Game vars' }),
                     HSUIC.Button({ id: 'hs-panel-exit-exalt-bug-btn', text: 'Fix Exalt Bug' }),
                     HSUIC.Button({ id: 'hs-panel-clear-settings-btn', text: 'CLEAR SETTINGS', styles: { borderColor: 'red' } }),
-                    this.#buildGridSectionHeader('Testing tools'),
-                    HSUIC.Button({ id: 'hs-panel-test-notify-btn', text: 'Notify test' }),
-                    HSUIC.Button({ id: 'hs-panel-test-notify-long-btn', text: 'Notify test 2' }),
                     this.#buildGridSectionHeader('Calculation tools'),
                     ...HSCalculationTools.buildToolsSection(),
                 ],
@@ -76,11 +69,6 @@ export class HSToolsTab {
     }
 
     static #bindEvents() {
-        const positions: HSNotifyPosition[] = ["topLeft", "top", "topRight", "right", "bottomRight", "bottom", "bottomLeft", "left"];
-        const colors: HSNotifyType[] = ["default", "warning", "error", "success"];
-        let p_idx = -1;
-        let c_idx = -1;
-
         HSBookmarkletNotice.bindToolsSection();
         HSBackup.bindToolsSection();
         HSCalculationTools.bindToolsSection();
@@ -111,29 +99,9 @@ export class HSToolsTab {
         this.#bindButton('#hs-panel-mod-github-btn', () => this.#openUrl(HSGlobal.General.modGithubUrl));
         this.#bindButton('#hs-panel-discord-thread-btn', () => this.#openUrl(HSGlobal.General.modDiscordThreadUrl));
 
-        this.#bindButton('#hs-panel-dump-settings-btn', () => HSSettings.dumpToConsole());
-        this.#bindButton('#hs-panel-dump-gamedata-btn', () => this.#dumpGameData());
         this.#bindButton('#hs-panel-clear-settings-btn', () => HSBackup.clearSettingsAndReload());
         this.#bindButton('#hs-panel-check-version-btn', () => this.#checkVersion());
         this.#bindButton('#hs-panel-exit-exalt-bug-btn', () => this.#fixExaltBug());
-
-        this.#bindButton('#hs-panel-test-notify-btn', async () => {
-            p_idx = (p_idx + 1) % positions.length;
-            c_idx = (c_idx + 1) % colors.length;
-            await HSUI.Notify('Test notification', {
-                position: positions[p_idx],
-                notificationType: colors[c_idx]
-            });
-        });
-
-        this.#bindButton('#hs-panel-test-notify-long-btn', async () => {
-            p_idx = (p_idx + 1) % positions.length;
-            c_idx = (c_idx + 1) % colors.length;
-            await HSUI.Notify('This is a really very extremely long test notification which tests if the notification works with a long notification test notification ', {
-                position: positions[p_idx],
-                notificationType: colors[c_idx]
-            });
-        });
     }
 
     static #bindButton(selector: string, callback: () => void | Promise<void>) {
@@ -202,22 +170,5 @@ export class HSToolsTab {
             position: 'top',
             notificationType: 'success'
         });
-    }
-
-    static #dumpGameData() {
-        const dataModule = HSModuleRegistry.getModule('HSGameDataAPI');
-        if (!dataModule) return;
-
-        console.log('----- GAME DATA -----');
-        console.log(dataModule.getGameData());
-        console.log('----- PSEUDO DATA -----');
-        // Patched game: the game's own levels, which the mod reads instead
-        console.log(window.__HS_pcoinLevelsLoaded ? window.__HS_pcoinLevels : dataModule.getPseudoData());
-        console.log('----- CAMPAIGN DATA -----');
-        console.log(dataModule.getCampaignData());
-        console.log('----- ME DATA -----');
-        console.log(dataModule.getMeData());
-        console.log('----- EVENT DATA -----');
-        console.log(dataModule.getEventData());
     }
 }

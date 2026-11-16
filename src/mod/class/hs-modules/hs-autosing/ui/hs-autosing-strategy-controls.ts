@@ -13,8 +13,8 @@ import { escapeLogText } from '../../../hs-utils/hs-escape';
  * Class: HSAutosingStrategyControls
  * IsExplicitHSModule: No
  * Description:
- *     The strategy controls of the Auto-Sing settings page: the strategy dropdown (default strategies, then the
- *     player's), and its Edit, Delete, Export and Import buttons. New and edited strategies come from the strategy
+ *     The strategy controls of the Auto-Sing settings page: the strategy dropdown (default strategies, the old
+ *     "-temp" ones, then the player's), and its Edit, Delete, Export and Import buttons. New and edited strategies come from the strategy
  *     editor (HSAutosingStrategyModal), which refreshes the dropdown through this class.
  * Author: XxMolkxX, Shewchou
  */
@@ -45,31 +45,23 @@ export class HSAutosingStrategyControls {
         const selectEl = document.querySelector(`#${control.controlId}`) as HTMLSelectElement | null;
         if (selectEl) {
             selectEl.innerHTML = "";
-            if (defaultStrategiesOptions.length > 0) {
-                const optgroupDefault = document.createElement('optgroup');
-                optgroupDefault.label = 'Default Strategies';
-                for (const opt of defaultStrategiesOptions) {
+            const appendGroup = (label: string, options: { text: string; value: string }[], isDefault: boolean) => {
+                if (options.length === 0) return;
+                const optgroup = document.createElement('optgroup');
+                optgroup.label = label;
+                for (const opt of options) {
                     const option = document.createElement('option');
                     option.text = opt.text;
                     option.value = String(opt.value);
-                    option.setAttribute('data-default', 'true');
-                    optgroupDefault.appendChild(option);
+                    option.setAttribute('data-default', String(isDefault));
+                    optgroup.appendChild(option);
                 }
-                selectEl.appendChild(optgroupDefault);
-            }
-
-            if (userStrategiesOptions.length > 0) {
-                const optgroupUser = document.createElement('optgroup');
-                optgroupUser.label = 'User Strategies';
-                for (const opt of userStrategiesOptions) {
-                    const option = document.createElement('option');
-                    option.text = opt.text;
-                    option.value = String(opt.value);
-                    option.setAttribute('data-default', 'false');
-                    optgroupUser.appendChild(option);
-                }
-                selectEl.appendChild(optgroupUser);
-            }
+                selectEl.appendChild(optgroup);
+            };
+            const isOld = (opt: { value: string }) => HSStrategyManager.isOldDefaultStrategy(opt.value);
+            appendGroup('Default Strategies', defaultStrategiesOptions.filter(opt => !isOld(opt)), true);
+            appendGroup('Old Strategies', defaultStrategiesOptions.filter(isOld), true);
+            appendGroup('User Strategies', userStrategiesOptions, false);
 
             let toSelect = savedStrategy;
             if (!toSelect || !Array.from(selectEl.options).some(opt => opt.value === toSelect)) {

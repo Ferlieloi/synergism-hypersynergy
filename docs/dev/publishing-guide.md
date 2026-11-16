@@ -1,12 +1,25 @@
 # Publishing the player guide and wiki
 
-The site uses GitHub Pages, matching the original project. No Sites/Cloudflare project, database, runtime dependencies or additional hosting account is needed. Existing `docs/features/`, `docs/game/` and `docs/dev/` remain developer documentation.
+The site uses GitHub Pages, matching the original project. No Sites/Cloudflare project, database, runtime dependencies or additional hosting account is needed. Existing `docs/features/`, `docs/game/` and `docs/dev/` remain developer documentation. How the site is built and how it behaves: `docs/features/website.md`.
 
 ## Update the content
 
 1. Review the relevant mod implementation and developer feature docs.
 2. Edit `docs/data/feature-catalogue.json`. It is the shared source for the public site, inventory and wiki; do not edit generated pages by hand.
-3. Step-by-step guides are hand-written Markdown in `docs/data/guides/<category id>.md`, starting with a `# Title` line. Each becomes `docs/wiki/<category id>-guide.html` and the wiki page `Guide-<category id>`, linked from its category, the wiki index and the sidebar. Use only headings (`#` to `####`), paragraphs, flat `-` and `1.` lists, `---` rules (blank line above), `**bold**`, `` `code` `` and `[links](url)`: the generator refuses anything else.
+3. Step-by-step guides are hand-written Markdown in `docs/data/guides/<category id>.md`, starting with a `# Title` line. Each becomes `docs/wiki/<category id>-guide.html`, linked from its category and the wiki index. Use only headings (`#` to `####`), paragraphs, flat `-` and `1.` lists, `---` rules (blank line above), `**bold**`, `` `code` ``, `[links](url)` (to the site's own pages: a full URL, made relative on the site; the build stops on a page or anchor that doesn't exist, `docs/features/website.md`), a screenshot's mark as ① or Ⓐ outside bold (see "Images"), a mod setting as `**⚙ Label**` (its label as the Settings tab shows it, a trailing "(…)" optional; the build stops when no panel setting has that label), GitHub's alerts (a `> [!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]` or `[!CAUTION]` line, then `> ` lines of paragraphs or flat lists, then a blank line) and images (see "Images" below): the generator refuses anything else, inline too (italics, raw HTML, `\` escapes, bare addresses, link titles), and what GitHub would read another way: leave a blank line after a list and above an image, start a numbered list at `1.`, give two headings different titles, keep links out of headings (`docs/features/website.md`, "Players' guides").
+
+## Images
+
+Screenshots go in `docs/res/guides/` (guides) or `docs/res/features/` (catalogue entries), as WebP, PNG or GIF.
+
+- **The site's screenshots are taken by a script:** `npm run screenshots -- <backup.json> [name ...]` (`scripts/tools/screenshots/`). It loads an HS backup in the real game headless with the dev build (`npm run build`, `node scripts/tools/update-game.cjs` first), takes each view at 2x, and writes the WebP files in `docs/res/`, about 3 minutes for all. The backup: a save at S216+ with hepteracts and the GQ shop unlocked; the game shows the account as "harness", and the version without its `-devN` suffix. Rerun it for a name after a change to that view. `header-edit` is taken alone from another backup, one whose header layout shows well (`npm run screenshots -- <that backup> header-edit`), and the Heater's two from one with an unaffordable row (Max Amb + Oct: the guide points at it); the Distributor shot distributes, so it ascends. The names, where each image goes and its size on the site if smaller than taken: `images.cjs`; a new view: a function in `game-shots.cjs` plus its line in `images.cjs`. To adjust one shot without reloading the game each time: `game-session.cjs <backup>`, then `run-shot.cjs <name>`.
+- **Annotations** are drawn by the script too (`__shot.mark()` in `game-shots.cjs`), anchored to the window's elements so a retake keeps them on target; a mark whose element is missing or not visible stops the shot. A view with marks writes a second file, `<name>-marked@2x.png`, which goes where `marked` says in `images.cjs` (`to` for the clean one, left out when only the marked one is used). The guide or catalogue text writes each mark as ①–⑳ or Ⓐ–Ⓩ outside bold, which the site draws as the same badge (rules: `docs/features/website.md`, "Annotated screenshots"). Check a retaken marked image: a badge must not hide what the text names.
+- **Prepare a screenshot** with `node scripts/tools/prepare-image.cjs <screenshot> docs/res/guides/<name>@<n>x.webp [--crop x,y,w,h] [--width px]`: it crops, scales down and converts to WebP through headless Chrome (no image tool to install).
+- **`@<n>x` in the name** says the screenshot was taken at n times the page's size (browser zoom × Windows display scaling, e.g. `@1.4x` at 140%, `@2x` at 200%): the site shows it at its pixel size divided by n, the size it has in the game. Without it, at its pixel size.
+- **In a guide:** an image alone on its line, its path relative to the guide file (as GitHub reads it): `![What it shows](../../res/guides/strategy-window@2x.webp "Optional caption")`. The description is required (screen readers, broken images). Put a narrow image right under its heading, before the text it goes with (below).
+- **In the catalogue:** an entry's optional `images`, a list of `{"src": "res/features/<name>.webp", "alt": "What it shows", "caption": "optional"}`, `src` from `docs/`. A narrow one shows before the entry's details, a wide one after them. On the features page, where the details are folded, the first image also shows as a miniature right of the entry's title: a click unfolds the details.
+- On the site an image loads only when scrolled to, its box is sized before it loads, it shrinks to the column, and a click enlarges it over the page (one file pixel per screen pixel, shrunk to the window; without JavaScript the link opens the file). **An image shown 850 px wide or less** (`SIDE_IMAGE_MAX_WIDTH` in `build-docs.py`) **floats right of the text after it**, at most half the column (600 px), shrunk if wider; the next heading starts below it; on phones it takes the whole width. In a guide, `#past-headings` after its path (`![…](../../res/guides/heater-inputs@2x.webp#past-headings)`) lets the headings after it flow beside it, down to the next image: for one window that several sections describe. A wider one takes the column's width. The generator refuses a missing file, a file outside `docs/res/`, another format, and a missing description.
+- **No personal data:** check a screenshot shows no player name, ID or anything private before committing it.
 4. When re-auditing behavior, update `audited_commit` to the reviewed source commit: it only records the audit in `docs/FEATURE-AUDIT.md`, source links follow `master`. The package version, settings registry and calculation picker entries are read from the checkout.
 5. Run:
 
@@ -16,7 +29,7 @@ The site uses GitHub Pages, matching the original project. No Sites/Cloudflare p
    node --check docs/js/guide.js
    ```
 
-The generator refuses duplicate feature IDs, unknown settings, unmapped settings and missing source references. It does not access the network or change the mod. `--validate` runs only those catalogue checks and writes nothing: on Dev, use it instead of generating (`docs/dev/releasing.md`, "Porting a change to Live").
+The generator refuses duplicate feature IDs, unknown settings, unmapped settings, missing source references, unknown keys and broken links between its pages (the full list: `docs/features/website.md`). It does not access the network or change the mod. A page it no longer generates (a category or guide removed or renamed) is deleted by a build and reported by `--check`. `--validate` runs those checks, building the pages in memory, and writes nothing: on Dev, use it instead of generating (`docs/dev/releasing.md`, "Porting a change to Live").
 
 ## Update the changelog
 
@@ -32,6 +45,7 @@ At a Live release, regenerate the whole site (step 5 above) and run the changelo
 python scripts/tools/build-docs.py --changelog-only
 python scripts/tools/build-docs.py --changelog-only --check
 python scripts/tests/test-changelog-validation.py
+python scripts/tests/test-build-docs.py
 node --check docs/js/changelog.js
 ```
 
@@ -62,6 +76,8 @@ The attribution helper does not fetch or publish. Review any new identity before
 
 Open `docs/index.html` directly in a browser: the complete site, wiki, relative assets and feature search work without a server. Alternatively run `python -m http.server 8080 --directory docs` and visit `http://localhost:8080/`. No game save is needed.
 
+On Dev, whose checked-in pages lag the data, preview without touching `docs/`: `python scripts/tools/build-docs.py --out local/site` builds the site into the git-ignored `local/site/` and copies `css/`, `js/`, `res/` and the mod's images (`src/mod/resource/img/`) next to it; open `local/site/docs/index.html`. `npm run site` rebuilds that preview at each change of the site's sources (catalogue, guides, changelog, `css/`, `js/`, `res/`, the mod's images, the generator, the settings, the calculations, the version, the Discord thread's address); `start-dev-server.bat` runs it and serves the preview at `http://localhost:8081/docs/` (reload to see a rebuild).
+
 Check these flows at desktop and narrow/mobile widths:
 
 - Home → each colored navigation tab → Back to top. The tab matches the page and text is readable.
@@ -77,31 +93,15 @@ Check these flows at desktop and narrow/mobile widths:
 
 ## Publish the website
 
-After the documentation changes are reviewed and committed to `master`:
+Pages serves Live's `master` from the **repository root** (Settings → Pages: Deploy from a branch, `master`, `/ (root)`), so committing the regenerated pages to `master` publishes them. Wait for the Pages deployment to finish before calling a change live. No Actions workflow: the root `.nojekyll` makes it a plain static deployment.
 
-1. Open `https://github.com/Ferlieloi/synergism-hypersynergy/settings/pages`.
-2. Under Build and deployment, choose **Deploy from a branch**.
-3. Select branch **master**, folder **/docs**, and Save.
-4. Wait for the Pages deployment to finish. The expected address is `https://ferlieloi.github.io/synergism-hypersynergy/`; verify GitHub's reported URL before calling it live.
+Keep the root source: the site's addresses contain `docs/` (the root `index.html` redirects the bare address there), and the mod's strategy editor, the README and the GitHub Wiki link to those addresses, and the category icons that are the mod's own are served from `src/`. Switching the source to `/docs` breaks them (`docs/features/website.md`, "Hosting").
 
-The tracked `.nojekyll` makes this a plain static deployment. No custom Actions workflow is required; future commits to `/docs` update the site through Pages. If Pages serves the repository root instead, the root `index.html` redirects visitors to `docs/`; the main website address works with either source selection. The original author's website is not changed.
+## The native GitHub Wiki
 
-Set the repository's About → Website field to the new URL only after it is confirmed live.
+The GitHub Wiki (its own repository, `Ferlieloi/synergism-hypersynergy.wiki`) holds only pages pointing to the website: Home, Mod-Features, a `Features-<category id>` page per category, Settings-Reference, Calculation-Reference, the sidebar and the footer. They are written by hand in the wiki itself; update them when a category is added, renamed or removed.
 
-## Publish the native GitHub Wiki
-
-`docs/wiki-source/` contains the GitHub-compatible Markdown: Home, Mod-Features, one page per category, the step-by-step guides, Settings-Reference, Calculation-Reference, sidebar and footer. The site also has a complete browsable HTML wiki under `docs/wiki/`, so the guide does not depend on the native wiki being initialized.
-
-GitHub Wikis have a separate Git repository, not a `/wiki` directory in the main repo. The GitHub connector has no Wiki-writing or Pages-settings operation; an authenticated GitHub CLI can configure Pages and Git can publish an initialized wiki. If the wiki has not been initialized, first open `https://github.com/Ferlieloi/synergism-hypersynergy/wiki` and create its first page in GitHub's UI. Then, in an authenticated Git environment:
-
-```sh
-git clone https://github.com/Ferlieloi/synergism-hypersynergy.wiki.git ../hypersynergism-wiki
-python scripts/tools/prepare-wiki.py ../hypersynergism-wiki
-```
-
-The preparation helper verifies the wiki remote and copies only its managed Markdown pages. It never deletes unrelated pages, commits, stages or pushes. Inspect the diff in the wiki checkout and commit/push only after explicit approval, as required by `AGENTS.md`.
-
-Future updates: regenerate from the catalogue, pull the wiki checkout, run the helper again, review and publish its diff. Do not maintain a second independent feature list in the wiki.
+Nothing in the repository generates them.
 
 ## Scope and verification
 

@@ -7,17 +7,27 @@ const isWindows = process.platform === 'win32'
 
 // Runs the globally installed http-server through node itself: through its .cmd shim, Windows puts a cmd.exe
 // between us and the server, and killing that cmd.exe leaves the server running.
-function httpServerProcess () {
-  const args = ['./build/', '--mimetypes', './mimes.types', '--cors']
+function findHttpServerEntry () {
   try {
     const globalRoot = execSync('npm root -g', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim()
     const entry = path.join(globalRoot, 'http-server', 'bin', 'http-server')
-    if (fs.existsSync(entry)) {
-      return { name: 'HTTP server', command: process.execPath, args: [entry, ...args], shell: false }
-    }
+    if (fs.existsSync(entry)) return entry
   } catch {}
-  return { name: 'HTTP server', command: 'http-server', args, shell: isWindows }
+  return null
 }
+const httpServerEntry = findHttpServerEntry()
+
+function httpServerProcess (name, args, optional = false) {
+  if (httpServerEntry) {
+    return { name, command: process.execPath, args: [httpServerEntry, ...args], shell: false, optional }
+  }
+  return { name, command: 'http-server', args, shell: isWindows, optional }
+}
+
+// The website preview (local/site/, rebuilt at each change of its sources) is optional: when it stops (no Python, a
+// port taken), the mod's build and server keep running.
+const siteDir = path.join(projectRoot, 'local', 'site')
+fs.mkdirSync(siteDir, { recursive: true })
 
 const processes = [
   {
@@ -26,7 +36,16 @@ const processes = [
     args: ['esbuild.config.js', 'dev'],
     shell: false
   },
-  httpServerProcess()
+  httpServerProcess('HTTP server', ['./build/', '--mimetypes', './mimes.types', '--cors']),
+  {
+    name: 'website watcher',
+    command: process.execPath,
+    args: ['scripts/tools/watch-site.cjs'],
+    shell: false,
+    optional: true
+  },
+  // No cache, so a reload shows the latest build; silent, or every request would be logged.
+  httpServerProcess('website server', [siteDir, '-p', '8081', '-c-1', '-s'], true)
 ]
 
 let shuttingDown = false
@@ -34,7 +53,7 @@ let exitCode = 0
 
 // No child reads the console: on Windows, http-server reads it in raw mode, which turns Ctrl+C into a key press only
 // it sees, instead of a signal every process gets.
-const children = processes.map(({ name, command, args, shell }) => {
+const children = processes.map(({ name, command, args, shell, optional }) => {
   const child = spawn(command, args, {
     cwd: projectRoot,
     stdio: ['ignore', 'inherit', 'inherit'],
@@ -43,7 +62,7 @@ const children = processes.map(({ name, command, args, shell }) => {
 
   child.once('error', (error) => {
     console.error(`${name} failed to start:`, error)
-    shutdown(1)
+    if (!optional) shutdown(1)
   })
 
   child.once('exit', (code, signal) => {
@@ -54,7 +73,11 @@ const children = processes.map(({ name, command, args, shell }) => {
     // Ctrl+C reaches the children too, and one may exit before our SIGINT handler runs: wait a moment before
     // calling it unexpected.
     setTimeout(() => {
-      if (!shuttingDown) {
+      if (shuttingDown) {
+        // stopped with the others
+      } else if (optional) {
+        console.error(`${name} stopped (${signal ?? `exit ${code}`}); the mod's build and server keep running.`)
+      } else {
         console.error(`${name} stopped unexpectedly (${signal ?? `exit ${code}`}).`)
         shutdown(code || 1)
       }

@@ -1,4 +1,4 @@
-import { HSAutosingStrategy, AutosingStrategyPhase, Challenge, phases, AOAG_PHASE_ID, AOAG_PHASE_NAME, createDefaultAoagPhase, SET_CORRUPTION_LEVEL_VALUE, EXIT_ASCENSION_CHALLENGE_VALUE, STRATEGY_FORMAT_VERSION, AOAG_LEVEL_STEP_COMMENT, IF_JUMP_VALUE, SPECIAL_ACTION_BY_ID, isCorruptionLevelStep, isIfJumpMaxJumps } from "./hs-autosing-types";
+import { HSAutosingStrategy, AutosingStrategyPhase, Challenge, phases, AOAG_PHASE_ID, AOAG_PHASE_NAME, createDefaultAoagPhase, SET_CORRUPTION_LEVEL_VALUE, CLEANSE_CORRUPTION_VALUE, isSetAutoToggleStep, EXIT_ASCENSION_CHALLENGE_VALUE, STRATEGY_FORMAT_VERSION, AOAG_LEVEL_STEP_COMMENT, IF_JUMP_VALUE, SPECIAL_ACTION_BY_ID, isCorruptionLevelStep, isIfJumpMaxJumps } from "./hs-autosing-types";
 import { HSModuleRegistry } from "../../hs-core/module/hs-module-registry";
 
 import { HSGlobal } from "../../hs-core/hs-global";
@@ -34,6 +34,18 @@ function storedStrategyList(value: unknown): unknown[] {
     return value == null ? [] : [value];
 }
 
+/** Same JSON data, whatever the key order (a key holding undefined counts as absent, as in JSON). */
+function isSameJsonData(a: unknown, b: unknown): boolean {
+    if (a === b) return true;
+    if (Array.isArray(a) || Array.isArray(b)) {
+        return Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((item, i) => isSameJsonData(item, b[i]));
+    }
+    if (!isRecord(a) || !isRecord(b)) return false;
+    const keysA = Object.keys(a).filter(key => a[key] !== undefined);
+    const keysB = Object.keys(b).filter(key => b[key] !== undefined);
+    return keysA.length === keysB.length && keysA.every(key => Object.hasOwn(b, key) && isSameJsonData(a[key], b[key]));
+}
+
 function storedStrategyName(value: unknown): string | undefined {
     return isRecord(value) && typeof value.strategyName === 'string' ? value.strategyName : undefined;
 }
@@ -67,6 +79,11 @@ export class HSStrategyManager {
     static getDefaultStrategyNames(): string[] {
         const manifestArr: string[] = Array.isArray(manifest) ? manifest : JSON.parse(manifest);
         return manifestArr.map((filename: string) => filename.replace(/\.json$/, ""));
+    }
+
+    /** A default strategy not yet retuned since the game's 4.4.0 corruption rework: its file name ends in "-temp". */
+    static isOldDefaultStrategy(name: string): boolean {
+        return name.endsWith("-temp");
     }
 
     static async loadDefaultStrategyByName(name: string, context = ''): Promise<HSAutosingStrategy | null> {
@@ -338,6 +355,16 @@ export class HSStrategyManager {
             if (invalidAscend !== -1) {
                 throw new Error(`Phase ${phase.startPhase} → ${phase.endPhase}: step ${invalidAscend + 1} has no valid corruption ascension option`);
             }
+            const invalidCleanse = phase.strat?.findIndex(step => step.challengeNumber === CLEANSE_CORRUPTION_VALUE
+                && step.cleanseToHighest !== undefined && typeof step.cleanseToHighest !== 'boolean') ?? -1;
+            if (invalidCleanse !== -1) {
+                throw new Error(`Phase ${phase.startPhase} → ${phase.endPhase}: step ${invalidCleanse + 1} has an invalid cleanse option (true or false)`);
+            }
+            const invalidToggle = phase.strat?.findIndex(step => isSetAutoToggleStep(step.challengeNumber)
+                && step.toggleOn !== undefined && typeof step.toggleOn !== 'boolean') ?? -1;
+            if (invalidToggle !== -1) {
+                throw new Error(`Phase ${phase.startPhase} → ${phase.endPhase}: step ${invalidToggle + 1} has an invalid ON/OFF option (true or false)`);
+            }
             const invalidMaxJumps = phase.strat?.findIndex(step => step.ifJump && !isIfJumpMaxJumps(step.ifJump.ifJumpMaxJumps)) ?? -1;
             if (invalidMaxJumps !== -1) {
                 throw new Error(`Phase ${phase.startPhase} → ${phase.endPhase}: step ${invalidMaxJumps + 1} has an invalid max jumps (a whole number, 0 or more)`);
@@ -479,6 +506,8 @@ export class HSStrategyManager {
         const defaultStrategyNames = new Set(HSStrategyManager.getDefaultStrategyNames());
         const normalized: HSAutosingStrategy[] = [];
         const legacyNames: string[] = [];
+        // Stored outside an array (an older format) counts as migrated
+        let didMigrate = !Array.isArray(loaded);
         let didDropDefaults = false;
         let rejected = false;
         for (const strategy of list) {
@@ -490,6 +519,7 @@ export class HSStrategyManager {
             try {
                 const checked = HSStrategyManager.validateStrategy(strategy, context);
                 normalized.push(checked);
+                if (!isSameJsonData(strategy, checked)) didMigrate = true;
                 // Validation checked the original structure before normalizing the copy.
                 if (HSStrategyManager.hasLegacyCorruptions(strategy as HSAutosingStrategy)) legacyNames.push(checked.strategyName);
             } catch (error) {
@@ -498,13 +528,13 @@ export class HSStrategyManager {
             }
         }
 
-        if (legacyNames.length > 0) {
-            // Keep malformed entries on disk for repair; a load must not silently delete them.
-            if (!rejected) storageMod.setData(HSGlobal.HSSettings.strategiesKey, normalized);
-            HSStrategyManager.warnLegacyCorruptions(legacyNames, context);
-        } else if (didDropDefaults && !rejected) {
-            storageMod.setData(HSGlobal.HSSettings.strategiesKey, normalized);
+        // Migrated strategies are written back, so a migration can go once every stored copy has been loaded
+        // (docs/dev/compat-code.md). Not when an entry was rejected: it stays on disk for repair, a load must not delete it.
+        if ((didMigrate || didDropDefaults) && !rejected) {
+            const saved = storageMod.setData(HSGlobal.HSSettings.strategiesKey, normalized);
+            if (didMigrate) HSLogger.debug(() => `Stored strategies brought to the current format${saved ? '' : ' (not saved: storage refused the write)'}`, context);
         }
+        if (legacyNames.length > 0) HSStrategyManager.warnLegacyCorruptions(legacyNames, context);
 
         return normalized;
     }

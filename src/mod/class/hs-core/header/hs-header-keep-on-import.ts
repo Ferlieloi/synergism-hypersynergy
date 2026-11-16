@@ -17,7 +17,7 @@ const CHECKBOX_ID = 'hs-keep-header-layout';
  *     The layouts are copied at the start of importSynergism, without the mod's module ids (the game's save schema
  *     would reset a whole layout over one), and put into the save loadSynergy parses, in the same synchronous step.
  *     The mod's modules come back as at every load (HSHeaderModules). The checkbox's state is the hidden setting
- *     keepHeaderLayoutOnImport.
+ *     keepHeaderLayoutOnImport, shared with the Tools tab's Import from file (HSBackup, which works its own way).
  * Author: Shewchou
  */
 export class HSHeaderKeepOnImport {
@@ -25,6 +25,17 @@ export class HSHeaderKeepOnImport {
     static #checkbox?: HTMLInputElement;
     // The layouts to put into the save being loaded, for one task
     static #pending?: unknown;
+
+    /** The shared state, also offered in the Tools tab's Import from file (HSBackup), for every player. */
+    static isKeepTicked(): boolean {
+        return HSSettings.getSetting('keepHeaderLayoutOnImport').getValue() === true;
+    }
+
+    /** Ticked or unticked from elsewhere (HSBackup): the checkbox under Load from file follows. */
+    static setKeep(keep: boolean): void {
+        HSSettings.getSetting('keepHeaderLayoutOnImport').setValue(keep);
+        if (HSHeaderKeepOnImport.#checkbox) HSHeaderKeepOnImport.#checkbox.checked = keep;
+    }
 
     static #isAvailable(): boolean {
         const w = window;
@@ -43,7 +54,7 @@ export class HSHeaderKeepOnImport {
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.id = CHECKBOX_ID;
-        checkbox.checked = HSSettings.getSetting('keepHeaderLayoutOnImport').getValue() === true;
+        checkbox.checked = HSHeaderKeepOnImport.isKeepTicked();
         const label = document.createElement('label');
         label.htmlFor = CHECKBOX_ID;
         label.textContent = '[HS] Keep my header layout';

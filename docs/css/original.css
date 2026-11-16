@@ -242,6 +242,7 @@ button#about-btn {
 
 #github-logo {
     width: 180px;
+    height: auto;
     background-color: ghostwhite;
     border-radius: 10px;
     margin-left: 30px;

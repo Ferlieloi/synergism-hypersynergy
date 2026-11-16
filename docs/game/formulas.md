@@ -49,6 +49,21 @@ rework, as on Steam until it updates, the save kept only what was paid (`firstPa
 that buys on a curve whose threshold follows construction: GDS reads `coinBuildings` and falls back to the coin curve
 (`hs-gamedata-api-building.ts`, for the Speed and Duplication rune bonus levels). It also computes construction.
 
+## Where golden quarks come from
+
+For tuning a strategy on GQ. `calculateGoldenQuarks` (`Statistics.ts`, `allGoldenQuarkMultiplierStatsProduct`) is a base
+times multipliers; the base is `100 × 1.04^sing + quarksThisSingularity / 1e5 + 100`, where quarks dominate at a high
+singularity. The only multiplier a strategy moves is C15's, `1 + (log10(C15 + 1) − 20) / 2` (about 55 at 1e127, +0.4%
+per doubling): GQ/hr is Q/hr times a near-constant, and tuning for GQ or for Q is the same aim.
+- **Nearly all quarks come from cubes opened at an Ascend** (the auto-open in `Reset.ts`), through the daily formula of
+  `CubeExperimental.ts`: quark multiplier × base × log10(cubes opened today), minus the quarks already given today.
+  The singularity reset rebuilds the player from a blank save, so the daily counters start at 0 each singularity, and
+  what counts is the quark multiplier at the Ascend that gives the most (autosing's final Ascend, in the Quark loadout).
+  On an S282 save, 99.7% of a singularity's quarks; the export ~1%, the first singularity after a load only; challenges
+  nothing. Wow cubes there reach the 1e300 cap.
+- Quarks per singularity rose with C15 there (about C15^0.07, through the multiplier and the cube counts); which
+  multiplier wasn't identified.
+
 ## Since 4.4.0
 
 The game's 2026-10-24 to 10-27 commits changed viscosity, cube rates per corruption level and cube type, free

@@ -1,13 +1,14 @@
 {
   "repository": "Ferlieloi/synergism-hypersynergy",
   "branch": "master",
-  "audited_commit": "43cf692e14e9263a4fdb99d391fdc635ae726d78",
+  "audited_commit": "c80bd67dfbd4a0c4629703d8ab7b2ca1ae319d04",
   "categories": [
     {
       "id": "getting-started",
       "title": "Installation & updates",
       "color": "orange",
-      "intro": "Choose the browser userscript or the Windows Steam loader. Both patch the game before loading the mod.",
+      "icon": "src/mod/resource/img/hs-panel-icon.png",
+      "intro": "Choose the browser userscript or the Windows Steam loader. Both patch the game before loading the mod. A patch step that can't be applied is reported once at load, with details in the Log tab.",
       "sources": [
         "src/loader/tampermonkey-bridge.user.js",
         "docs/features/loaders.md",
@@ -28,6 +29,22 @@
           ]
         },
         {
+          "id": "late-loader",
+          "title": "Recover when the browser loader starts late",
+          "where": "Settings → UI → Reload when the loader starts late",
+          "summary": "Retries loading when Tampermonkey starts after the game.",
+          "details": [
+            "The browser bridge can reload up to three times, then shows a message asking you to refresh.",
+            "Disable automatic retries to see the refresh message immediately."
+          ],
+          "limits": [
+            "Tampermonkey/browser only; this does not retry unrelated network or patch failures."
+          ],
+          "settings": [
+            "reloadOnLateLoaderStart"
+          ]
+        },
+        {
           "id": "steam-loader",
           "title": "Windows Steam loader",
           "where": "GitHub Releases → Hypersynergism Loader",
@@ -39,6 +56,12 @@
           ],
           "limits": [
             "Windows only. Re-patch when requested; reloading the mod alone does not update an already patched Steam copy."
+          ],
+          "images": [
+            {
+              "src": "res/features/steam-loader@2x.webp",
+              "alt": "The Steam loader, step 2: the Live channel and its master build"
+            }
           ]
         },
         {
@@ -58,8 +81,7 @@
           "where": "Legacy bookmark / Tools migration notice",
           "summary": "Keeps a legacy loading path and shows how to switch to Tampermonkey.",
           "details": [
-            "The bookmarklet loads after the game starts. A migration window provides installation steps and the bridge script to copy.",
-            "A missing or incomplete game patch is reported once at load, with details in the Log tab."
+            "The bookmarklet loads after the game starts. A migration window provides installation steps and the bridge script to copy."
           ],
           "limits": [
             "Bookmarklet loading is not recommended: it lacks direct game access, has slower fallbacks, and cannot support every feature reliably."
@@ -83,9 +105,10 @@
     },
     {
       "id": "interface",
-      "title": "Interface & remembered preferences",
+      "title": "Interface & navigation",
       "color": "cyan",
-      "intro": "Small interface choices are remembered locally, including changes made through the game's own tab controls.",
+      "icon": "docs/res/categories/interface.png",
+      "intro": "The mod panel and quick menu, hidden tabs and remembered subtabs, search fields, and choices for the game's dialogs and notifications.",
       "sources": [
         "src/mod/class/hs-core/hs-ui.ts",
         "src/mod/class/hs-core/settings/hs-settings-ui.ts",
@@ -101,7 +124,15 @@
           "summary": "Groups settings, tools, logs and information in the game's visual style.",
           "details": [
             "Drag the panel, resize it, or minimize it while keeping the game accessible.",
-            "Settings are grouped into pages; tooltips explain their individual controls."
+            "Settings are grouped into pages; tooltips explain their individual controls.",
+            "The mod's own notifications stack in one column at the top centre: hover one to keep it, click it to dismiss it.",
+            "The Tools tab's Mod links open the mod's website, its GitHub repository and its Discord thread."
+          ],
+          "images": [
+            {
+              "src": "res/features/mod-panel@2x.webp",
+              "alt": "The mod panel's Settings tab, QoL subtab"
+            }
           ]
         },
         {
@@ -110,7 +141,7 @@
           "where": "Mod icon → quick access menu",
           "summary": "Opens common tools without navigating the full panel.",
           "details": [
-            "Provides quick access to the integrated Ambrosia Heater and Heater data export.",
+            "Provides quick access to Start Auto-Sing, the integrated Ambrosia Heater and the Heater data export.",
             "Uses the same underlying actions as the Tools tab."
           ]
         },
@@ -148,7 +179,7 @@
         {
           "id": "stats-for-nerds-groups",
           "title": "Grouped Stats for Nerds list",
-          "where": "Settings → Stats for Nerds, left side",
+          "where": "Game Settings → Stats for Nerds, left side",
           "summary": "Replaces the game's grid of category buttons with a compact list sorted into groups.",
           "details": [
             "Groups follow the game's progression: general, offerings and runes, obtainium, ants, ascension and cubes, singularity, ambrosia, red ambrosia, purple honey.",
@@ -169,20 +200,26 @@
         {
           "id": "singularity-search",
           "title": "Search the singularity perks and upgrades",
-          "where": "Singularity → Perks / Penalties, above the penalties; Golden Quarks and Octeracts, at the top of the upgrades",
+          "where": "Singularity → Perks / Penalties, above the penalties; Golden Quarks, at the top of the upgrades; Octeracts, above the octeract stats",
           "summary": "Finds the perks, Golden Quark upgrades and octeract upgrades matching what you type.",
           "details": [
             "Results take the place of the penalties text while you search, and the other perks are dimmed in the tree. Clear the field or press Escape to bring the penalties back.",
             "Searches perk names and descriptions in your game language, by the start of words. Several words must all match.",
-            "A row of clickable words (quark, cube, octeract, ant, luck, salvage, token, auto, challenge, purple) runs the common searches. The words are English; one that finds nothing is not shown.",
+            "A row of clickable words under each field runs the common searches (on perks: quark, cube, oct, ant, luck, salvage, token, auto, challenge, purple). The words are English; one that finds nothing is not shown.",
             "Perks the game hasn't shown you yet stay out of the results.",
-            "Golden Quarks and Octeracts: the upgrades that don't match are dimmed; hover one that stays lit for the game's tooltip. Searches upgrade names and descriptions the same way. Matching maxed upgrades the game's Maxed Upgrades button hides are counted apart: 2 results (+10 hidden)."
+            "Golden Quarks and Octeracts: the upgrades that don't match are dimmed, and the tooltips of those found are listed left of the grid (over the octeract stats on Octeracts). Searches upgrade names and descriptions the same way. Matching maxed upgrades the game's Maxed Upgrades button hides are counted apart: 2 results (+10 hidden)."
           ],
           "limits": [
-            "Perk values in the results update at your next key press or when you come back to the subtab. Not available on touch devices."
+            "Values in the results update at your next key press or when you come back to the subtab. In a narrow window, Golden Quarks and Octeracts only dim the upgrades not found. Not available on touch devices."
           ],
           "settings": [
             "singularitySearch"
+          ],
+          "images": [
+            {
+              "src": "res/features/gq-search@2x.webp",
+              "alt": "Golden Quark upgrades searched for \"ambrosia\": matches lit in the grid, their cards on the left"
+            }
           ]
         },
         {
@@ -195,22 +232,6 @@
           ],
           "settings": [
             "autoDismissOfflinePopup"
-          ]
-        },
-        {
-          "id": "late-loader",
-          "title": "Recover when the browser loader starts late",
-          "where": "Settings → UI → Reload when the loader starts late",
-          "summary": "Retries loading when Tampermonkey starts after the game.",
-          "details": [
-            "The browser bridge can reload up to three times, then shows a message asking you to refresh.",
-            "Disable automatic retries to see the refresh message immediately."
-          ],
-          "limits": [
-            "Tampermonkey/browser only; this does not retry unrelated network or patch failures."
-          ],
-          "settings": [
-            "reloadOnLateLoaderStart"
           ]
         },
         {
@@ -258,226 +279,10 @@
       ]
     },
     {
-      "id": "input",
-      "title": "Click-saving tools & input",
-      "color": "gold",
-      "intro": "Convenience controls use the game's own actions; optional repeated input is active only while its modifier is held.",
-      "sources": [
-        "src/mod/class/hs-modules/hs-codes.ts",
-        "src/mod/class/hs-modules/hs-qol-buttons/hs-qol-buttons.ts",
-        "src/mod/class/hs-core/hs-mouse.ts"
-      ],
-      "features": [
-        {
-          "id": "code-injection",
-          "title": "Clickable reusable promotion codes",
-          "where": "Game → promotion-code dialog",
-          "summary": "Lists reusable codes and fills the input when a code is clicked.",
-          "details": [
-            "The current injected list includes synergism2026, Khafra, :unsmith: and :antismith:.",
-            "Selecting a code fills the game's field; it does not redeem it automatically."
-          ],
-          "limits": [
-            "Injection depends on recognizing the game's reusable-code prompt."
-          ]
-        },
-        {
-          "id": "add-ten",
-          "title": "ADD ×10 shortcut",
-          "where": "Game → ADD code controls",
-          "summary": "Requests ten ADD-code uses from one added button.",
-          "details": [
-            "Answers the native ADD quantity prompt with 10 and dismisses its result alert; configured ADD Auto-Loadout also applies.",
-            "Without a maxed calculator, the game's arithmetic question is still shown for you to answer.",
-            "ADD/TIME information is refreshed after their queued dialogs finish so remaining uses do not stay stale."
-          ],
-          "limits": [
-            "The game still determines code availability and rewards."
-          ]
-        },
-        {
-          "id": "potions-ten",
-          "title": "Buy and consume potions ×10",
-          "where": "Offering and Obtainium potion controls",
-          "summary": "Adds BUY 10× and CONSUME 10× next to the native potion buttons.",
-          "details": [
-            "Consumption clicks the native action ten times. Buying handles the game's purchase modes, including Buy ANY's quantity prompt.",
-            "Both Offering and Obtainium potions are supported."
-          ],
-          "limits": [
-            "Each action uses the game's costs and available stock."
-          ]
-        },
-        {
-          "id": "reactive-hover",
-          "title": "Repeat hover while holding left Shift",
-          "where": "Settings → Input → Repeat hover",
-          "summary": "Repeatedly refreshes the hover event under the pointer.",
-          "details": [
-            "Enable the option and set the interval in seconds; hold left Shift to emit repeated mouseover events.",
-            "Releasing the modifier, switching windows or hiding the page stops it."
-          ],
-          "settings": [
-            "reactiveMouseHover"
-          ]
-        },
-        {
-          "id": "auto-click",
-          "title": "Auto-click while holding left Ctrl",
-          "where": "Settings → Input → Auto click",
-          "summary": "Repeats clicks at the pointer with a configurable interval.",
-          "details": [
-            "Enable it, choose the interval in seconds, then hold left Ctrl over the desired target.",
-            "Releasing the modifier or leaving the page stops the timer. Skip risky buttons, under Auto click and on by default for new players, avoids selected controls."
-          ],
-          "limits": [
-            "Skip risky buttons is a convenience filter, not a guarantee against every unintended click."
-          ],
-          "settings": [
-            "autoClick",
-            "autoClickIgnoreElements"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "ambrosia",
-      "title": "Ambrosia loadouts & income",
-      "color": "orchid",
-      "intro": "The mod enhances the game's Ambrosia loadout controls and adds generation information for blue, red and purple resources.",
-      "sources": [
-        "src/mod/class/hs-modules/hs-ambrosia/hs-ambrosia.ts",
-        "src/mod/class/hs-modules/hs-ambrosia/hs-ambrosia-quick-import.ts",
-        "src/mod/class/hs-modules/hs-ambrosia/hs-ambrosia-rates.ts",
-        "docs/features/header-loadouts.md",
-        "docs/features/header-modules.md"
-      ],
-      "features": [
-        {
-          "id": "ambrosia-icons",
-          "title": "Custom Ambrosia loadout icons",
-          "where": "Header editor → slot icon chooser; Ambrosia tab",
-          "summary": "Gives saved loadouts recognizable icons instead of only numbers.",
-          "details": [
-            "Choose an icon through the header slot's icon dialog, including the mod's Pick any game icon option. The mod applies its stored custom icon to the matching Ambrosia-tab slot too.",
-            "The same stored icon is reused by the Heater slot row; choosing a native icon or plain number clears the mod's custom override."
-          ]
-        },
-        {
-          "id": "loaded-slot",
-          "title": "Loaded-loadout indicator",
-          "where": "Ambrosia tab and the game's header loadout modules",
-          "summary": "Distinguishes the game's confirmed active slot from a guessed match.",
-          "details": [
-            "A rainbow border means the game has marked the slot active; silver means the mod inferred the slot from the save.",
-            "Indicators are restored after the game rebuilds its slot controls, including the paged header module."
-          ],
-          "limits": [
-            "A guessed slot is not a guarantee that the live tree exactly matches it; actions that need an exact match check separately."
-          ]
-        },
-        {
-          "id": "quick-import",
-          "title": "Quick Import one or multiple loadouts",
-          "where": "Ambrosia tab → Quick Import",
-          "summary": "Imports one to sixteen newline-separated loadouts from the clipboard.",
-          "details": [
-            "One loadout is written to the slot shown as active; load a slot first when none is shown.",
-            "Multiple lines map to slots 1–16 in order; empty lines are skipped. Locked or invalid slots are reported.",
-            "Older loadout JSON is normalized with missing upgrade keys at zero. Patched games validate and write slots directly; legacy games use the game's import dialogs."
-          ],
-          "limits": [
-            "Clipboard read access is required. Importing into the active slot reloads its tree, resetting Ambrosia bar progress. The legacy import path is refused while AutoSing runs."
-          ]
-        },
-        {
-          "id": "upgrade-levels",
-          "title": "Keep Ambrosia upgrade levels visible",
-          "where": "Settings → QoL → Keep tree levels shown",
-          "summary": "Keeps the game's levels view pinned while the tree is idle.",
-          "details": [
-            "The display temporarily yields while the pointer is over the tree or a loadout, then returns to the pinned levels view."
-          ],
-          "settings": [
-            "persistentAmbrosiaLevels"
-          ]
-        },
-        {
-          "id": "code-loadouts",
-          "title": "Separate ADD and TIME Auto-Loadouts",
-          "where": "Settings → QoL → Add+Time loadouts auto-switch",
-          "summary": "Loads the configured tree before a code pays out and restores the previous loadout afterward.",
-          "details": [
-            "Choose independent ADD and TIME slots, then enable Auto-Loadout. ADD shortcuts use the same switching path.",
-            "TIME is automatically answered only when Cx11 is maxed on a patched game; below that, the timing dialog is left for you.",
-            "AutoSing bypasses this feature because it manages its own loadouts."
-          ],
-          "limits": [
-            "Loading trees resets Ambrosia bars. The fallback and previous-slot availability can limit restoration."
-          ],
-          "settings": [
-            "addTimeAutoLoadouts",
-            "autoLoadoutAdd",
-            "autoLoadoutTime"
-          ],
-          "sources": [
-            "src/mod/class/hs-modules/hs-ambrosia/hs-ambrosia-auto-loadout.ts"
-          ]
-        },
-        {
-          "id": "ascension-loadout",
-          "title": "Ascension loadout auto-switch",
-          "where": "Settings → QoL → Ascension loadout auto-switch",
-          "summary": "Uses a chosen Ambrosia loadout for a manual ascension and restores the previous tree afterward.",
-          "details": [
-            "Enable the switch and choose a saved slot. The game confirms the ascension as usual.",
-            "The Ascend button works with or without the patch. Shift+A uses the configured loadout when the game is patched."
-          ],
-          "limits": [
-            "Switching loadouts resets Ambrosia bar progress. Without the patch, the mod restores the saved contents of the previously marked slot, so save tree edits before ascending."
-          ],
-          "settings": [
-            "ascensionAutoLoadout",
-            "autoLoadoutAscension"
-          ],
-          "sources": [
-            "docs/features/ascension-loadout.md",
-            "src/mod/class/hs-modules/hs-ambrosia/hs-ambrosia-auto-loadout.ts"
-          ]
-        },
-        {
-          "id": "ambrosia-minibars",
-          "title": "Blue, red and purple progress minibars",
-          "where": "Header editor → [HS] Header → Mod modules",
-          "summary": "Shows compact progress bars without keeping the Ambrosia tab open.",
-          "details": [
-            "The bars follow the game's unlocks: blue Ambrosia, then red Ambrosia and purple honey when available.",
-            "They are one movable header module; resizing and a group border are configured in header edit mode.",
-            "Patched games read live progress; legacy loaders use the mod's fallback row and GDS."
-          ],
-          "settings": [
-            "ambrosiaMinibars"
-          ]
-        },
-        {
-          "id": "ambrosia-hourly",
-          "title": "Expected Ambrosia income per hour",
-          "where": "Ambrosia tab; header editor → Ambrosia per hour",
-          "summary": "Shows expected blue Ambrosia, red Ambrosia and purple honey income for the current tree.",
-          "details": [
-            "The header offers separate rate modules that can be moved, stacked or placed in the tray.",
-            "Rates account for the current generation model, including Purple Reactor effects; they are expectations rather than a promise of individual random payouts."
-          ],
-          "settings": [
-            "ambrosiaRateHeader"
-          ]
-        }
-      ]
-    },
-    {
       "id": "header",
       "title": "Header customization",
       "color": "lightskyblue",
+      "icon": "docs/res/categories/header.png",
       "intro": "Open the game's header editor with the pencil beside the mod icon, or Settings → UI → Edit game header. HS options live beside the game's module tray, not in a separate quickbar settings page.",
       "sources": [
         "docs/features/header-edit-mode.md",
@@ -491,15 +296,21 @@
         {
           "id": "header-editor",
           "title": "Header pencil and editor shortcut",
-          "where": "Pencil next to mod icon; Settings → UI → Edit game header",
+          "where": "Pencil ① next to mod icon; Settings → UI → Edit game header",
           "summary": "Opens header editing without waiting for a long press.",
           "details": [
             "The pencil toggles edit mode and can itself be hidden in the Layout section. The panel's button opens the editor and closes the panel.",
-            "Done saves the header and pending mod settings."
+            "Done ② saves the header and pending mod settings."
           ],
           "settings": [
             "headerEditButton",
             "editGameHeader"
+          ],
+          "images": [
+            {
+              "src": "res/features/header-edit@2x.webp",
+              "alt": "The header in edit mode, with the edit panel and the mod's header settings under it"
+            }
           ]
         },
         {
@@ -511,7 +322,7 @@
             "With it off, the pencil and panel shortcut remain available. Normal clicks and dragging inside edit mode are unchanged."
           ],
           "limits": [
-            "Shown only when the long-press patch is available."
+            "Shown only on a patched game (Tampermonkey or Steam loader): not for bookmarklet players."
           ],
           "settings": [
             "headerLongPressEditing"
@@ -589,7 +400,7 @@
             "An aligned group accepts a dragged button before the button under the pointer. Groups made on a wider window keep their buttons when the window becomes narrower."
           ],
           "limits": [
-            "The corresponding game patch is needed for the dynamic grouping behavior."
+            "The dynamic grouping needs a patched game (Tampermonkey or Steam loader): not for bookmarklet players."
           ]
         },
         {
@@ -603,7 +414,7 @@
             "Turning a module off and back on restores its remembered place when available. The game's Reset clears that layout's mod placements."
           ],
           "limits": [
-            "Full integration requires the header-modules patch; older loaders retain a fallback row for supported bars."
+            "Needs a patched game (Tampermonkey or Steam loader). For bookmarklet players, the Automation bar and the Ambrosia minibars show in a row under the header instead."
           ]
         },
         {
@@ -619,7 +430,7 @@
         {
           "id": "header-minibar-border",
           "title": "Optional minibar frame",
-          "where": "[HS] Header → Minibars border",
+          "where": "[HS] Header → Mod modules → Minibars border",
           "summary": "Adds a single border around the progress-bar group.",
           "details": [
             "The frame surrounds the group so thin bars retain their full fill height; it is off by default."
@@ -651,6 +462,9 @@
           ],
           "settings": [
             "headerAmbrosiaSlotsShown"
+          ],
+          "limits": [
+            "Applies to the full Ambrosia loadouts module only: the paged module keeps its 8 slots a page. A loaded slot above N has no marker in the header."
           ]
         },
         {
@@ -675,13 +489,14 @@
             "Choosing a native icon or the plain number clears the mod override."
           ],
           "limits": [
-            "Custom icons are stored by the mod locally; the game's save schema only accepts its own icon names."
+            "Custom icons are stored by the mod locally; the game's save schema only accepts its own icon names.",
+            "A picked game icon is a copy: it doesn't follow a later switch of the game's icon set."
           ]
         },
         {
           "id": "header-octeract-icon",
           "title": "Match Octeract icon size",
-          "where": "[HS] Header → Octeracts",
+          "where": "[HS] Header → Octeracts → Match Oct icon size",
           "summary": "Sizes the Octeract icon like the other cube resource icons.",
           "details": [
             "Follows the module's Small, Medium or Large size. Turn it off for the game's default look."
@@ -693,7 +508,7 @@
         {
           "id": "header-octeract-text",
           "title": "Match Octeract unit text",
-          "where": "[HS] Header → Octeracts",
+          "where": "[HS] Header → Octeracts → Match Oct text",
           "summary": "Adds a white Oct or Oct/s unit beside the value.",
           "details": [
             "Clicking the module still switches between owned amount and production rate."
@@ -713,7 +528,7 @@
             "Escape, an outside press, a second module click or entering edit mode closes the popover."
           ],
           "limits": [
-            "Needs live-player access. Below singularity 10, it only shows the game's out-of-order message. Teleport is refused while AutoSing runs, because AutoSing answers every confirmation."
+            "Needs a patched game (Tampermonkey or Steam loader): not for bookmarklet players. Below singularity 10, it only shows the game's out-of-order message. Teleport is refused while AutoSing runs, because AutoSing answers every confirmation."
           ],
           "settings": [
             "singularityHeaderElevator"
@@ -729,7 +544,7 @@
             "Mod modules are restored through the mod's local placement store after the game reloads the layout."
           ],
           "limits": [
-            "Requires the save-import and header parsing patches. This checkbox is for the game's normal imports; Backup & Restore performs a broader local-state restore."
+            "Needs a patched game (Tampermonkey or Steam loader): not for bookmarklet players. This checkbox is for the game's normal imports; Backup & Restore has the same option (Keep my current header layout), shared with this one and open to every player."
           ],
           "settings": [
             "keepHeaderLayoutOnImport"
@@ -738,12 +553,12 @@
         {
           "id": "automation-quickbar",
           "title": "Automation quickbar with mixed-state indicators",
-          "where": "[HS] Header → Mod modules → Automation quick bar",
+          "where": "[HS] Header → Mod modules → Automation bar",
           "summary": "Groups frequently used game automation toggles in a compact header module.",
           "details": [
             "Controls Auto-Challenge, buildings and upgrades, runes, research, auto-sacrifice, cube/hepteract auto-open and auto-ascend when available.",
             "Buttons show enabled, disabled or mixed states. Some permanently enabled groups disappear after their relevant singularity unlocks.",
-            "The unpatched fallback row has a separate centering preference."
+            "For bookmarklet players, the bar sits in a row under the header, with its own centering preference (Center quick bars)."
           ],
           "settings": [
             "enableAutomationQuickBar",
@@ -756,9 +571,81 @@
       ]
     },
     {
+      "id": "input",
+      "title": "Click-saving tools & input",
+      "color": "orchid",
+      "icon": "docs/res/categories/input.png",
+      "intro": "Convenience controls use the game's own actions; optional repeated input is active only while its modifier is held.",
+      "sources": [
+        "src/mod/class/hs-modules/hs-codes.ts",
+        "src/mod/class/hs-modules/hs-qol-buttons/hs-qol-buttons.ts",
+        "src/mod/class/hs-core/hs-mouse.ts"
+      ],
+      "features": [
+        {
+          "id": "code-injection",
+          "title": "Clickable reusable promotion codes",
+          "where": "Game → promotion-code dialog",
+          "summary": "Lists reusable codes and fills the input when a code is clicked.",
+          "details": [
+            "The current injected list includes synergism2026, Khafra, :unsmith: and :antismith:.",
+            "Selecting a code fills the game's field; it does not redeem it automatically."
+          ],
+          "limits": [
+            "Injection depends on recognizing the game's reusable-code prompt."
+          ]
+        },
+        {
+          "id": "add-ten",
+          "title": "ADD ×10 shortcut",
+          "where": "Game → ADD code controls",
+          "summary": "Requests ten ADD-code uses from one added button.",
+          "details": [
+            "Answers the native ADD quantity prompt with 10 and dismisses its result alert; configured ADD Auto-Loadout also applies.",
+            "Without a maxed calculator, the game's arithmetic question is still shown for you to answer.",
+            "ADD/TIME information is refreshed after their queued dialogs finish so remaining uses do not stay stale."
+          ],
+          "limits": [
+            "The game still determines code availability and rewards."
+          ]
+        },
+        {
+          "id": "reactive-hover",
+          "title": "Repeat hover while holding left Shift",
+          "where": "Settings → Input → Repeat hover",
+          "summary": "Repeatedly refreshes the hover event under the pointer.",
+          "details": [
+            "Enable the option and set the interval in seconds; hold left Shift to emit repeated mouseover events.",
+            "Releasing the modifier, switching windows or hiding the page stops it."
+          ],
+          "settings": [
+            "reactiveMouseHover"
+          ]
+        },
+        {
+          "id": "auto-click",
+          "title": "Auto-click while holding left Ctrl",
+          "where": "Settings → Input → Auto click",
+          "summary": "Repeats clicks at the pointer with a configurable interval.",
+          "details": [
+            "Enable it, choose the interval in seconds, then hold left Ctrl over the desired target.",
+            "Releasing the modifier or leaving the page stops the timer. Skip risky buttons, under Auto click and on by default for new players, avoids selected controls."
+          ],
+          "limits": [
+            "Skip risky buttons is a convenience filter, not a guarantee against every unintended click."
+          ],
+          "settings": [
+            "autoClick",
+            "autoClickIgnoreElements"
+          ]
+        }
+      ]
+    },
+    {
       "id": "challenges",
       "title": "Corruption & challenge displays",
       "color": "limegreen",
+      "icon": "docs/res/categories/challenges.png",
       "intro": "Current versions use a single corruption level. The old corruption-loadout modules are no longer part of the mod.",
       "sources": [
         "docs/features/header-corruption.md",
@@ -789,7 +676,8 @@
             "Escape, an outside press, a second module click or entering edit mode closes the popover."
           ],
           "limits": [
-            "The game clamps levels to those currently available. Cleanse changes the current ascension immediately; changing the next level normally applies on the next ascension."
+            "The game clamps levels to those currently available. Cleanse changes the current ascension immediately; changing the next level normally applies on the next ascension.",
+            "During AutoSing, its Set corruption level steps overwrite a level changed here."
           ]
         },
         {
@@ -815,7 +703,7 @@
             "After the first singularity, the module can remain visible before C11. A 0/0 display before corruption unlock is expected; the toggles are still useful."
           ],
           "limits": [
-            "Requires the header-modules patch."
+            "Needs a patched game (Tampermonkey or Steam loader): not for bookmarklet players."
           ],
           "settings": [
             "corruptionHeaderAlwaysShown"
@@ -832,7 +720,7 @@
             "Tall 1×2 is supported; optional CØ marks the module when no challenge is active."
           ],
           "limits": [
-            "Needs live-player access. Requirement detail is not offered on mobile because the game does not supply those progress lines there."
+            "Needs a patched game (Tampermonkey or Steam loader): not for bookmarklet players. Requirement detail is not offered on mobile because the game does not supply those progress lines there."
           ],
           "settings": [
             "challengeProgressHeader",
@@ -858,213 +746,10 @@
       ]
     },
     {
-      "id": "heater",
-      "title": "Integrated Ambrosia Heater",
-      "color": "orangered",
-      "intro": "An in-game optimizer for Ambrosia loadouts, with resource-aware result tables and direct imports. Results depend on the exported game state and selected options.",
-      "sources": [
-        "docs/features/heater.md",
-        "docs/features/heater-optimizer.md",
-        "src/mod/class/hs-modules/hs-heater/hs-heater-result-config.ts",
-        "src/mod/class/hs-modules/hs-heater/ui/hs-heater-ui-result.ts"
-      ],
-      "features": [
-        {
-          "id": "heater-inputs",
-          "title": "Read the current game or edit Heater inputs",
-          "where": "Tools → Ambrosia Heater → inputs window",
-          "summary": "Builds optimization inputs from the save and lets you adjust scenarios.",
-          "details": [
-            "Inputs cover Exalt, singularity, bells, event bonus, pre/post-AOAG mode, Ambrosia resources, unlocks, runes, talismans and shop upgrades.",
-            "Exalts are displayed by name. A warning appears if you choose a different Exalt from the exported save's context."
-          ],
-          "limits": [
-            "Changing the Exalt selector does not reconstruct every base value from a save in that Exalt; export from the intended context for reliable comparisons."
-          ]
-        },
-        {
-          "id": "heater-branches",
-          "title": "Choose and remember active optimization branches",
-          "where": "Heater inputs → Loadouts to heat",
-          "summary": "Runs only the loadout families you need.",
-          "details": [
-            "Branches include Ambrosia, Purple Ambrosia, Quarks, 3–7D Cubes, Octeracts, C15 coins, Obtainium/Offerings, joint Obt+Off, Hyperflux, Max SR and Max Amb+Oct.",
-            "Shortcuts select branches needed by your assigned slots, all visible branches, or none. Choices are remembered; choosing a slot type enables its required branch.",
-            "The slower joint Obt+Off branch starts unticked; Purple branches follow the save's unlocks."
-          ],
-          "settings": [
-            "heaterUncheckedBranches",
-            "heaterTickedBranches"
-          ]
-        },
-        {
-          "id": "heater-common",
-          "title": "Common resource loadout optimization",
-          "where": "Heater results → Common Loadouts",
-          "summary": "Optimizes All Ambrosia, Blue Ambrosia, Red Ambrosia, Quarks, 3–7D Cubes and Octeracts.",
-          "details": [
-            "Compare the effect, resource cost and required Blueberries for each result.",
-            "The 3–7D Cube and Octeract rows are intended for post-AOAG; pre-AOAG cube trees have their own Hyperflux section."
-          ]
-        },
-        {
-          "id": "heater-coins",
-          "title": "Coins in Challenge 15 optimization",
-          "where": "Heater → Coins in C15 branch",
-          "summary": "Optimizes coin income per real second under C15's tax-cap assumption.",
-          "details": [
-            "The exporter models C15 on a copy of your save, so you do not have to be inside C15. It uses existing rune EXP, blessings, spirits and talismans.",
-            "Effect compares with no purchased Ambrosia modules while holding other resources fixed."
-          ],
-          "limits": [
-            "Assumes the tax cap is reached. This is not a prediction of future rune or resource growth."
-          ],
-          "sources": [
-            "src/mod/class/hs-core/gds/hs-heater-coins-export.ts"
-          ]
-        },
-        {
-          "id": "heater-purple",
-          "title": "Purple Honey and Purple Ambrosia loadouts",
-          "where": "Heater → Purple Ambrosia branch",
-          "summary": "Balances generation for Honey stockpiling or Purple Ambrosia crafting.",
-          "details": [
-            "Purple Honey and Purple Ambrosia rows use current reactor routing; Phoney (best econ) and Pamb (best econ) optimize the tree and routing together.",
-            "Purple Ambrosia production accounts for both Red Ambrosia and Purple Honey inputs."
-          ],
-          "limits": [
-            "Routing is not stored in Ambrosia loadouts. Applying optimized routing changes the income of your other trees too."
-          ]
-        },
-        {
-          "id": "heater-obt-off",
-          "title": "Obtainium, Offerings and joint optimization",
-          "where": "Heater → Obt, Off / Obt + Off branches",
-          "summary": "Produces specialized or combined trees for these two resources.",
-          "details": [
-            "Choose pre-AOAG or post-AOAG inputs to match the intended use.",
-            "Joint Obt+Off values equal relative improvements to either resource; its result reports both multipliers."
-          ],
-          "limits": [
-            "The combined search can take longer; it starts disabled."
-          ]
-        },
-        {
-          "id": "heater-hyperflux",
-          "title": "Hyperflux H0–H7 and Max SR trees",
-          "where": "Heater results → p4x4 (pre-AOAG) Loadouts",
-          "summary": "Compares cube trees across Hyperflux levels and singularity-reducer priorities.",
-          "details": [
-            "H0–H7 compare pre-AOAG cube effectiveness and show P4x4 equivalence thresholds.",
-            "Max SR1 and Max SR2 prioritize their respective reducer first, then cubes, so you can see the cube cost of that choice.",
-            "SR1 is evaluated outside an Exalt; SR2 inside one. Maxed comparisons respect upgrade prerequisites."
-          ]
-        },
-        {
-          "id": "heater-best-h",
-          "title": "Best H at the current P4x4",
-          "where": "Heater → Your loadout order → Best H (P4x4 now)",
-          "summary": "Selects the appropriate Hyperflux result when importing, using live P4x4.",
-          "details": [
-            "The selected row is marked ★ now. Import All reads P4x4 again rather than relying on its heat-time value.",
-            "The choice is resolved once per import; it does not automatically switch trees as P4x4 rises."
-          ],
-          "limits": [
-            "Requires heated Hyperflux results and a readable P4x4 value."
-          ]
-        },
-        {
-          "id": "heater-hybrid",
-          "title": "Max Amb + Oct hybrid",
-          "where": "Heater → Max Amb + Oct branch",
-          "summary": "Combines maximized Ambrosia upgrades with Octeract optimization.",
-          "details": [
-            "Intended for late-game budgets large enough to afford the full All Ambrosia base.",
-            "The row remains visible as Unaffordable when its base cannot be bought."
-          ]
-        },
-        {
-          "id": "heater-affordability",
-          "title": "Affordability and limiting-resource explanations",
-          "where": "Heater results table",
-          "summary": "Shows why a row is unavailable or not yet maxed.",
-          "details": [
-            "Unaffordable rows identify insufficient Ambrosia and/or Blueberries where known.",
-            "Non-maxed rows show limiting-resource icons. Missing branches and unaffordable assigned types use different slot-border colors.",
-            "Hover a non-maxed row's ✘ to see the levels it still needs to be maxed, next to your loadout's; right-click to pin.",
-            "Results include loadout, effect, cost and relevant routing or P4x4 comparisons."
-          ]
-        },
-        {
-          "id": "heater-import",
-          "title": "Assign, copy and import Heater loadouts",
-          "where": "Heater results → Actions / Your loadout order / Import All",
-          "summary": "Moves optimized trees into the game's existing loadout slots.",
-          "details": [
-            "Assign result types to slots, copy individual loadout data or import selected results.",
-            "Import All preserves unticked slots, skips missing/unaffordable choices with appropriate feedback, and can resolve Best H at import time.",
-            "The slot row reflects active borders and custom icons; slot assignments are remembered."
-          ],
-          "settings": [
-            "heaterTypeLoadoutSelections"
-          ]
-        },
-        {
-          "id": "heater-sync",
-          "title": "Sync icons and AutoSing loadout settings",
-          "where": "Heater results → Sync icons / Sync settings",
-          "summary": "Reuses your Heater slot assignments in the rest of the mod.",
-          "details": [
-            "Sync icons assigns recognizable semantic icons to the chosen slot roles.",
-            "Sync settings maps relevant roles into the AutoSing, ADD/TIME and timed export loadout settings; Best H remains a semantic choice rather than being stored as a fixed H row."
-          ]
-        },
-        {
-          "id": "heater-red-table",
-          "title": "Red Ambrosia upgrade comparison table",
-          "where": "Heater → Red Ambrosia upgrades tool",
-          "summary": "Compares supported upgrade effects and cost effectiveness.",
-          "details": [
-            "Uses Heater context to report available Ambrosia, Red Ambrosia and Octeract effects for modeled upgrades.",
-            "Unavailable or unmodeled values are shown as such rather than invented.",
-            "Switch between compact and expanded views; cost-effectiveness sort controls cycle ascending, descending and unsorted."
-          ],
-          "sources": [
-            "src/mod/class/hs-modules/hs-heater/ui/hs-heater-red-ambrosia-table.ts"
-          ]
-        },
-        {
-          "id": "heater-workers",
-          "title": "Background heating, progress and cancel",
-          "where": "Heater → Heat / Heat with",
-          "summary": "Runs the optimizer in workers with elapsed-time and group progress.",
-          "details": [
-            "Heats with 1, 2 or 3 workers at once, 3 by default; lower-memory or lower-core devices fall back to 1.",
-            "Cancel terminates an active worker heat. Identical already-heated inputs can reuse their result; the Log records heat timing or reuse."
-          ],
-          "limits": [
-            "Heating can use substantial memory. Without worker support, calculation can block the page and cannot offer the same cancellation behavior."
-          ],
-          "settings": [
-            "heaterWorkers"
-          ]
-        },
-        {
-          "id": "heater-export",
-          "title": "Extended Heater data export",
-          "where": "Tools → Copy Heater Data; quick access menu",
-          "summary": "Copies an extended save string for the external Ambrosia Heater sheet.",
-          "details": [
-            "Includes calculated context beyond the base save, such as the mod's computed values and fetched game bonuses.",
-            "The integrated Heater uses the same game-data infrastructure; the external sheet remains a separate tool."
-          ]
-        }
-      ]
-    },
-    {
       "id": "hepteracts",
       "title": "Hepteracts & Platonic upgrades",
       "color": "mediumpurple",
+      "icon": "docs/res/categories/hepteracts.png",
       "intro": "Forge shortcuts and distribution tools reduce repetitive crafting while exposing what an action will cost.",
       "sources": [
         "src/mod/class/hs-modules/hs-hepteracts/hs-hepteracts.ts",
@@ -1133,12 +818,18 @@
             "The most under-target type receives its next fill/expand step. If that step cannot be paid, the run normally stops instead of overspending on cheaper types."
           ],
           "limits": [
-            "Uses repeated ascensions and native Auto craft. Requires a patched game and at least one singularity; unavailable during AutoSing and in limited-ascension/time Exalts. Quark hepteracts are excluded."
+            "Uses repeated ascensions and native Auto craft. Requires a patched game (Tampermonkey or Steam loader) and at least one singularity; unavailable during AutoSing and in limited-ascension/time Exalts. Quark hepteracts are excluded."
           ],
           "settings": [
             "enableHepteractDistributor",
             "hepteractDistributorRatios",
             "hepteractDistributorOpen"
+          ],
+          "images": [
+            {
+              "src": "res/features/hepteract-distributor@2x.webp",
+              "alt": "The Hepteract Distributor panel with a ratio per hepteract type"
+            }
           ]
         },
         {
@@ -1173,7 +864,8 @@
           "summary": "Uses the remaining budget on the next under-target type.",
           "details": [
             "Without the option, the planner stops at full-meter steps.",
-            "With it, expansion is allowed only when enough can be crafted back to avoid reducing that type's balance."
+            "With it, expansion is allowed only when enough can be crafted back to avoid reducing that type's balance.",
+            "A partial step ends the run: that type is crafted last and takes all that is left."
           ],
           "settings": [
             "hepteractDistributorAllowPartial"
@@ -1185,7 +877,7 @@
           "where": "Distributor → Use singularity reducers and Talisman Power",
           "summary": "Can swap in a temporary crafting tree, then restore your original tree.",
           "details": [
-            "Uses affordable, available reductions to lower craft costs. The secondary stored preference controls the Talisman-Power-only case.",
+            "Uses affordable, available reductions to lower craft costs. Also swap when only Talisman Power can be added swaps the tree even when no reducer can be added, at the cost of the Ambrosia bars' progress.",
             "Restores the original loadout/tree after the craft, including on errors, when the required patched loading path is available."
           ],
           "limits": [
@@ -1215,6 +907,7 @@
       "id": "golden-quarks",
       "title": "Golden Quarks & shop preferences",
       "color": "gold",
+      "icon": "docs/res/categories/golden-quarks.png",
       "intro": "Shop helpers allocate a chosen budget and remember which completed upgrades you want out of the way.",
       "sources": [
         "docs/features/gq-distributor.md",
@@ -1299,117 +992,357 @@
       ]
     },
     {
-      "id": "saves",
-      "title": "Save exports, backups & restore",
-      "color": "lightsteelblue",
-      "intro": "Timed game exports collect native export rewards. A full HS backup is a separate action that also preserves local mod state.",
+      "id": "ambrosia",
+      "title": "Ambrosia loadouts & income",
+      "color": "royalblue",
+      "icon": "docs/res/categories/ambrosia.png",
+      "intro": "The mod enhances the game's Ambrosia loadout controls and adds generation information for blue, red and purple resources.",
       "sources": [
-        "docs/features/auto-export.md",
-        "docs/features/backup.md"
+        "src/mod/class/hs-modules/hs-ambrosia/hs-ambrosia.ts",
+        "src/mod/class/hs-modules/hs-ambrosia/hs-ambrosia-quick-import.ts",
+        "src/mod/class/hs-modules/hs-ambrosia/hs-ambrosia-rates.ts",
+        "docs/features/header-loadouts.md",
+        "docs/features/header-modules.md"
       ],
       "features": [
         {
-          "id": "timed-export",
-          "title": "Export every X minutes",
-          "where": "Settings → QoL →Export the save every X minutes",
-          "summary": "Runs the game's Export action on a configurable schedule.",
+          "id": "ambrosia-icons",
+          "title": "Custom Ambrosia loadout icons",
+          "where": "Header editor → slot icon chooser; Ambrosia tab",
+          "summary": "Gives saved loadouts recognizable icons instead of only numbers.",
           "details": [
-            "Uses the last game export time, so exporting manually restarts the interval and reloads do not normally reset it.",
-            "Collects native export rewards and makes a file even when your regular export preference is clipboard mode.",
-            "Pauses while AutoSing runs or the offline popup is open."
+            "Choose an icon through the header slot's icon dialog, including the mod's Pick any game icon option. The mod applies its stored custom icon to the matching Ambrosia-tab slot too.",
+            "The same stored icon is reused by the Heater slot row; choosing a native icon or plain number clears the mod's custom override."
+          ]
+        },
+        {
+          "id": "loaded-slot",
+          "title": "Loaded-loadout indicator",
+          "where": "Ambrosia tab and the game's header loadout modules",
+          "summary": "Distinguishes the game's confirmed active slot from a guessed match.",
+          "details": [
+            "A rainbow border means the game has marked the slot active; silver means the mod inferred the slot from the save.",
+            "Indicators are restored after the game rebuilds its slot controls, including the paged header module."
           ],
           "limits": [
-            "Steam needs an export folder. Browser download permissions can affect plain downloads."
+            "A guessed slot is not a guarantee that the live tree exactly matches it; actions that need an exact match check separately."
+          ]
+        },
+        {
+          "id": "quick-import",
+          "title": "Quick Import one or multiple loadouts",
+          "where": "Ambrosia tab → Quick Import",
+          "summary": "Imports one to sixteen newline-separated loadouts from the clipboard.",
+          "details": [
+            "One loadout is written to the slot shown as active; load a slot first when none is shown.",
+            "Multiple lines map to slots 1–16 in order; empty lines are skipped. Locked or invalid slots are reported.",
+            "Older loadout JSON is normalized with missing upgrade keys at zero. Patched games validate and write slots directly; bookmarklet players go through the game's import dialogs."
+          ],
+          "limits": [
+            "Clipboard read access is required. Importing into the active slot reloads its tree, resetting Ambrosia bar progress. For bookmarklet players, importing is refused while AutoSing runs."
+          ]
+        },
+        {
+          "id": "upgrade-levels",
+          "title": "Keep Ambrosia upgrade levels visible",
+          "where": "Settings → QoL → Keep tree levels shown",
+          "summary": "Keeps the game's levels view pinned while the tree is idle.",
+          "details": [
+            "The display temporarily yields while the pointer is over the tree or a loadout, then returns to the pinned levels view."
           ],
           "settings": [
-            "autoExportSave"
+            "persistentAmbrosiaLevels"
           ]
         },
         {
-          "id": "export-folder",
-          "title": "Choose and remember an export folder",
-          "where": "Settings → QoL → Choose folder / ✕",
-          "summary": "Writes timed exports directly to a folder on supported platforms.",
+          "id": "code-loadouts",
+          "title": "Separate ADD and TIME Auto-Loadouts",
+          "where": "Settings → QoL → Add+Time loadouts auto-switch",
+          "summary": "Loads the configured tree before a code pays out and restores the previous loadout afterward.",
           "details": [
-            "The folder handle is remembered locally; after a restart, your first game click/key press can renew permission.",
-            "✕ forgets the folder: direct writes stop, existing files stay.",
-            "Choose a subfolder if the platform refuses a protected system folder."
+            "Choose independent ADD and TIME slots, then enable Auto-Loadout. ADD shortcuts use the same switching path.",
+            "TIME's dialogs are answered at once, except on a patched game with Cx11 below its max: an instant answer would always lose there, so the dialog is left for you to time, with a notification.",
+            "AutoSing bypasses this feature because it manages its own loadouts."
           ],
           "limits": [
-            "Supported on Steam and compatible Chromium browsers, not Firefox. Folder handles are not transferable in a backup."
+            "Loading trees resets Ambrosia bars. The fallback and previous-slot availability can limit restoration."
           ],
           "settings": [
-            "autoExportSaveFolder",
-            "autoExportSaveForgetFolder"
+            "addTimeAutoLoadouts",
+            "autoLoadoutAdd",
+            "autoLoadoutTime"
+          ],
+          "sources": [
+            "src/mod/class/hs-modules/hs-ambrosia/hs-ambrosia-auto-loadout.ts"
           ]
         },
         {
-          "id": "export-retention",
-          "title": "Keep only the last X timed-export files",
-          "where": "Settings → QoL →Keep only the last X files",
-          "summary": "Limits saved timed exports in the chosen folder.",
+          "id": "ascension-loadout",
+          "title": "Ascension loadout auto-switch",
+          "where": "Settings → QoL → Ascension loadout auto-switch",
+          "summary": "Uses a chosen Ambrosia loadout for a manual ascension and restores the previous tree afterward.",
           "details": [
-            "Deletes only files recorded as written by this feature. Other files in the folder are left alone.",
-            "The setting does not delete plain browser downloads."
+            "Enable the switch and choose a saved slot. The game confirms the ascension as usual.",
+            "The Ascend button works with or without the patch. Shift+A uses the configured loadout when the game is patched."
+          ],
+          "limits": [
+            "Switching loadouts resets Ambrosia bar progress. Without the patch, the mod restores the saved contents of the previously marked slot, so save tree edits before ascending.",
+            "Auto Ascend, AutoSing and the Hepteract Distributor's ascensions keep their own loadout behavior."
           ],
           "settings": [
-            "autoExportSaveKeep"
+            "ascensionAutoLoadout",
+            "autoLoadoutAscension"
+          ],
+          "sources": [
+            "docs/features/ascension-loadout.md",
+            "src/mod/class/hs-modules/hs-ambrosia/hs-ambrosia-auto-loadout.ts"
           ]
         },
         {
-          "id": "export-loadout",
-          "title": "Dedicated Ambrosia export loadout",
-          "where": "Settings → QoL →Export loadout",
-          "summary": "Collects export rewards with the configured tree, then restores the original when possible.",
+          "id": "ambrosia-minibars",
+          "title": "Blue, red and purple progress minibars",
+          "where": "Header editor → [HS] Header → Mod modules",
+          "summary": "Shows compact progress bars without keeping the Ambrosia tab open.",
           "details": [
-            "Choose None to leave the tree untouched. The exported save contains the export-time tree.",
-            "The return path preserves unsaved tree changes when the required live-game validation is available."
-          ],
-          "limits": [
-            "Each tree load resets Ambrosia bars. Without a usable return slot, the export loadout remains loaded."
+            "The bars follow the game's unlocks: blue Ambrosia, then red Ambrosia and purple honey when available.",
+            "They are one movable header module; resizing and a group border are configured in header edit mode.",
+            "Patched games read live progress; bookmarklet players get the bars in a row under the header, through GDS."
           ],
           "settings": [
-            "autoExportSaveLoadout"
+            "ambrosiaMinibars"
           ]
         },
         {
-          "id": "full-backup",
-          "title": "One-file game and mod backup",
-          "where": "Tools → Backup & Restore → export backup",
-          "summary": "Downloads the save, mod settings/data, game preferences, logs and diagnostic context together.",
+          "id": "ambrosia-hourly",
+          "title": "Expected Ambrosia income per hour",
+          "where": "Ambrosia tab; header editor → Ambrosia per hour",
+          "summary": "Shows expected blue Ambrosia, red Ambrosia and purple honey income for the current tree.",
           "details": [
-            "Includes saved strategies, hidden tabs/dialogs, custom icons, header customization and other hs-prefixed stores, excluding development-only state.",
-            "Adds version/platform information and Heater diagnostics where available; diagnostic export failure does not prevent the backup."
+            "The header offers separate rate modules that can be moved, stacked or placed in the tray.",
+            "Rates account for the current generation model, including Purple Reactor effects; they are expectations rather than a promise of individual random payouts."
+          ],
+          "settings": [
+            "ambrosiaRateHeader"
           ],
           "limits": [
-            "Does not collect game export rewards. Refused during AutoSing or when the game cannot save, such as a time warp. Keep backups private when they contain your save or logs."
+            "The header modules need a patched game (Tampermonkey or Steam loader): not for bookmarklet players."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "heater",
+      "title": "Integrated Ambrosia Heater",
+      "color": "orangered",
+      "icon": "src/mod/resource/img/hs-heater-icon.png",
+      "intro": "An in-game optimizer for Ambrosia loadouts, with resource-aware result tables and direct imports. Results depend on the exported game state and selected options.",
+      "sources": [
+        "docs/features/heater.md",
+        "docs/features/heater-optimizer.md",
+        "src/mod/class/hs-modules/hs-heater/hs-heater-result-config.ts",
+        "src/mod/class/hs-modules/hs-heater/ui/hs-heater-ui-result.ts"
+      ],
+      "features": [
+        {
+          "id": "heater-inputs",
+          "title": "Read the current game or edit Heater inputs",
+          "where": "Tools → Ambrosia Heater, or the quick access menu → inputs window",
+          "summary": "Builds optimization inputs from the save and lets you adjust scenarios.",
+          "details": [
+            "Inputs cover Exalt, singularity, bells, event bonus, pre/post-AOAG mode, Ambrosia resources, unlocks, runes, talismans and shop upgrades.",
+            "Exalts are displayed by name. A warning appears if you choose a different Exalt from the exported save's context.",
+            "In Exalt 10, a badge above the results says how they read there."
+          ],
+          "limits": [
+            "Changing the Exalt selector does not reconstruct every base value from a save in that Exalt; export from the intended context for reliable comparisons.",
+            "A field that isn't a number stops the heat at once, and the Log names the field."
           ]
         },
         {
-          "id": "backup-restore",
-          "title": "Restore a backup or ordinary game save",
-          "where": "Tools → Backup & Restore → import",
-          "summary": "Validates the file, lets you choose supported restore parts, then reloads.",
+          "id": "heater-branches",
+          "title": "Choose and remember active optimization branches",
+          "where": "Heater inputs → Loadouts to heat",
+          "summary": "Runs only the loadout families you need.",
           "details": [
-            "The current-state backup and the actual import are separate clicks, allowing the backup download to finish first.",
-            "Restoring mod data is exact: missing mod keys are removed. Only permitted game-preference keys are restored; logs and diagnostics are never imported.",
-            "An ordinary current-format game export can also be loaded.",
-            "\"Skip offline progress\" loads the save with no offline progress since it was made; code timers and the daily reset work as usual."
+            "Branches include Ambrosia, Purple Ambrosia, Quarks, 3–7D Cubes, Octeracts, C15 coins, Obtainium/Offerings, joint Obt+Off, Hyperflux, Max SR and Max Amb+Oct.",
+            "Shortcuts select branches needed by your assigned slots, all visible branches, or none. Choices are remembered; choosing a slot type enables its required branch.",
+            "The slower joint Obt+Off branch starts unticked; Purple branches follow the save's unlocks."
           ],
-          "limits": [
-            "Import replaces the selected local state and reloads the page. Legacy compressed saves rejected by current validation are not restored; folder permissions and pending paid time skips are not copied."
+          "settings": [
+            "heaterUncheckedBranches",
+            "heaterTickedBranches"
           ]
         },
         {
-          "id": "clear-mod-settings",
-          "title": "Clear mod settings and reload",
-          "where": "Tools → CLEAR SETTINGS",
-          "summary": "Resets the mod's main settings after confirmation.",
+          "id": "heater-common",
+          "title": "Common resource loadout optimization",
+          "where": "Heater results → Common Loadouts",
+          "summary": "Optimizes All Ambrosia, Blue Ambrosia, Red Ambrosia, Quarks, 3–7D Cubes and Octeracts.",
           "details": [
-            "Clears the settings store and reloads immediately so in-memory values cannot silently write the old settings back."
+            "Compare the effect, resource cost and required Blueberries for each result.",
+            "The 3–7D Cube and Octeract rows are intended for post-AOAG; pre-AOAG cube trees have their own Hyperflux section.",
+            "Coins in C15 and the four Purple rows are in the same Common Loadouts section."
+          ],
+          "images": [
+            {
+              "src": "res/features/heater-results@2x.webp",
+              "alt": "The Ambrosia Heater results window after a heat: common, Obtainium and Offering, p4x4 and hybrid loadouts"
+            }
+          ]
+        },
+        {
+          "id": "heater-coins",
+          "title": "Coins in Challenge 15 optimization",
+          "where": "Heater → Coins in C15 branch",
+          "summary": "Optimizes coin income per real second under C15's tax-cap assumption.",
+          "details": [
+            "The exporter models C15 on a copy of your save, so you do not have to be inside C15. It uses existing rune EXP, blessings, spirits and talismans.",
+            "Effect compares with no purchased Ambrosia modules while holding other resources fixed."
           ],
           "limits": [
-            "This clears the main settings key; it is not a promise to delete every separate mod store or the game save."
+            "Assumes the tax cap is reached. This is not a prediction of future rune or resource growth."
+          ],
+          "sources": [
+            "src/mod/class/hs-core/gds/hs-heater-coins-export.ts"
+          ]
+        },
+        {
+          "id": "heater-purple",
+          "title": "Purple Honey and Purple Ambrosia loadouts",
+          "where": "Heater → Purple Ambrosia branch",
+          "summary": "Balances generation for Honey stockpiling or Purple Ambrosia crafting.",
+          "details": [
+            "Purple Honey and Purple Ambrosia rows use current reactor routing; Phoney (best econ) and Pamb (best econ) optimize the tree and routing together.",
+            "Purple Ambrosia production accounts for both Red Ambrosia and Purple Honey inputs."
+          ],
+          "limits": [
+            "Routing is not stored in Ambrosia loadouts. Applying optimized routing changes the income of your other trees too."
+          ]
+        },
+        {
+          "id": "heater-obt-off",
+          "title": "Obtainium, Offerings and joint optimization",
+          "where": "Heater → Obt, Off / Obt + Off branches",
+          "summary": "Produces specialized or combined trees for these two resources.",
+          "details": [
+            "Choose pre-AOAG or post-AOAG inputs to match the intended use.",
+            "Joint Obt+Off values equal relative improvements to either resource; its result reports both multipliers."
+          ],
+          "limits": [
+            "The combined search can take longer; it starts disabled."
+          ]
+        },
+        {
+          "id": "heater-hyperflux",
+          "title": "Hyperflux H0–H7 and Max SR trees",
+          "where": "Heater results → p4x4 (pre-AOAG) Loadouts",
+          "summary": "Compares cube trees across Hyperflux levels and singularity-reducer priorities.",
+          "details": [
+            "H0–H7 compare pre-AOAG cube effectiveness and show P4x4 equivalence thresholds.",
+            "Max SR1 and Max SR2 prioritize their respective reducer first, then cubes, so you can see the cube cost of that choice.",
+            "SR1 is evaluated outside an Exalt; SR2 inside one. Maxed comparisons respect upgrade prerequisites.",
+            "H rows that never win show Never in the p4x4 eq column and are dimmed."
+          ]
+        },
+        {
+          "id": "heater-best-h",
+          "title": "Best H at the current P4x4",
+          "where": "Heater inputs → Your Loadout Order → Best H (P4x4 now)",
+          "summary": "Selects the appropriate Hyperflux result when importing, using live P4x4.",
+          "details": [
+            "The selected row is marked ★ now. Import All reads P4x4 again rather than relying on its heat-time value.",
+            "The choice is resolved once per import; it does not automatically switch trees as P4x4 rises."
+          ],
+          "limits": [
+            "Requires heated Hyperflux results and a readable P4x4 value."
+          ]
+        },
+        {
+          "id": "heater-hybrid",
+          "title": "Max Amb + Oct hybrid",
+          "where": "Heater → Max Amb + Oct branch",
+          "summary": "Combines maximized Ambrosia upgrades with Octeract optimization.",
+          "details": [
+            "Intended for late-game budgets large enough to afford the full All Ambrosia base.",
+            "The row remains visible as Unaffordable when its base cannot be bought."
+          ]
+        },
+        {
+          "id": "heater-affordability",
+          "title": "Affordability and limiting-resource explanations",
+          "where": "Heater results table",
+          "summary": "Shows why a row is unavailable or not yet maxed.",
+          "details": [
+            "Unaffordable rows identify insufficient Ambrosia and/or Blueberries where known.",
+            "Non-maxed rows show limiting-resource icons. Missing branches and unaffordable assigned types use different slot-border colors.",
+            "Hover a non-maxed row's ✘ to see the levels it still needs to be maxed, next to your loadout's; right-click to pin.",
+            "Results include loadout, effect, cost and relevant routing or P4x4 comparisons.",
+            "Maxed compares with a tree that can exist: only the upgrades the row's Hyperflux level allows, and Brick of Lead at the level best for that row, so a ✔ row can have Brick of Lead below its max."
+          ]
+        },
+        {
+          "id": "heater-import",
+          "title": "Assign, copy and import Heater loadouts",
+          "where": "Heater results → Actions; Heater inputs → Your Loadout Order / Import All",
+          "summary": "Moves optimized trees into the game's existing loadout slots.",
+          "details": [
+            "Assign result types to slots, copy individual loadout data or import selected results.",
+            "Import All preserves unticked slots, skips missing/unaffordable choices with appropriate feedback, and can resolve Best H at import time.",
+            "The slot row reflects active borders and custom icons; slot assignments are remembered."
+          ],
+          "settings": [
+            "heaterTypeLoadoutSelections"
+          ]
+        },
+        {
+          "id": "heater-sync",
+          "title": "Sync icons and AutoSing loadout settings",
+          "where": "Heater inputs → Sync All Icons / Sync All Loadout Settings",
+          "summary": "Reuses your Heater slot assignments in the rest of the mod.",
+          "details": [
+            "Sync All Icons assigns recognizable semantic icons to the chosen slot roles.",
+            "Sync All Loadout Settings maps relevant roles into the AutoSing, ADD/TIME and timed export loadout settings; Best H remains a semantic choice rather than being stored as a fixed H row."
+          ]
+        },
+        {
+          "id": "heater-red-table",
+          "title": "Red Ambrosia upgrade comparison table",
+          "where": "Red Ambrosia Upgrades window, opened with the results after each heat",
+          "summary": "Compares supported upgrade effects and cost effectiveness.",
+          "details": [
+            "Uses Heater context to report available Ambrosia, Red Ambrosia and Octeract effects for modeled upgrades.",
+            "Unavailable or unmodeled values are shown as such rather than invented.",
+            "Switch between compact and expanded views; cost-effectiveness sort controls cycle ascending, descending and unsorted."
+          ],
+          "sources": [
+            "src/mod/class/hs-modules/hs-heater/ui/hs-heater-red-ambrosia-table.ts"
+          ]
+        },
+        {
+          "id": "heater-workers",
+          "title": "Background heating, progress and cancel",
+          "where": "Heater inputs → 🔥 Start Heater / Heat with",
+          "summary": "Runs the optimizer in workers with elapsed-time and group progress.",
+          "details": [
+            "Heats with 1, 2 or 3 workers at once, 3 by default; lower-memory or lower-core devices fall back to 1.",
+            "Cancel terminates an active worker heat. Identical already-heated inputs can reuse their result; the Log records heat timing or reuse."
+          ],
+          "limits": [
+            "Heating can use substantial memory. Without worker support, calculation can block the page and cannot offer the same cancellation behavior.",
+            "A heat whose search passes the row limit stops, with a notification naming that search."
+          ],
+          "settings": [
+            "heaterWorkers"
+          ]
+        },
+        {
+          "id": "heater-export",
+          "title": "Extended Heater data export",
+          "where": "Tools → Copy Heater Data; quick access menu",
+          "summary": "Copies an extended save string for the external Ambrosia Heater sheet.",
+          "details": [
+            "Includes calculated context beyond the base save, such as the mod's computed values and fetched game bonuses.",
+            "The integrated Heater uses the same game-data infrastructure; the external sheet remains a separate tool."
           ]
         }
       ]
@@ -1418,6 +1351,7 @@
       "id": "autosing",
       "title": "AutoSing & strategy editor",
       "color": "springgreen",
+      "icon": "docs/res/categories/autosing.png",
       "intro": "An explicitly opt-in automation system for end-game singularity farming. This goes beyond strictly informational QoL.",
       "sources": [
         "docs/features/autosing.md",
@@ -1435,10 +1369,13 @@
             "Choose the singularity to farm and a strategy appropriate to your save. Start validates the required game state and settings.",
             "AutoSing manages progression, the AOAG phase, end-of-singularity actions and the Exalt entry/exit used by its farming cycle.",
             "It restores the player's accessible tab/subtab after its own navigation; importing another save stops AutoSing.",
-            "It keeps its speed when the game is in another tab. Chrome's Energy Saver can still freeze a hidden tab after 5 minutes: turn it off in chrome://settings/performance, or keep the game window in view."
+            "It keeps its speed when the game is in another tab. Chrome's Energy Saver can still freeze a hidden tab after 5 minutes: turn it off in chrome://settings/performance, or keep the game window in view.",
+            "Stopping (Stop, Finish & Stop, or a failed start) puts back the game settings AutoSing changed. After a reload or a closed game during a run, they are put back at the next load, with a notification; an Exalt the run was in is left as it is.",
+            "During a run, the automation bar, the Ambrosia minibars and the hourly rates are turned off, and back on at the stop."
           ],
           "limits": [
-            "Intended for S216+ after completing EXALT6 at least once. The code refuses a highest singularity below 40, warns below 216, and expects EXALT2 access for its cycle. A supplied strategy is not guaranteed to finish on every save."
+            "Intended for S216+ after completing EXALT6 at least once. The code refuses a highest singularity below 40, warns below 216, and expects EXALT2 access for its cycle. A supplied strategy is not guaranteed to finish on every save.",
+            "For bookmarklet players, AutoSing writes its target into the game's Elevator target and leaves it there after the run."
           ],
           "settings": [
             "startAutosing",
@@ -1490,7 +1427,7 @@
           "details": [
             "Inspect built-in strategies, then copy or create one for your own tuning.",
             "Imports are validated and older strategy formats are normalized. Exports copy shareable strategy JSON.",
-            "The current bundled strategy names carry -temp: their authors still need to tune them for the changed corruption system.",
+            "Bundled strategies whose names carry -temp are listed under Old Strategies: their authors still need to tune them for the changed corruption system.",
             "If a strategy cannot be saved, the draft stays open and the existing strategy list stays intact."
           ],
           "settings": [
@@ -1510,7 +1447,9 @@
           "details": [
             "Add phases by selecting an end stage; insert a phase with the small + dropdown and edit its action list with the step-count button.",
             "Stage choices maintain a continuous chain and saving refuses empty or invalid ranges.",
-            "Multiple strategies/actions windows can be compared; reopening an existing one brings it forward."
+            "Multiple strategies/actions windows can be compared; reopening an existing one brings it forward.",
+            "The AOAG phase shows as its own row right before the phase that ends at end, where it runs.",
+            "How to make or edit a strategy ↗ opens the players' guide."
           ]
         },
         {
@@ -1521,7 +1460,8 @@
           "details": [
             "Add, edit, duplicate, delete and drag steps; edge dragging auto-scrolls the list. Fields are shown only for actions that use them.",
             "Numeric inputs are checked as typed. Enter adds or updates from a typed field.",
-            "Comments annotate steps, and the footer calculates the fixed wait time of one linear pass."
+            "Comments annotate steps, and the footer calculates the fixed wait time of one linear pass.",
+            "Double-click a step to move Add Here below it."
           ]
         },
         {
@@ -1531,7 +1471,8 @@
           "summary": "Branches or loops the phase based on configured game conditions.",
           "details": [
             "IF and Jump here rows show their linked step numbers, with clickable links and highlighted pairs.",
-            "Looping targets are marked. Adding or deleting steps shifts targets; dragging keeps targets at their list positions, so review them after rearranging."
+            "Looping targets are marked. Adding or deleting steps shifts targets; dragging keeps targets at their list positions, so review them after rearranging.",
+            "Max jumps stops an IF from jumping after that many jumps in one phase pass (0 = no limit); reaching it writes a log line. The default strategies' C15 loop uses 5."
           ]
         },
         {
@@ -1552,7 +1493,7 @@
           "summary": "Sets actual corruption level, optionally ascending immediately.",
           "details": [
             "Ascend immediately is on by default; inside an ascension challenge it exits the challenge to apply the reset correctly. Untick it to defer the level until a later ascension.",
-            "Phases do not implicitly ascend or set corruption. The AOAG transition explicitly uses level zero; the final push uses the game's Max action.",
+            "Phases do not implicitly ascend or set corruption. The AOAG phase starts with its own Set corruption level step at 0, which a strategy can change or remove (older strategies get it once); the final push uses the game's Max action.",
             "Older named/eight-value corruption strategies are converted where possible and warn when a meaningful numeric conversion is unavailable."
           ],
           "limits": [
@@ -1566,7 +1507,7 @@
           "summary": "Assigns the Hyperflux (H), 3-7D Cubes, Quark, Obtainium, Offerings and Ambrosia slots; an Antiquities icon shows which are for pre-AOAG (dimmed) and post-AOAG (full colours).",
           "details": [
             "AutoSing switches through its own central loadout path at the relevant steps and final actions.",
-            "Heater Sync settings can populate compatible role choices."
+            "The Heater's Sync All Loadout Settings can fill compatible role choices."
           ],
           "settings": [
             "autosingEarlyCubeLoadout",
@@ -1609,7 +1550,7 @@
         {
           "id": "autosing-advanced",
           "title": "Advanced run settings and reset to defaults",
-          "where": "AutoSing advanced/timer settings",
+          "where": "Settings → Auto-Sing → Advanced",
           "summary": "Tunes cube opening, tesseract buying and auto-challenge timing.",
           "details": [
             "Set 3–6D cube opening percentage, tesseract-building auto-buy percentage, and challenge start/enter/exit timers.",
@@ -1627,9 +1568,129 @@
       ]
     },
     {
+      "id": "saves",
+      "title": "Save exports, backups & restore",
+      "color": "lightsteelblue",
+      "icon": "docs/res/categories/saves.png",
+      "intro": "Timed game exports collect native export rewards. A full HS backup is a separate action that also preserves local mod state.",
+      "sources": [
+        "docs/features/auto-export.md",
+        "docs/features/backup.md"
+      ],
+      "features": [
+        {
+          "id": "timed-export",
+          "title": "Export every X minutes",
+          "where": "Settings → QoL → Export the save every X minutes",
+          "summary": "Runs the game's Export action on a configurable schedule.",
+          "details": [
+            "Uses the last game export time, so exporting manually restarts the interval and reloads do not normally reset it.",
+            "Collects native export rewards and makes a file even when your regular export preference is clipboard mode.",
+            "Pauses while AutoSing runs or the offline popup is open.",
+            "The folder, file-count and loadout lines appear once the switch is on."
+          ],
+          "limits": [
+            "Steam needs an export folder. Browser download permissions can affect plain downloads."
+          ],
+          "settings": [
+            "autoExportSave"
+          ]
+        },
+        {
+          "id": "export-folder",
+          "title": "Choose and remember an export folder",
+          "where": "Settings → QoL → Choose folder / ✕",
+          "summary": "Writes timed exports directly to a folder on supported platforms.",
+          "details": [
+            "The folder handle is remembered locally; after a restart, your first game click/key press can renew permission.",
+            "✕ forgets the folder: direct writes stop, existing files stay.",
+            "Choose a subfolder if the platform refuses a protected system folder."
+          ],
+          "limits": [
+            "Supported on Steam and compatible Chromium browsers, not Firefox. Folder handles are not transferable in a backup."
+          ],
+          "settings": [
+            "autoExportSaveFolder",
+            "autoExportSaveForgetFolder"
+          ]
+        },
+        {
+          "id": "export-retention",
+          "title": "Keep only the last X timed-export files",
+          "where": "Settings → QoL → Keep only the last X files",
+          "summary": "Limits saved timed exports in the chosen folder.",
+          "details": [
+            "Deletes only files recorded as written by this feature. Other files in the folder are left alone.",
+            "The setting does not delete plain browser downloads."
+          ],
+          "settings": [
+            "autoExportSaveKeep"
+          ]
+        },
+        {
+          "id": "export-loadout",
+          "title": "Dedicated Ambrosia export loadout",
+          "where": "Settings → QoL → Export loadout",
+          "summary": "Collects export rewards with the configured tree, then restores the original when possible.",
+          "details": [
+            "Choose None to leave the tree untouched. The exported save contains the export-time tree.",
+            "The return path preserves unsaved tree changes when the required live-game validation is available."
+          ],
+          "limits": [
+            "Each tree load resets Ambrosia bars. Without a usable return slot, the export loadout remains loaded."
+          ],
+          "settings": [
+            "autoExportSaveLoadout"
+          ]
+        },
+        {
+          "id": "full-backup",
+          "title": "One-file game and mod backup",
+          "where": "Tools → Backup & Restore → Export to file",
+          "summary": "Downloads the save, mod settings/data, game preferences, logs and diagnostic context together.",
+          "details": [
+            "Includes saved strategies, hidden tabs/dialogs, custom icons, header customization and other hs-prefixed stores, excluding development-only state.",
+            "Adds version/platform information and Heater diagnostics where available; diagnostic export failure does not prevent the backup."
+          ],
+          "limits": [
+            "Does not collect game export rewards. Refused during AutoSing or when the game cannot save, such as a time warp. Keep backups private when they contain your save or logs."
+          ]
+        },
+        {
+          "id": "backup-restore",
+          "title": "Restore a backup or ordinary game save",
+          "where": "Tools → Backup & Restore → Import from file…",
+          "summary": "Validates the file, lets you choose supported restore parts, then reloads.",
+          "details": [
+            "The current-state backup and the actual import are separate clicks, allowing the backup download to finish first.",
+            "Restoring mod data is exact: missing mod keys are removed. Only permitted game-preference keys are restored; logs and diagnostics are never imported.",
+            "An ordinary current-format game export can also be loaded.",
+            "\"Skip offline progress\" loads the save with no offline progress since it was made; code timers and the daily reset work as usual.",
+            "\"Keep my current header layout\" keeps your header as it is: its layout from the save and where the mod's modules sit from the mod data. Shared with the checkbox under the game's Load from file, and works without the patched game too."
+          ],
+          "limits": [
+            "Import replaces the selected local state and reloads the page. Legacy compressed saves rejected by current validation are not restored; folder permissions and pending paid time skips are not copied."
+          ]
+        },
+        {
+          "id": "clear-mod-settings",
+          "title": "Clear mod settings and reload",
+          "where": "Tools → CLEAR SETTINGS",
+          "summary": "Resets the mod's main settings after confirmation.",
+          "details": [
+            "Clears the settings store and reloads immediately so in-memory values cannot silently write the old settings back."
+          ],
+          "limits": [
+            "This clears the main settings key; it is not a promise to delete every separate mod store or the game save."
+          ]
+        }
+      ]
+    },
+    {
       "id": "tools",
       "title": "Calculations, logs & framework",
       "color": "plum",
+      "icon": "docs/res/categories/tools.png",
       "intro": "Information tools expose computed game values and diagnostics; developer-only tools are kept separate from player features.",
       "sources": [
         "docs/features/tools-tab.md",
@@ -1642,14 +1703,14 @@
         {
           "id": "gds",
           "title": "Game Data Sniffing and live-game access",
-          "where": "Settings → QoL; automatic with patched loaders",
+          "where": "Settings → QoL → Game Data Sniffing (bookmarklet players only); always on with the Tampermonkey or Steam loader",
           "summary": "Supplies current game state to information and optimization features.",
           "details": [
-            "Patched loaders read the live player; legacy loading captures saves. The engine supports the mod's game-aware calculations, caches and dependent controls.",
+            "Patched loaders read the live player; bookmarklet loading captures saves. The engine supports the mod's game-aware calculations, caches and dependent controls.",
             "Calculations are implemented against game formulas, with fetched account/event context where needed."
           ],
           "limits": [
-            "The bookmarklet GDS switch and patched live-reader behavior differ. Formula support changes with game updates; not every displayed game statistic is reimplemented."
+            "Formula support changes with game updates; not every displayed game statistic is reimplemented."
           ],
           "settings": [
             "useGameData"
@@ -1661,12 +1722,16 @@
           "where": "Tools → calculation picker → Calc. reduced / Calc. components",
           "summary": "Computes supported values directly from your current save.",
           "details": [
-            "The alphabetized picker covers supported Ambrosia luck and generation, Red/Purple systems, runes, talismans, GQ, shop effects and other registered calculations.",
+            "The picker is grouped by theme (Ambrosia, Red Ambrosia, Ascension & Cubes, Singularity, Runes & Talismans, Ants & Honey, Other), A→Z inside each group; List order switches to one A→Z list. It covers supported Ambrosia luck and generation, Red/Purple systems, runes, talismans, GQ, shop effects and other registered calculations.",
             "Cube Bank and Cube Gain: Corruption Lines expose the currently supported cube breakdowns. Options select applicable calculation modes.",
-            "Each run forces a save read, so the tool can be used with background GDS off; component-capable entries can show their factors."
+            "Each run forces a save read, so the tool can be used with background GDS off; component-capable entries can show their factors.",
+            "Results show 3 decimals, in scientific notation above 1e6 and below 0.01."
           ],
           "limits": [
             "The old broad Cube Multiplier and Ascension Score tools were removed when their formulas became incomplete; they must not be treated as current features. Entries without components return the reduced result."
+          ],
+          "settings": [
+            "calculationToolsGrouped"
           ]
         },
         {
@@ -1678,25 +1743,15 @@
             "Each line's time and the debug lines are always recorded; the Timestamps and Debug logs boxes below the log only show or hide them.",
             "During an Auto-Sing run, only warnings and errors are recorded, for speed, unless Full log during Auto-Sing is on.",
             "Distributors, Heater runs and answered/refused actions write useful context. Backups include the accumulated logs for troubleshooting.",
-            "COPY LOG copies the whole log, hidden lines included; CLEAR LOG clears it."
+            "Copy Log copies the whole log, hidden lines included; Clear Log clears it."
           ],
           "settings": [
             "logTimestamp",
             "showDebugLogs",
             "autosingFullLog"
-          ]
-        },
-        {
-          "id": "settings-dump",
-          "title": "Dump settings and game variables",
-          "where": "Tools → Dump Settings / Dump Game vars",
-          "summary": "Prints diagnostic snapshots to the browser or game developer console.",
-          "details": [
-            "Dump Settings shows the mod settings. Dump Game vars prints current game, PseudoCoin, campaign, account and event data available to the mod.",
-            "These actions help diagnose calculations; they do not import or modify the save."
           ],
-          "limits": [
-            "Console output may contain save/account context; review it before sharing."
+          "sources": [
+            "docs/features/log.md"
           ]
         },
         {
@@ -1705,19 +1760,25 @@
           "where": "Tools → Fix Exalt Bug",
           "summary": "Attempts the recovery path for an inconsistent active-Exalt display.",
           "details": [
-            "With an Exalt active, clicks its icon as the Exalts tab does. When the game still thinks you are in an Exalt with none active, clears that state. Each outcome shows a notification; the fix needs the Tampermonkey loader."
+            "With an Exalt active, clicks its icon as the Exalts tab does. When the game still thinks you are in an Exalt with none active, clears that state. Each outcome shows a notification; the fix needs a patched game (Tampermonkey or Steam loader)."
           ],
           "limits": [
             "A targeted recovery tool, not a general-purpose save repair or guaranteed fix for every Exalt problem."
           ]
         },
         {
-          "id": "notification-test",
-          "title": "Short and long notification previews",
-          "where": "Tools → Notify test / Notify test 2",
-          "summary": "Previews the mod notification system.",
+          "id": "game-bug-fixes",
+          "title": "Fixes for game bugs",
+          "where": "Automatic with the Tampermonkey or Steam loader",
+          "summary": "The mod's patch works around bugs in the game itself.",
           "details": [
-            "Repeated presses cycle through supported positions and message types; the second button uses a long message."
+            "Saves keep working when the Ambrosia bars fill more than 1000 times a second on average: the game's own save check would otherwise refuse every save and export, and stop its autosave until a reload."
+          ],
+          "limits": [
+            "Needs a patched game (Tampermonkey or Steam loader): not for bookmarklet players. On Steam, a fix applies once the game is re-patched (the loader asks)."
+          ],
+          "sources": [
+            "synergism_modloader/lib/patcher.js"
           ]
         },
         {
@@ -1736,12 +1797,12 @@
         },
         {
           "id": "dev-only",
-          "title": "Development-only live editing and recording",
+          "title": "Development-only live editing",
           "where": "Development build only; developer Debug tools",
-          "summary": "Provides live-save inspection/editing and AutoSing recording for maintainers.",
+          "summary": "Provides live-save inspection and editing for maintainers.",
           "details": [
-            "Development tools and the recorder are gated out of the player release bundle.",
-            "The live editor and development recorder are excluded from release builds. Advanced Data Collection is a separate hidden diagnostic preference, documented with AutoSing's statistics."
+            "The Debug tab, its live editor and save snapshots, and the Dump Settings / Dump Game vars buttons exist only in development builds.",
+            "A release build that would contain the development tools is refused. AutoSing's step timings are a player feature (Record step timings)."
           ],
           "limits": [
             "Not available in production releases. Editing live game values is for development and testing."

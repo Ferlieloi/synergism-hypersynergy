@@ -1,1 +1,0 @@
-[Hypersynergism source](https://github.com/Ferlieloi/synergism-hypersynergy) · [Report an issue](https://github.com/Ferlieloi/synergism-hypersynergy/issues) · Original mod by [ahvonenj](https://github.com/ahvonenj)

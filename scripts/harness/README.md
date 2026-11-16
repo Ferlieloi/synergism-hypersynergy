@@ -101,6 +101,12 @@ heat on a S260 save in node, about 100 s.
 - **Check a node run against the player's other loadout slots**: without PseudoCoin/quark data, the ambrosia, cube and
   octeract slots still matched exactly; quarks, Obtainium and Offerings were a few levels off.
 - **A few fields of a backup's base64 `save`** can be read without the file: decode a copied fragment at offsets 0–3.
+- **To find what changes a player field, and when**: put a setter on it on the live player (`Object.defineProperty`,
+  enumerable, the value in a closure) that logs each change with `performance.now()`, the delta and a few lines of
+  `new Error().stack`. The live player stays the same object through resets, so the setter lasts the whole run. To
+  tie a change to an autosing step: `__HS_autosingTimings.steps.length` is the index of the step running (a step is
+  recorded when it ends), but what follows the AOAG phase (Quark loadout, export, final Ascend) shows as the singularity's last
+  recorded step + 1.
 
 ## Building blocks (`lib/`)
 

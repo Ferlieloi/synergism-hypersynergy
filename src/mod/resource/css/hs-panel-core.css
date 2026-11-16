@@ -354,8 +354,6 @@ select::-webkit-scrollbar-corner {
     text-align: left;
     width: 100%;
 }
-#hs-quick-access-menu button[data-type="autosing"] > span:first-child { color: green; }
-
 #hs-quick-access-menu button[data-type="autosing"]:hover    { background: rgba(76, 175, 80, 0.25); }
 #hs-quick-access-menu button[data-type="amb-heater"]:hover  { background: rgba(255, 152, 0, 0.25); }
 
@@ -733,7 +731,7 @@ select::-webkit-scrollbar-corner {
    on a line at the panel's narrowest width. The block's left padding is the gap between them; between rows, the
    block's 5px bottom padding + 5px margin give the same 10px as the Tools grids */
 .hs-button-group-autosing-strategy .hs-panel-btn {
-    width: 120px;
+    width: 110px;
 }
 
 .hs-inline-button.hs-button-group-autosing-strategy {

@@ -121,5 +121,4 @@ the mod's expected-value bar income (`hs-ambrosia-bar-income.ts`) still matches.
 
 Steam stayed on the previous game for a while (its bundle had no `runeLevels`): GDS reads both shapes, the EXP through
 `getRuneEXP` / `getBlessingEXP` / `getSpiritEXP` (`hs-gamedata-utils.ts`) and the coin buildings from `coinBuildings`
-or the 4.4.1 cost curve. Once the Steam bundle has `runeLevels`, the old shape goes: the optional fields in
-`GameDataFields`, the cost curve in `hs-gamedata-api-building.ts` and `scripts/tools/coin-curve-vs-vanilla.cjs`.
+or the 4.4.1 cost curve. What goes once the Steam bundle has `runeLevels`: `docs/dev/compat-code.md`.

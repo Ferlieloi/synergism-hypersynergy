@@ -60,6 +60,7 @@ const CUBE_CORRUPTION_LEVEL_PARAM: HSCalculationParams = {
 export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     {
         calculationName: "Event Buff: Consumables",
+        group: "Other",
         fnName: "calculateConsumableEventBuff",
         fnParams: [EVENT_BUFF_PARAM],
         supportsReduce: false,
@@ -67,6 +68,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Ambrosia Speed: Shop Upgrade",
+        group: "Ambrosia",
         fnName: "calculateAmbrosiaGenerationShopUpgrade",
         fnParams: [
             {
@@ -81,6 +83,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Ambrosia Speed: Singularity Upgrade",
+        group: "Ambrosia",
         fnName: "calculateAmbrosiaGenerationSingularityUpgrade",
         fnParams: [
             {
@@ -94,6 +97,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Ambrosia Speed: Octeract Upgrade",
+        group: "Ambrosia",
         fnName: "calculateAmbrosiaGenerationOcteractUpgrade",
         fnParams: [
             {
@@ -107,6 +111,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Ambrosia Blueberries: Singularity Milestones",
+        group: "Ambrosia",
         fnName: "calculateSingularityMilestoneBlueberries",
         fnParams: [],
         supportsReduce: false,
@@ -114,6 +119,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Ambrosia Luck: Dilated Five-Leaf Clover",
+        group: "Ambrosia",
         fnName: "calculateDilatedFiveLeafBonus",
         fnParams: [],
         supportsReduce: false,
@@ -121,6 +127,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Ambrosia Luck: Singularity Milestones",
+        group: "Ambrosia",
         fnName: "calculateSingularityAmbrosiaLuckMilestoneBonus",
         fnParams: [],
         supportsReduce: false,
@@ -128,6 +135,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Ambrosia Luck: Shop Upgrade",
+        group: "Ambrosia",
         fnName: "calculateAmbrosiaLuckShopUpgrade",
         fnParams: [
             {
@@ -142,6 +150,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Ambrosia Luck: Singularity Upgrade",
+        group: "Ambrosia",
         fnName: "calculateAmbrosiaLuckSingularityUpgrade",
         fnParams: [
             {
@@ -155,6 +164,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Ambrosia Luck: Octeract Upgrade",
+        group: "Ambrosia",
         fnName: "calculateAmbrosiaLuckOcteractUpgrade",
         fnParams: [
             {
@@ -168,6 +178,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Cubes Opened (log10 sum)",
+        group: "Ascension & Cubes",
         fnName: "calculateTotalCubesExp",
         fnParams: [],
         supportsReduce: false,
@@ -175,6 +186,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Red Ambrosia Upgrade Value",
+        group: "Red Ambrosia",
         fnName: "calculateRedAmbrosiaUpgradeValue",
         fnParams: [
             {
@@ -188,6 +200,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Ambrosia Speed: Campaign Bonus",
+        group: "Ambrosia",
         fnName: "calculateCampaignAmbrosiaSpeedBonus",
         fnParams: [],
         supportsReduce: false,
@@ -195,6 +208,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Ambrosia Luck: Campaign Bonus",
+        group: "Ambrosia",
         fnName: "calculateCampaignLuckBonus",
         fnParams: [],
         supportsReduce: false,
@@ -202,6 +216,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Ambrosia Luck: Cookie Upgrade 29",
+        group: "Ambrosia",
         fnName: "calculateCookieUpgrade29Luck",
         fnParams: [],
         supportsReduce: false,
@@ -209,6 +224,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Exalt Completions",
+        group: "Singularity",
         fnName: "calculateSumOfExaltCompletions",
         fnParams: [],
         supportsReduce: false,
@@ -216,6 +232,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Ambrosia Thresholds",
+        group: "Ambrosia",
         fnName: "calculateNumberOfThresholds",
         fnParams: [],
         supportsReduce: false,
@@ -223,6 +240,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Ambrosia Thresholds: Ambrosia to Next",
+        group: "Ambrosia",
         fnName: "calculateToNextThreshold",
         fnParams: [],
         supportsReduce: false,
@@ -230,6 +248,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Ambrosia Bar Requirement",
+        group: "Ambrosia",
         fnName: "calculateRequiredBlueberryTime",
         fnParams: [
             {
@@ -248,6 +267,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Red Ambrosia Bar Requirement",
+        group: "Red Ambrosia",
         fnName: "calculateRequiredRedAmbrosiaTime",
         fnParams: [
             {
@@ -261,6 +281,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Corruption Level",
+        group: "Ascension & Cubes",
         fnName: "getActiveCorruptionLevel",
         fnParams: [],
         supportsReduce: false,
@@ -268,6 +289,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Corruption Level: Free Levels",
+        group: "Ascension & Cubes",
         fnName: "calculateFreeCorruptionLevels",
         fnParams: [
             {
@@ -281,6 +303,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Corruption Level: Effective",
+        group: "Ascension & Cubes",
         fnName: "getActiveEffectiveCorruptionLevel",
         fnParams: [],
         supportsReduce: false,
@@ -288,6 +311,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Corruption Level: Platonic Scaling",
+        group: "Ascension & Cubes",
         fnName: "getPlatonicCorruptionScaling",
         fnParams: [],
         supportsReduce: false,
@@ -295,6 +319,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Hepteract Effective Amount",
+        group: "Ascension & Cubes",
         fnName: "calculateHepteractEffective",
         fnParams: [
             {
@@ -308,6 +333,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Vouchers",
+        group: "Other",
         fnName: "calculateAllShopTablets",
         fnParams: [
             {
@@ -322,6 +348,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Exalt Debuff: Limited Ascensions",
+        group: "Singularity",
         fnName: "calculateLimitedAscensionsDebuff",
         fnParams: [],
         supportsReduce: false,
@@ -329,6 +356,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Singularity Debuff: Reductions",
+        group: "Singularity",
         fnName: "calculateSingularityReductions",
         fnParams: [
             {
@@ -347,6 +375,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Singularity Debuff: Effective Singularities",
+        group: "Singularity",
         fnName: "calculateEffectiveSingularities",
         fnParams: [SINGULARITY_COUNT_PARAM],
         supportsReduce: false,
@@ -354,6 +383,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Singularity Debuff",
+        group: "Singularity",
         fnName: "calculateSingularityDebuff",
         fnParams: [
             {
@@ -368,6 +398,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Ascension Speed Exponent Spread",
+        group: "Ascension & Cubes",
         fnName: "calculateAscensionSpread",
         fnParams: [
             {
@@ -382,6 +413,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Challenge 15 Reward",
+        group: "Ascension & Cubes",
         fnName: "calculateChallenge15Reward",
         fnParams: [
             {
@@ -395,6 +427,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Ascension Speed Multiplier: Raw",
+        group: "Ascension & Cubes",
         fnName: "calculateRawAscensionSpeedMult",
         fnParams: [
             {
@@ -409,6 +442,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Ascension Speed Multiplier",
+        group: "Ascension & Cubes",
         fnName: "calculateAscensionSpeedMult",
         fnParams: [MODE_PARAM],
         supportsReduce: false,
@@ -416,6 +450,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Ambrosia Speed",
+        group: "Ambrosia",
         fnName: "calculateAmbrosiaGenerationSpeed",
         fnParams: [
             {
@@ -430,6 +465,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Ambrosia Blueberries",
+        group: "Ambrosia",
         fnName: "calculateBlueberryInventory",
         fnParams: [
             {
@@ -443,6 +479,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Ambrosia Luck",
+        group: "Ambrosia",
         fnName: "calculateLuck",
         fnParams: [
             {
@@ -457,6 +494,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Red Ambrosia Luck: Conversion",
+        group: "Red Ambrosia",
         fnName: "calculateLuckConversion",
         fnParams: [
             {
@@ -471,6 +509,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Red Ambrosia Luck",
+        group: "Red Ambrosia",
         fnName: "calculateRedAmbrosiaLuck",
         fnParams: [
             {
@@ -485,6 +524,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Golden Revolution",
+        group: "Singularity",
         fnName: "calculateGoldenRevolution",
         fnParams: [],
         supportsReduce: false,
@@ -492,6 +532,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Rune Salvage",
+        group: "Runes & Talismans",
         fnName: "calculateTotalSalvage",
         fnParams: [],
         supportsReduce: false,
@@ -499,6 +540,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Rune Salvage: Positive",
+        group: "Runes & Talismans",
         fnName: "calculatePositiveSalvage",
         fnParams: [],
         supportsReduce: false,
@@ -506,6 +548,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Rune Salvage: Negative",
+        group: "Runes & Talismans",
         fnName: "calculateNegativeSalvage",
         fnParams: [],
         supportsReduce: false,
@@ -513,6 +556,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Rune Salvage: First Five Runes",
+        group: "Runes & Talismans",
         fnName: "calculateFirstFiveRuneSalvage",
         fnParams: [],
         supportsReduce: false,
@@ -520,6 +564,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Rune Salvage: Corruption",
+        group: "Runes & Talismans",
         fnName: "calculateBadOfferingsSalvage",
         fnParams: [],
         supportsReduce: false,
@@ -529,6 +574,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     {
         // The HSGameDataAPI copy, which hides the helper's: no reduce_vals, hence no components
         calculationName: "Red Ambrosia Speed",
+        group: "Red Ambrosia",
         fnName: "calculateRedAmbrosiaGenerationSpeed",
         fnParams: [MODE_PARAM],
         supportsReduce: false,
@@ -536,6 +582,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Ambrosia Bar Income",
+        group: "Ambrosia",
         fnName: "calculateAmbrosiaBarIncome",
         fnParams: [],
         supportsReduce: false,
@@ -543,6 +590,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Ambrosia Upgrade Value",
+        group: "Ambrosia",
         fnName: "calculateAmbrosiaUpgradeValue",
         fnParams: [
             {
@@ -561,6 +609,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Ambrosia Luck: Panthema",
+        group: "Ambrosia",
         fnName: "calculatePanthemaAmbrosiaLuck",
         fnParams: [MODE_PARAM],
         supportsReduce: false,
@@ -568,6 +617,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Red Ambrosia Luck: Panthema",
+        group: "Red Ambrosia",
         fnName: "calculatePanthemaRedLuck",
         fnParams: [MODE_PARAM],
         supportsReduce: false,
@@ -575,6 +625,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Purple Honey Luck",
+        group: "Ants & Honey",
         fnName: "calculatePurpleHoneyLuck",
         fnParams: [],
         supportsReduce: false,
@@ -582,6 +633,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Purple Honey Luck Breakdown",
+        group: "Ants & Honey",
         fnName: "calculatePurpleHoneyLuckBreakdown",
         fnParams: [],
         supportsReduce: false,
@@ -589,6 +641,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Purple Honey Per Extraction",
+        group: "Ants & Honey",
         fnName: "calculatePurpleHoneyPerExtraction",
         fnParams: [],
         supportsReduce: false,
@@ -597,6 +650,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     // ----- Cubes, ascension, corruptions -----
     {
         calculationName: "Cube Bank",
+        group: "Ascension & Cubes",
         fnName: "calculateCubeBank",
         fnParams: [
             {
@@ -610,6 +664,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Cube Gain: Corruption Lines",
+        group: "Ascension & Cubes",
         fnName: "calculateCubeGainBase",
         fnParams: [
             {
@@ -629,6 +684,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Corruption Effect",
+        group: "Ascension & Cubes",
         fnName: "getCorruptionEffect",
         fnParams: [
             CORRUPTION_LEVEL_PARAM,
@@ -643,6 +699,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Corruption Effect: Challenge 15",
+        group: "Ascension & Cubes",
         fnName: "getChallenge15CorruptionEffect",
         fnParams: [
             {
@@ -657,6 +714,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     // ----- Runes, talismans, other -----
     {
         calculationName: "Rune Levels (Total)",
+        group: "Runes & Talismans",
         fnName: "calculateTotalRuneLevels",
         fnParams: [],
         supportsReduce: false,
@@ -664,6 +722,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Construction: Before Multiplier",
+        group: "Other",
         fnName: "calculateRawConstruction",
         fnParams: [],
         supportsReduce: false,
@@ -671,6 +730,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Construction",
+        group: "Other",
         fnName: "calculateConstruction",
         fnParams: [],
         supportsReduce: false,
@@ -678,6 +738,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Construction: Coin Buildings",
+        group: "Other",
         fnName: "calculateCoinConstruction",
         fnParams: [],
         supportsReduce: false,
@@ -685,6 +746,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Talisman Rarity (Total)",
+        group: "Runes & Talismans",
         fnName: "calculateTalismanRarityTotal",
         fnParams: [],
         supportsReduce: false,
@@ -692,6 +754,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Synergism Level",
+        group: "Other",
         fnName: "calculateSynergismLevel",
         fnParams: [],
         supportsReduce: false,
@@ -699,6 +762,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Ant Upgrade True Level",
+        group: "Ants & Honey",
         fnName: "calculateTrueAntLevel",
         fnParams: [
             {
@@ -712,6 +776,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Event Buff",
+        group: "Other",
         fnName: "calculateEventSourceBuff",
         fnParams: [EVENT_BUFF_PARAM],
         supportsReduce: false,

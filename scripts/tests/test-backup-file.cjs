@@ -64,7 +64,7 @@ async function main() {
                     export const HSLogger = { log() {}, warn() {}, error(message) { logErrors.push(message); } };
                     const stub = class {};
                     export { stub as HSUI, stub as HSUIC, stub as HSModuleRegistry, stub as HSGameData, stub as HSPlatform,
-                        stub as HSGameDialogs, stub as HSAutosing };
+                        stub as HSGameDialogs, stub as HSAutosing, stub as HSHeaderKeepOnImport };
                     export default '';`,
                 loader: 'ts',
             }));
@@ -367,6 +367,68 @@ async function main() {
         assert.equal(snapshot()[SAVE_KEY], 'autosave');
         assert.equal(snapshot()['hs-settings'], 'settings save');
         assert.equal(snapshot().language, undefined);
+    });
+
+    // ---------- Keep my current header layout: the mod's header stores stay as they are ----------
+
+    const HEADER_STORES = ['hs-header-modules', 'hs-header-cells', 'hs-header-grid-width', 'hs-minibar-dimensions'];
+    const withHeader = {
+        ...before,
+        'hs-header-modules': 'my modules',
+        'hs-header-cells': 'my cells',
+        'hs-minibar-dimensions': 'my minibars',
+    };
+    const headerWrite = {
+        modData: {
+            'hs-settings': 'new settings',
+            'hs-header-modules': 'file modules',
+            'hs-header-grid-width': 'file width',
+            'hs-minibar-dimensions': 'file minibars',
+        },
+    };
+
+    scenario('kept: the header stores are neither removed nor taken from the file, the rest is an exact restore', () => {
+        const { snapshot } = installStorage(withHeader);
+        assert.equal(applyImport({ ...headerWrite, keepHeader: true }), null);
+        assert.deepEqual(snapshot(), {
+            [SAVE_KEY]: 'old save',
+            [DEV_TOOLS_KEY]: 'dev',
+            'hs-settings': 'new settings',
+            'hs-header-modules': 'my modules',
+            // Missing from the file: kept all the same
+            'hs-header-cells': 'my cells',
+            'hs-minibar-dimensions': 'my minibars',
+            language: 'en',
+            theme: 'dark',
+            firstPlayed: '2020',
+            unrelated: 'kept',
+        });
+        // Absent here and in the file's: still absent
+        assert.equal(snapshot()['hs-header-grid-width'], undefined);
+    });
+
+    scenario('not kept: the header stores are restored from the file like any mod key', () => {
+        const { snapshot } = installStorage(withHeader);
+        assert.equal(applyImport({ ...headerWrite, keepHeader: false }), null);
+        const stores = Object.fromEntries(HEADER_STORES.map(key => [key, snapshot()[key]]));
+        assert.deepEqual(stores, {
+            'hs-header-modules': 'file modules',
+            'hs-header-cells': undefined,
+            'hs-header-grid-width': 'file width',
+            'hs-minibar-dimensions': 'file minibars',
+        });
+    });
+
+    scenario('kept, without mod data: nothing of the mod is touched', () => {
+        const { snapshot } = installStorage(withHeader);
+        assert.equal(applyImport({ save: 'new save', keepHeader: true }), null);
+        assert.deepEqual(snapshot(), { ...withHeader, [SAVE_KEY]: 'new save' });
+    });
+
+    scenario('kept: a key that only starts like a header store is restored as usual', () => {
+        const { snapshot } = installStorage({ 'hs-header-modules-old': 'x' });
+        assert.equal(applyImport({ modData: { 'hs-settings': 's' }, keepHeader: true }), null);
+        assert.deepEqual(snapshot(), { 'hs-settings': 's' });
     });
 
     // ---------- A failed write puts everything back ----------
