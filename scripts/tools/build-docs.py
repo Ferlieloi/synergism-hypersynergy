@@ -1076,9 +1076,11 @@ def settings_outputs() -> None:
                     '<p>Not in the Settings tab: choices made in the header’s edit mode, a tool window or a checkbox, and state the mod keeps between sessions. The feature says where each is set.</p>'
                     + settings_table("saved-choices", [(c["title"], hidden[c["id"]]) for c in CATEGORIES if c["id"] in hidden])
                     + '</section>')
+    panel = site_image(DOCS / "res/features/settings-tab@2x.webp", "settings page")
     page("docs/wiki/settings.html", "Settings reference", "wiki",
          '<p class="breadcrumb"><a href="index.html">Wiki</a> / Settings</p><h1>Settings reference</h1>'
-         f'<p>The mod’s {len(SETTINGS)} settings: the Settings tab’s pages in the order the tab shows them (open the mod’s panel from its icon at the top left of the game), then what the mod saves from elsewhere. Each row links to the feature that explains it; the grey name under a setting is its name in the mod’s files, as a backup or the Log shows it.</p>'
+         + figure_html("../", panel, "The mod panel's Settings tab, QoL page")
+         + f'<p>The mod’s {len(SETTINGS)} settings: the Settings tab’s pages in the order the tab shows them (open the mod’s panel from its icon at the top left of the game), then what the mod saves from elsewhere. Each row links to the feature that explains it; the grey name under a setting is its name in the mod’s files, as a backup or the Log shows it.</p>'
          '<p>Defaults are the mod’s initial values: a saved choice, a migration or another setting can change what you see.</p>'
          + "".join(sections), depth=1, folding=True,
          description="Every Hypersynergism setting, page by page as the Settings tab shows them: its default and the feature it belongs to.")

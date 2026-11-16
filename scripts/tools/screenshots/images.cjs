@@ -1,9 +1,12 @@
 // Where each screenshot goes on the website (docs/res/<to>@2x.webp), its crop in the shot's pixels (2x), and its
 // width on the site when smaller than taken (page px: the file is scaled down to twice that). `marked`: where its
-// annotated version goes (game-shots.cjs draws the marks; a view without `to` is used only annotated).
+// annotated version goes (game-shots.cjs draws the marks; a view without `to` is used only annotated). `also`: more
+// files from the same clean shot, each with its own `to`, `crop` and `shown`.
 // The names are those of game-shots.cjs, plus steam-loader (loader-shot.cjs).
 module.exports = {
-    'mod-panel': { to: 'features/mod-panel' },
+    // The catalogue's mod panel entry; the settings page's intro (build-docs.py) shows its top, down to the
+    // Singularity group, small enough to be no taller than the intro's text (the tables below keep the full width)
+    'mod-panel': { to: 'features/mod-panel', also: [{ to: 'features/settings-tab', crop: [0, 0, 1120, 696], shown: 450 }] },
     // Getting started: down to "Don't switch ambrosia loadouts" (Advanced isn't needed there)
     'autosing-settings': { to: 'guides/autosing-settings', crop: [0, 0, 1120, 1420] },
     'header-edit': { marked: 'features/header-edit' },

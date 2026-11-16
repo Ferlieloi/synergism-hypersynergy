@@ -52,8 +52,10 @@ if (unknown.length) {
 
     console.log('Converting to WebP...')
     for (const name of names) {
-        const { to, marked, crop, shown } = IMAGES[name]
-        for (const [file, dest] of [[name, to], [`${name}-marked`, marked]]) {
+        const { to, marked, crop, shown, also = [] } = IMAGES[name]
+        const outputs = [{ file: name, to, crop, shown }, { file: `${name}-marked`, to: marked, crop, shown },
+            ...also.map(a => ({ file: name, ...a }))]
+        for (const { file, to: dest, crop, shown } of outputs) {
             if (!dest) continue
             const args = [path.join(paths.repo, 'scripts/tools/prepare-image.cjs'), path.join(outDir('screenshots'), `${file}@2x.png`),
                 path.join(paths.repo, 'docs/res', `${dest}@2x.webp`)]
