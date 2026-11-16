@@ -130,7 +130,11 @@ export class HSAutosingStrategyModal {
         this.#key = key;
         this.#editedName = this.#mode === 'edit' ? existingStrategy!.strategyName : undefined;
 
-        const strategy: AutosingStrategyPhase[] = existingStrategy ? structuredClone(existingStrategy.strategy) : [];
+        // A new strategy starts with two empty phases around AOAG, which runs before the phase that ends at "end"
+        const strategy: AutosingStrategyPhase[] = existingStrategy ? structuredClone(existingStrategy.strategy) : [
+            { startPhase: "start", endPhase: "singularity", strat: [] },
+            { startPhase: "singularity", endPhase: "end", strat: [] }
+        ];
         // An older format kept the AOAG phase in the list
         const aoagIndex = strategy.findIndex(p => p.phaseId === AOAG_PHASE_ID);
         const aoagFromList = aoagIndex === -1 ? undefined : strategy.splice(aoagIndex, 1)[0];

@@ -64,7 +64,7 @@ A strategy is a list of **phases**. Each phase covers a part of the singularity,
 ![The strategy window of a default strategy: five phases from start to end, and the AOAG phase before the last one](../../res/guides/strategy-window@2x.webp)
 
 In Settings → Auto-Sing:
-- **➕ Create** opens a blank strategy (starting from a default is usually easier).
+- **➕ Create** opens a new strategy with two empty phases, "start → singularity" and "singularity → end", and the AOAG phase between them (starting from a default is usually easier).
 - **✏️ Edit** opens the selected one. Default strategies can't be changed: Edit opens a copy that you save under a new name.
 - **📤 Export** copies the strategy to share it; **📥 Import** adds one from a copy.
 
