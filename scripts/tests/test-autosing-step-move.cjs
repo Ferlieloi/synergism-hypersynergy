@@ -3,8 +3,8 @@ const path = require('node:path');
 const Module = require('node:module');
 const esbuild = require('esbuild');
 
-// Dragging a step in the strategy editor (docs/features/autosing-editor.md, "IF targets"): every "Jump here" row
-// stays between the same rows, and each IF's target follows its row.
+// Dragging a step in the strategy editor (docs/features/autosing-editor.md, "IF targets", "Dragging"): every "Jump
+// here" row and the "Add Here" separator stay between the same rows; each IF's target and the separator follow their row.
 async function main() {
     const root = path.resolve(__dirname, '../..');
     const bundled = await esbuild.build({
@@ -21,19 +21,28 @@ async function main() {
     const list = (...names) => names.map(name => name.startsWith('IF>')
         ? { challengeNumber: 200, name, ifJump: { id: name, ifJumpIndex: Number(name.slice(3)) } }
         : { challengeNumber: 1, name });
-    // The rows as text: "IF>n" an IF with its current target, "[IF>n@i]" the "Jump here" row of the IF at index i
+    // No "Add Here" row (it is always drawn in the editor): keeps the "Jump here" cases short
+    const NONE = Infinity;
+    // The rows as text: "IF>n" an IF with its current target, "[IF>n@i]" the "Jump here" row of the IF at index i,
+    // "|" the separator
     const label = step => step.ifJump ? `IF>${step.ifJump.ifJumpIndex}` : step.name;
-    const view = steps => stepListRows(steps).map(row => row.kind === 'target'
-        ? `[${label(row.ifStep)}@${row.ifIndex}]` : label(steps[row.index])).join(' ');
+    const view = (steps, separator = NONE) => stepListRows(steps, separator).map(row => row.kind === 'separator' ? '|'
+        : row.kind === 'target' ? `[${label(row.ifStep)}@${row.ifIndex}]` : label(steps[row.index])).join(' ');
     const targets = steps => steps.filter(step => step.ifJump).map(step => step.ifJump.ifJumpIndex);
-    // Moves a copy (moveStep changes the targets in place)
-    const move = (steps, from, slot) => moveStep(structuredClone(steps), from, slot);
+    // Moves a copy (moveStep changes the targets in place); the new list
+    const move = (steps, from, slot) => moveStep(structuredClone(steps), NONE, from, slot).steps;
+    // The same with a separator: the rows as text
+    const moveView = (steps, separator, from, slot) => {
+        const moved = moveStep(structuredClone(steps), separator, from, slot);
+        return view(moved.steps, moved.separatorIndex);
+    };
+    const slotOf = (steps, index) => stepSlot(steps, NONE, index);
 
     // The rows' order: "Jump here" rows before their step, in the order of their IFs, then the end-of-phase ones
     let steps = list('A', 'IF>0', 'B', 'IF>0', 'IF>4');
     assert.equal(view(steps), '[IF>0@1] [IF>0@3] A IF>0 B IF>0 [IF>4@4] IF>4');
-    assert.equal(stepSlot(steps, 0), 2);
-    assert.equal(stepSlot(steps, 4), 7);
+    assert.equal(slotOf(steps, 0), 2);
+    assert.equal(slotOf(steps, 4), 7);
 
     // The reported case: Set corruption (1) dragged below the second IF; the self-loop IF stays a self-loop
     steps = list('Before', 'Set', 'IF>2', 'IF>0', 'Exit');
@@ -86,20 +95,39 @@ async function main() {
     moved = move(steps, 1, 1);
     assert.equal(view(moved), 'A IF>2 [IF>2@1] B');
 
+    // "Add Here": drawn above the "Jump here" rows of its place, at the top for an index at or below 0
+    steps = list('A', 'IF>0', 'IF>2');
+    assert.equal(view(steps, 0), '| [IF>0@1] A IF>0 [IF>2@2] IF>2');
+    assert.equal(view(steps, -1), '| [IF>0@1] A IF>0 [IF>2@2] IF>2');
+    assert.equal(view(steps, 2), '[IF>0@1] A IF>0 | [IF>2@2] IF>2');
+    assert.equal(view(steps, 3), '[IF>0@1] A IF>0 [IF>2@2] IF>2 |');
+
+    // A step dragged across "Add Here" leaves it in place, and lands above or below it by the mouse
+    steps = list('A', 'B', 'C');
+    assert.equal(view(steps, 1), 'A | B C');
+    assert.equal(moveView(steps, 1, 0, 2), '| B A C');
+    assert.equal(moveView(steps, 1, 2, 1), 'A C | B');
+    assert.equal(moveView(steps, 1, 2, 2), 'A | C B');
+    // The step below it dragged away: it stays, before the next step (or at the end)
+    assert.equal(moveView(steps, 1, 1, 3), 'A | C B');
+    assert.equal(moveView(steps, 2, 2, 0), 'C A B |');
+
     // A drag through several places and back leaves the list as it was
     steps = list('Before', 'Set', 'IF>2', 'IF>0', 'Exit');
-    let current = structuredClone(steps);
+    const separator = 3;
+    assert.equal(view(steps, separator), '[IF>0@3] Before Set [IF>2@2] IF>2 | IF>0 Exit');
+    let current = { steps: structuredClone(steps), separatorIndex: separator };
     let index = 1;
-    for (const slot of [3, 4, 5, 6, 5, 4, 3, 2, 1, 0, 1, 2]) {
-        const step = current[index];
-        current = moveStep(current, index, slot);
-        index = current.indexOf(step);
-        assert.equal(stepSlot(current, index), slot);
+    for (const slot of [3, 4, 5, 6, 7, 6, 5, 4, 3, 2, 1, 0, 1, 2]) {
+        const step = current.steps[index];
+        current = moveStep(current.steps, current.separatorIndex, index, slot);
+        index = current.steps.indexOf(step);
+        assert.equal(stepSlot(current.steps, current.separatorIndex, index), slot);
     }
-    assert.deepEqual(current, steps);
+    assert.deepEqual(current, { steps, separatorIndex: separator });
 
     // Same place: no change
-    assert.deepEqual(move(steps, 1, stepSlot(steps, 1)), steps);
+    assert.deepEqual(moveStep(structuredClone(steps), separator, 1, stepSlot(steps, separator, 1)), { steps, separatorIndex: separator });
 
     console.log('autosing step move tests passed');
 }

@@ -311,8 +311,8 @@ const AUTO_SCROLL_MAX_PX_PER_FRAME = 12;
  *       with the mouse. The list is drawn again whenever the drop place changes, and the dragged row found again.
  *       A double-click on a step moves the separator below it.
  *     - An IF jump's target is a step index (the step it jumps before): adding, duplicating or deleting a step
- *       shifts the targets after it. A dragged step leaves every "Jump here" row between the same rows, its own one
- *       too (hs-autosing-step-rows.ts). An IF and its "Jump here" row link to each other.
+ *       shifts the targets after it. A dragged step leaves every "Jump here" row (its own one too) and the separator
+ *       between the same rows (hs-autosing-step-rows.ts). An IF and its "Jump here" row link to each other.
  *     - The fields the action shows are checked as they are typed: a bad value turns red and Add/Update says why
  *       and refuses. Never corrected. Enter in a field = Add/Update.
  *     - Edit mode follows the edited step through drags, duplicates and deletes (renumbered); Undo/Redo leave it.
@@ -483,17 +483,13 @@ export class HSAutosingChallengeModal {
 
     // The steps, with each IF jump's target before the step it jumps to and the separator where new steps go
     #renderList(): string {
-        const html: string[] = [];
-        if (this.#separatorIndex <= 0) html.push(this.#renderSeparator());
-        for (const row of stepListRows(this.#steps)) {
-            if (row.kind === 'target') {
-                html.push(this.#renderJumpTarget(row.ifStep, row.ifIndex));
-                continue;
+        return stepListRows(this.#steps, this.#separatorIndex).map(row => {
+            switch (row.kind) {
+                case 'step': return this.#renderStep(this.#steps[row.index], row.index);
+                case 'target': return this.#renderJumpTarget(row.ifStep, row.ifIndex);
+                case 'separator': return this.#renderSeparator();
             }
-            html.push(this.#renderStep(this.#steps[row.index], row.index));
-            if (this.#separatorIndex === row.index + 1) html.push(this.#renderSeparator());
-        }
-        return html.join("");
+        }).join("");
     }
 
     // After any change of the steps or of the separator
@@ -1067,9 +1063,12 @@ export class HSAutosingChallengeModal {
     }
 
     // The number of rows in the list whose middle is above the mouse (the dragged row left out): steps, plus the
-    // "Jump here" rows when a step is dragged (it lands on either side of them)
-    #rowsAbove(clientY: number, withJumpRows: boolean): number {
-        const rows = this.#list.querySelectorAll<HTMLElement>(`.hs-challenge-item${withJumpRows ? "" : "[data-index]"}:not(.hs-challenge-lifted):not(.hs-challenge-placeholder)`);
+    // "Jump here" rows and "Add Here" when a step is dragged (it lands on either side of them)
+    #rowsAbove(clientY: number, allRows: boolean): number {
+        const shown = ":not(.hs-challenge-lifted):not(.hs-challenge-placeholder)";
+        const rows = this.#list.querySelectorAll<HTMLElement>(allRows
+            ? `.hs-challenge-item${shown}, .hs-challenge-separator${shown}`
+            : `.hs-challenge-item[data-index]${shown}`);
         let count = 0;
         for (const row of rows) {
             const rect = row.getBoundingClientRect();
@@ -1080,15 +1079,15 @@ export class HSAutosingChallengeModal {
     }
 
     // Moves the dragged item to the place under the mouse; false when it is already there. place: the number of rows
-    // above it (a step: steps and "Jump here" rows, which keep their place; otherwise steps only)
+    // above it (a step: every row, the others keeping their place; otherwise steps only)
     #dropAt(place: number): boolean {
         const target = this.#drag!.target;
         switch (target.kind) {
             case 'step': {
-                if (place === stepSlot(this.#steps, target.index)) return false;
+                if (place === stepSlot(this.#steps, this.#separatorIndex, target.index)) return false;
                 const step = this.#steps[target.index];
                 this.#keepEditing(() => {
-                    this.#steps = moveStep(this.#steps, target.index, place);
+                    ({ steps: this.#steps, separatorIndex: this.#separatorIndex } = moveStep(this.#steps, this.#separatorIndex, target.index, place));
                 });
                 target.index = this.#steps.indexOf(step);
                 return true;
