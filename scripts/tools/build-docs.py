@@ -294,6 +294,12 @@ def page(path: str, title: str, tab: str, body: str, *, depth: int = 0,
         + ('</a>' if href else '</span>')
         for icon, value, label, color, href in counters
     )
+    # The mod's icon opens a quick access menu, like the mod's icon in the game: the guides, then Help. CSS only (guide.css).
+    quick_links = "".join(
+        f'<a href="{prefix}wiki/{c["id"]}-guide.html"><span class="quick-icon">{category_icon(c, prefix, 20)}</span>'
+        f'{esc(guide_title(c["id"]))}</a>'
+        for c in CATEGORIES if c["id"] in GUIDES
+    ) + f'<a class="quick-help" href="{prefix}index.html#help"><span class="quick-icon"><span class="help-mark">?</span></span>Help &amp; bug reports</a>'
     extra_scripts = "".join(f'\n  <script src="{prefix}js/{esc(script)}" defer></script>' for script in scripts)
     unfold = "document.documentElement.classList.remove('folding')"
     folding_script = (f"\n  <script>document.documentElement.classList.add('folding'); setTimeout(() => {unfold}, 5000);</script>"
@@ -319,7 +325,8 @@ def page(path: str, title: str, tab: str, body: str, *, depth: int = 0,
   <header>
     <div id="first-row" aria-label="Guide overview">{counter_html}</div>
     <div id="second-row"><div id="second-row-left-container"><div class="second-row-subcontainer">
-      <img class="res-icon" src="{prefix}{MOD_ICON}" width="32" height="32" alt="">
+      <div class="quick-menu"><button type="button" class="quick-menu-btn" aria-label="Guides and help"><img class="res-icon" src="{prefix}{MOD_ICON}" width="32" height="32" alt=""></button>
+        <div class="quick-menu-list">{quick_links}</div></div>
       <div class="second-row-disp">Hypersynergism<br>Guide for <a class="version-link" href="{prefix}{version_entry_href()}"><span id="version_num">v{esc(VERSION)}</span></a></div>
     </div></div><p class="header-credit">A Synergism QoL mod<br><span>Maintained by Ferlieloi, maenhiir &amp; contributors</span></p></div>
     <nav aria-label="Main navigation"><div id="tabs">{nav}</div></nav>
