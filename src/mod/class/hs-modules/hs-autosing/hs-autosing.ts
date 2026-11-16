@@ -737,13 +737,6 @@ export class HSAutosing extends HSModule {
 
         if (!this.#strategyPhaseRanges) this.#rebuildStrategyPhaseCaches();
 
-        if (stage === 'final') {
-            const finalPhase = this.#finalPhaseConfig;
-            if (!finalPhase) { HSLogger.warn("No final phase found in strategy - Autosing stopped.", this.context); this.stopAutosing(); return; }
-            await this.#executePhase(finalPhase);
-            return;
-        }
-
         const cachedPhaseConfig = this.#phaseConfigByStage.get(stage);
         if (cachedPhaseConfig) {
             await this.#executePhase(cachedPhaseConfig);
@@ -792,14 +785,13 @@ export class HSAutosing extends HSModule {
         this.#autosingModal?.setCurrentPhase(phaseLabel);
         const passRecord = this.#recordTimings ? HSAutosingRecorder.startPass(phaseLabel) : undefined;
 
-        const isEndPhase = phaseConfig.endPhase === "end";
         // Jumps taken by each IF with a max jumps in this pass, by its index
         const jumpCounts = new Map<number, number>();
         for (let i = 0; i < phaseConfig.strat.length; i++) {
             if (this.#autosingModal?.getIsPaused()) await this.#waitIfAutosingPaused();
 
-            // Autosing disabled or AOAG observer activated
-            if (!this.#autosingEnabled || (this.#antiquitiesObserverActivated && !isEndPhase && !ignoreObserverActivated)) {
+            // Autosing disabled, or AOAG observer activated (except for the AOAG and final phases, run after it)
+            if (!this.#autosingEnabled || (this.#antiquitiesObserverActivated && !ignoreObserverActivated)) {
                 this.#autosingModal?.recordPhase(phaseLabel);
                 if (passRecord) HSAutosingRecorder.endPass(passRecord, this.#autosingEnabled ? 'aoag' : 'stopped');
                 return;
@@ -1595,8 +1587,11 @@ export class HSAutosing extends HSModule {
         // Stopped during the AOAG phase: don't go on with the final phase (corruptions, Ascend…)
         if (!this.#autosingEnabled) return;
 
+        // The phase that ends at "end": singularity → end for strategies saved since that rule (older ones may start earlier)
+        const finalPhase = this.#finalPhaseConfig;
+        if (!finalPhase) { HSLogger.warn("No final phase found in strategy - Autosing stopped.", this.context); this.stopAutosing(); return; }
         this.#prevActionTime = performance.now();
-        await this.#matchStageToStrategy('final');
+        await this.#executePhase(finalPhase, { ignoreObserverActivated: true });
         if (!this.#autosingEnabled) return; // If the user stopped during the very last step
 
         // Export to gather a few quarks
