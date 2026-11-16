@@ -573,7 +573,7 @@
     {
       "id": "input",
       "title": "Click-saving tools & input",
-      "color": "gold",
+      "color": "orchid",
       "icon": "docs/res/categories/input.png",
       "intro": "Convenience controls use the game's own actions; optional repeated input is active only while its modifier is held.",
       "sources": [
@@ -994,7 +994,7 @@
     {
       "id": "ambrosia",
       "title": "Ambrosia loadouts & income",
-      "color": "orchid",
+      "color": "royalblue",
       "icon": "docs/res/categories/ambrosia.png",
       "intro": "The mod enhances the game's Ambrosia loadout controls and adds generation information for blue, red and purple resources.",
       "sources": [
