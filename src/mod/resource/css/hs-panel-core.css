@@ -731,7 +731,7 @@ select::-webkit-scrollbar-corner {
    on a line at the panel's narrowest width. The block's left padding is the gap between them; between rows, the
    block's 5px bottom padding + 5px margin give the same 10px as the Tools grids */
 .hs-button-group-autosing-strategy .hs-panel-btn {
-    width: 120px;
+    width: 110px;
 }
 
 .hs-inline-button.hs-button-group-autosing-strategy {
