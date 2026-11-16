@@ -1233,7 +1233,7 @@ def build() -> None:
         + "".join(feature_html(c, f, compact=True) for f in c["features"]) + '</section>'
         for c in CATEGORIES)
     page("docs/features.html", "All features", "features",
-         f'<h1>Mod features</h1><p>{feature_count} features across {len(CATEGORIES)} categories. Search includes descriptions, usage and limits. Open a category to see its features, and an entry for its details.</p>'
+         f'<h1>Mod features</h1><p>{feature_count} features across {len(CATEGORIES)} categories. Search includes descriptions, usage and limits. Open a category, then an entry for its details.</p>'
          '<noscript><p>Search needs JavaScript; all features and their details remain available below.</p></noscript>' + search + sections,
          folding=True, description=f"All {feature_count} Hypersynergism features, searchable: what each does, where to find it and its limits.")
 
