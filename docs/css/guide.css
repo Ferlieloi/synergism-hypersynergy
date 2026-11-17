@@ -80,6 +80,13 @@ nav { grid-column: 2; grid-row: 2; }
 .page-wrapper li { margin: 5px 0; }
 a, a:visited { color: #82baff; padding: 0; display: inline; }
 a:hover, a:active, a:hover:visited { color: #b8d9ff; }
+/* A link among text gets a faint underline: its colour alone is under the 3:1 WCAG asks against the text around it (1.4.1).
+   Not in lists made only of links (categories, a wiki page's contents, sources), nor on titles or setting chips (their own box).
+   :where keeps it weak, so those exceptions win. */
+.page-wrapper :where(p, li, td, .changelog-merge) a:where(:not(.permalink, .setting-ref)) { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: .2em;
+  text-decoration-color: color-mix(in srgb, currentColor 40%, transparent); }
+.page-wrapper :where(p, li, td, .changelog-merge) a:where(:not(.permalink, .setting-ref)):hover { text-decoration-color: currentColor; }
+.page-wrapper :is(.category-list, .wiki-toc, .sources) a { text-decoration: none; }
 a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline: 2px solid #f4d565; outline-offset: 4px; }
 .skip-link { position: fixed; top: -60px; left: 8px; z-index: 5; padding: 8px; background: #101828; }
 .skip-link:focus { top: 8px; }
@@ -121,9 +128,11 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .feature:target { box-shadow: inset 2px 0 #f5d96b; background: #201e26; }
 .permalink, .permalink:visited { color: ghostwhite; }
 /* Titles stand out from their summaries and from the category's intro, so the page can be skimmed by title. */
-.feature h3 .permalink, .feature h3 .permalink:visited { color: #fff; font-weight: bold; }
-.page-wrapper .feature h3 { font-size: 1.12em; margin-bottom: 2px; }
-.page-wrapper .feature h3 + p { margin-top: 2px; color: #d3cfdc; }
+/* A wiki page's titles are h2 (no level skipped under its h1, build-docs.py feature_html()), drawn as the features page's h3. */
+.feature :is(h2, h3) .permalink, .feature :is(h2, h3) .permalink:visited { color: #fff; font-weight: bold; }
+.page-wrapper .feature :is(h2, h3) { font-size: 1.12em; margin-bottom: 2px; }
+.page-wrapper .feature h2 { line-height: 1.4; margin-top: 20px; margin-left: 20px; border: 0; padding: 0; }
+.page-wrapper .feature :is(h2, h3) + p { margin-top: 2px; color: #d3cfdc; }
 /* The intro and its guide link: one block with an unbroken rule in the category's colour. */
 .category-intro { color: #d3cfdc; border-left: 3px solid var(--category-color); padding-left: 10px; margin: 10px 0 12px 30px; }
 .category-intro > p { margin: 0; }
@@ -156,7 +165,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .shot-side { float: right; clear: right; width: fit-content; max-width: min(50%, 600px); margin: 6px 0 16px 24px; }
 .feature details .shot-side { margin-left: 24px; }
 .page-wrapper :is(h2, h3, h4), .page-wrapper hr { clear: both; }
-.page-wrapper .feature h3 { clear: none; }
+.page-wrapper .feature :is(h2, h3) { clear: none; }
 /* The headings after a guide image marked #past-headings, down to the next image (build-docs.py): beside it */
 .page-wrapper .beside-shot { clear: none; }
 .feature, .feature details, .callout, .limits { display: flow-root; }
@@ -270,7 +279,7 @@ footer { clear: both; margin: 45px 0 18px 30px; padding-top: 15px; border-top: 1
   #page-container { padding: 16px 12px; }
   .page-wrapper { padding: 0; }
   .page-wrapper p, .page-wrapper h2, .page-wrapper h3, .page-wrapper h4, .feature details, .limits, .callout, .shot, footer, .table-scroll, .feature-controls, .changelog-controls, .changelog-sources, .changelog-merge, .category-intro { margin-left: 0; }
-  .changelog-entry h3 { margin-left: 0; }
+  .changelog-entry h3, .page-wrapper .feature h2 { margin-left: 0; }
   .shot-side, .feature details .shot-side { float: none; max-width: 100%; margin-left: 0; }
   .page-wrapper ul, .page-wrapper ol { margin-left: 12px; }
   .category-list { columns: 1; }

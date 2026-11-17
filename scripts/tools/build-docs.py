@@ -255,8 +255,10 @@ def feature_html(category: dict, feature: dict, *, compact: bool = False) -> str
         body = f'<details><summary>How to use it &amp; limits</summary>{body}</details>'
         if images:
             thumb = thumbnail_html(prefix, images[0][1])
+    # Under its category's h2 on the features page; right under the h1 on a wiki page (no level skipped), styled the same (guide.css).
+    level = 3 if compact else 2
     return (f'<article class="feature" id="{esc(f["id"])}">{thumb}'
-            f'<h3><a class="permalink" href="#{esc(f["id"])}">{esc(f["title"])}</a></h3>'
+            f'<h{level}><a class="permalink" href="#{esc(f["id"])}">{esc(f["title"])}</a></h{level}>'
             f'<p>{esc(f["summary"])}</p>{body}</article>')
 
 
@@ -295,7 +297,8 @@ def page(path: str, title: str, tab: str, body: str, *, depth: int = 0,
     prefix = "../" * depth
     wrapper = f' accented" style="--accent:{accent}' if accent else ""
     tabs = [("home", "Home", "index.html", "orange"),
-            ("features", "Features", "features.html", "green"),
+            # A brighter green than the game's: the selected tab's dark text needs 4.5:1 (WCAG AA)
+            ("features", "Features", "features.html", "#009400"),
             ("wiki", "Wiki", "wiki/index.html", "cyan"),
             ("changelog", "Changelog", "changelog.html", "plum"),
             ("github", "GitHub", "github.html", "lightskyblue"),
@@ -309,7 +312,7 @@ def page(path: str, title: str, tab: str, body: str, *, depth: int = 0,
     # Each counter leads to what it counts; "All Channels" on the changelog is already there.
     counters = [("1", str(len(FEATURES)), " Features", "yellow", "features.html"),
                 ("2", str(len(CATEGORIES)), " Categories", "orange", "wiki/index.html"),
-                ("3", str(len(SETTINGS)), " Settings", "red", "wiki/settings.html"),
+                ("3", str(len(SETTINGS)), " Settings", "#ff2020", "wiki/settings.html"),  # pure red is 4.45:1 on the page, under AA's 4.5
                 ("4", "All" if tab == "changelog" else "Live", " Channels" if tab == "changelog" else " Channel", "magenta",
                  None if tab == "changelog" else "wiki/getting-started.html#channels"),
                 ("5", "QoL", " + opt-in AutoSing", "mediumpurple", "wiki/autosing-guide.html")]
@@ -355,7 +358,7 @@ def page(path: str, title: str, tab: str, body: str, *, depth: int = 0,
         <div class="quick-menu-list">{quick_links}</div></div>
       <div class="second-row-disp">Hypersynergism<br>Guide for <a class="version-link" href="{prefix}{version_entry_href()}"><span id="version_num">v{esc(VERSION)}</span></a></div>
     </div></div>
-    <div id="first-row" aria-label="Guide overview">{counter_html}</div>
+    <div id="first-row" role="group" aria-label="Guide overview">{counter_html}</div>
     <p class="header-credit">A Synergism QoL mod<br><span>Maintained by Ferlieloi, maenhiir &amp; contributors</span></p></div>
     <nav aria-label="Main navigation"><div id="tabs">{nav}</div></nav>
   </header>
