@@ -261,6 +261,8 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
             buttonId: 'automationQuickBar-hepteracts',
             label: 'Hept Auto-Open',
             iconSrc: './Pictures/Default/TinyWow7.png',
+            // Not the game's unlock (Singularity 1), on purpose: low-Singularity players learn to choose what they
+            // craft before an all-on shortcut (docs/features/quickbars.md)
             minHighestSingularityCount: 15
         },
         AutoAscend: {

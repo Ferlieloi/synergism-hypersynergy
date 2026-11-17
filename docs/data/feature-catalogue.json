@@ -565,7 +565,8 @@
             "centerQuickbars"
           ],
           "sources": [
-            "src/mod/class/hs-modules/hs-qol-quickbar/hs-qolQuickbarAutomation.ts"
+            "src/mod/class/hs-modules/hs-qol-quickbar/hs-qolQuickbarAutomation.ts",
+            "docs/features/quickbars.md"
           ]
         }
       ]
