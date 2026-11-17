@@ -1051,7 +1051,7 @@ export class HSHeaterUIResult {
             modal.removeEventListener('contextmenu', onIconButtonContextMenu);
             window.removeEventListener('keydown', onEscape);
             this.#attachedModalHandlers.delete(modal);
-            HSLogger.warn(`modal-handlers-detached: ${JSON.stringify({ modalId })}`, this.#context);
+            HSLogger.debug(() => `modal-handlers-detached: ${JSON.stringify({ modalId })}`, this.#context);
         };
 
         this.#attachedModalHandlers.set(modal, {
