@@ -2,7 +2,7 @@
 """Build the public site and the feature inventory from one catalogue.
 
 No dependencies or network access. Existing developer documents are inputs only.
-What each page is built from and how it behaves: docs/features/website.md.
+What each page is built from: docs/features/website.md; how each page behaves: docs/features/website-pages.md.
 Run from any directory: python scripts/tools/build-docs.py [--check | --validate | --changelog-only] [--out DIR]
 """
 from __future__ import annotations

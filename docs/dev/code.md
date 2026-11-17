@@ -23,7 +23,9 @@ header layout check in Chromium.
 - Imports prefixed with `inline:` are inlined as strings by `esbuild-plugin-inline-import` (CSS, HTML and JSON files
   from `src/mod/resource/`); `.png` imports become data URLs. Their types: `types/hs-inline-imports.d.ts`.
 
-`HSElementHooker.HookElement<T>` returns `T | null` on timeout; `HookElements` returns an actual array (empty on timeout, without partial results). Both log the missing selectors. Optional features check for absence before installing handlers; required mod-panel elements use `RequireElement<T>`, which throws with the selector. No proxy stands in for a missing element. `HSElementHooker.watchElement` calls back on each change of the element's parsed value, with no throttle (a dropped change leaves a stale value), and returns a stop function.
+`HSElementHooker.HookElement<T>` returns `T | null` on timeout; `HookElements` returns an actual array (empty on timeout, without partial results). Both log the missing selectors. Optional features check for absence before installing handlers; required mod-panel elements use `RequireElement<T>`, which throws with the selector. No proxy stands in for a missing element. `HSElementHooker.watchElement` calls back on each change of the element's parsed value, with no throttle (a dropped change leaves a stale value), and returns a stop function. `HookElement` polls rather than using a `MutationObserver`: it waits 500 ms at most and targets are usually there already, while a document observer would fire at every game text update.
+
+Load steps: `Hypersynergism.#onGameLoaded` runs the post-load work in one linear method, and `HSUtils.isOfflinePopupOpen` / `isGameRunning` / `isGameLoaded` are the shared checks. `HSGlobal.General.isModFullyLoaded` stays: it refuses the `startAutosing` switch's stored state that the settings sync replays at load, which `isGameLoaded` can't (in a browser the game is loaded by then).
 
 ## Build
 
@@ -97,6 +99,8 @@ the mod's own small elements (a settings block, a table cell) is fine.
   `hs-tip-dim`, `hs-tip-warn`. Default: 150 ms, below, about 420 px at most; don't put line breaks in a text to shape it,
   it wraps by itself. Content made of lines (a list) takes `wrap: false`, not a width.
 - The mouse passes through a tooltip. A window with pins or scrolling keeps its own code and uses `HSTooltip.place()`.
+- A `title` becomes an `HSTooltip` only when its code is touched anyway. Fit a tooltip to `HSTooltip` rather than add
+  options to keep an old one's exact behaviour.
 
 ## Class headers and authors
 
