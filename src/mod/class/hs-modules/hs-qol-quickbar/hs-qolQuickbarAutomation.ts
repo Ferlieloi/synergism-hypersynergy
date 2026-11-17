@@ -46,6 +46,7 @@ type AutomationQuickbarSoloConfig = {
     iconSrc: string;
     iconElementId?: string;
     minHighestSingularityCount?: number;
+    unlockAttribute?: string;
 };
 
 type AutomationQuickbarGroupConfig = {
@@ -58,6 +59,9 @@ type AutomationQuickbarGroupConfig = {
     iconSrc: string;
     iconElementId?: string;
     minHighestSingularityCount?: number;
+    // An attribute of <html> the game sets to 'true' once the feature is unlocked (its own rule, kept up to date
+    // by its revealStuff()). Like minHighestSingularityCount, it replaces the check that the game's toggle is shown.
+    unlockAttribute?: string;
 };
 
 type AutomationQuickbarToggleConfig = AutomationQuickbarSoloConfig | AutomationQuickbarGroupConfig;
@@ -268,7 +272,8 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
             buttonId: 'automationQuickBar-autoascend',
             label: 'Auto Ascend',
             iconSrc: './Pictures/Simplified/AscensionNoBorder.png',
-            minHighestSingularityCount: 25
+            // The game: highestSingularityCount > 0 or cube upgrade 10
+            unlockAttribute: 'data-auto-ascend-unlock'
         }
     } as const satisfies Record<AutomationQuickbarRenderKey, AutomationQuickbarToggleConfig>;
 
@@ -458,8 +463,12 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
         return gameData?.highestSingularityCount ?? 0;
     }
 
-    /** Determine whether a toggle should be visible based on `minHighestSingularityCount`. */
+    /** Determine whether a toggle should be visible based on `minHighestSingularityCount` and `unlockAttribute`. */
     #isAutomationToggleVisible(config: AutomationQuickbarToggleConfig, highestSingularityCount: number): boolean {
+        if (config.unlockAttribute !== undefined
+            && document.documentElement.getAttribute(config.unlockAttribute) !== 'true') {
+            return false;
+        }
         const minSingularity = config.minHighestSingularityCount;
         if (minSingularity === undefined) {
             return true;
@@ -469,7 +478,7 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
 
     /** Whether selector-visibility rules should be applied for this config. */
     #shouldApplyAutomationSelectorVisibility(config: AutomationQuickbarToggleConfig): boolean {
-        if (config.minHighestSingularityCount !== undefined) {
+        if (config.minHighestSingularityCount !== undefined || config.unlockAttribute !== undefined) {
             return false;
         }
         return config.selectorVisibility !== 'none';
@@ -968,6 +977,25 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
                 }
             } catch (e) {
                 HSLogger.log(`Error setting watcher for ${sel}: ${e}`, this.context);
+            }
+        }
+
+        // Unlock attributes on <html>: show the button as soon as the game unlocks the feature
+        const configs = Object.values(HSQOLAutomationQuickbar.AUTOMATION_QUICKBAR_CONFIG) as readonly AutomationQuickbarToggleConfig[];
+        const root = document.documentElement;
+        for (const attribute of new Set(configs.map(c => c.unlockAttribute).filter((a): a is string => !!a))) {
+            const key = `html[${attribute}]`;
+            if (this.#automationQuickBarWatcherBySelector.has(key)) continue;
+            const stop = HSElementHooker.watchElement(root, () => updateUI(), {
+                attributes: true,
+                attributeFilter: [attribute],
+                childList: false,
+                subtree: false,
+                characterData: false,
+                valueParser: (el) => el.getAttribute(attribute)
+            });
+            if (stop) {
+                this.#automationQuickBarWatcherBySelector.set(key, { stop, element: root });
             }
         }
     }
