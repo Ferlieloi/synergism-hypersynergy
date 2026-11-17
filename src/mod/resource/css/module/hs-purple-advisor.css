@@ -1,0 +1,69 @@
+/* The Purple subtab's upgrade ranking (HSPurpleAdvisor). Injected only while its setting is on. */
+
+#hs-purple-advisor {
+    box-sizing: border-box;
+    width: min(760px, calc(100% - 16px));
+    margin: 6px auto;
+    padding: 4px 10px 6px;
+    border: 1px solid var(--purple-box-color);
+    border-radius: 4px;
+    background-color: var(--box-color);
+    font-size: 0.85em;
+}
+
+#hs-purple-advisor .hs-purple-advisor-title {
+    margin: 0 0 2px;
+    color: var(--purple-text-color);
+    text-align: left;
+}
+
+#hs-purple-advisor .hs-purple-advisor-dim {
+    color: #888;
+}
+
+#hs-purple-advisor table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+#hs-purple-advisor th,
+#hs-purple-advisor td {
+    padding: 1px 4px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    text-align: right;
+    line-height: 1.35;
+}
+
+#hs-purple-advisor th {
+    color: #888;
+    font-weight: normal;
+}
+
+#hs-purple-advisor th:first-child,
+#hs-purple-advisor td:first-child {
+    width: 46%;
+    text-align: left;
+}
+
+#hs-purple-advisor th:nth-child(2),
+#hs-purple-advisor td:nth-child(2) {
+    width: 20%;
+}
+
+/* The Purple Honey gain carries the ranking; the other incomes are secondary */
+#hs-purple-advisor td:nth-child(3) {
+    color: var(--purple-text-color);
+}
+
+#hs-purple-advisor td:nth-child(4),
+#hs-purple-advisor td:nth-child(5) {
+    color: #999;
+}
+
+#hs-purple-advisor tr.hs-purple-advisor-message td {
+    color: #999;
+    text-align: left;
+}

@@ -8,6 +8,7 @@ import { HSSettings } from "../settings/hs-settings";
 import { HSMouse } from "../hs-mouse";
 import { HSStorage } from "../hs-storage";
 import { HSAmbrosia } from "../../hs-modules/hs-ambrosia/hs-ambrosia";
+import { HSPurpleAdvisor } from "../../hs-modules/hs-purple-advisor/hs-purple-advisor";
 import { HSGameState } from "../hs-gamestate";
 import { HSGameData } from "../gds/hs-gamedata";
 import { HSGameDataAPI } from "../gds/hs-gamedata-api";
@@ -99,6 +100,12 @@ export const HS_MODULE_DEFINITIONS = [
         moduleClass: HSAmbrosia,
         context: 'HSAmbrosia',
         moduleColor: 'blueviolet',
+    },
+    {
+        className: 'HSPurpleAdvisor',
+        moduleClass: HSPurpleAdvisor,
+        context: 'HSPurpleAdvisor',
+        moduleColor: 'orchid',
     },
     {
         className: 'HSHeaderLoadoutIcons',

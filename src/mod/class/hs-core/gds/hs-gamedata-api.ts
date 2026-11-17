@@ -20,7 +20,8 @@ import { AmbrosiaHelper } from "./hs-gamedata-api-ambrosia";
 import { GoldenQuarkHelper } from "./hs-gamedata-api-goldenQuark";
 import { OcteractHelper } from "./hs-gamedata-api-octeract";
 import { LuckHelper } from "./hs-gamedata-api-luck";
-import { PurpleHelper } from "./hs-gamedata-api-purple";
+import { PurpleHelper, PURPLE_AMBROSIA_UPGRADE_KEYS, PURPLE_REACTOR_UPGRADE_KEYS, type PurpleReactorUpgradeKey, type PurpleAmbrosiaUpgradeKey } from "./hs-gamedata-api-purple";
+import { rankPurpleUpgrades, type PurpleAdvisorResult } from "./hs-purple-upgrade-advisor";
 import { SynergismLevelHelper } from "./hs-gamedata-api-synergismLevel";
 import type { HSCalculationComponents } from "../../../types/data-types/hs-gamedata-api-types";
 import { checkCalculationCache, updateCalculationCache, clearCalculationCache, dumpCalculationCache, createCalculationCache } from "./hs-gamedata-api-cache";
@@ -901,6 +902,34 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             craftRedAmbrosiaCost: (2_500 - redReduction) * discount,
             craftPurpleHoneyCost: (500 - honeyReduction) * discount,
         };
+    }
+
+    /**
+     * The next Purple Reactor and Purple Ambrosia upgrade levels ranked by Purple Honey growth per Purple Honey
+     * spent (rankPurpleUpgrades). Null without save data.
+     */
+    calculatePurpleUpgradeAdvice(): PurpleAdvisorResult | null {
+        const data = this.gameData;
+        const income = this.ambrosia.buildAmbrosiaBarIncomeInput();
+        if (!data || !income) return null;
+
+        const reactorLevels: Partial<Record<PurpleReactorUpgradeKey, number>> = {};
+        for (const key of PURPLE_REACTOR_UPGRADE_KEYS) {
+            reactorLevels[key] = this.purple.getPurpleReactorUpgradeLevel(key);
+        }
+        const zodiacLevels: Partial<Record<PurpleAmbrosiaUpgradeKey, number>> = {};
+        for (const key of PURPLE_AMBROSIA_UPGRADE_KEYS) zodiacLevels[key] = this.purple.getPurpleAmbrosiaUpgradeLevel(key);
+        const craft = this.calculatePurpleAmbrosiaCraftCosts();
+
+        return rankPurpleUpgrades({
+            income,
+            reactorLevels,
+            zodiacLevels,
+            lifetimePurpleHoney: Number(data.purpleReactor?.lifetimePurpleHoney ?? 0),
+            ariesDigits: this.purple.getAriesDigits(),
+            craftPurpleHoneyCost: craft.craftPurpleHoneyCost,
+            craftRedAmbrosiaCost: craft.craftRedAmbrosiaCost,
+        });
     }
 
     // Kept here: the helpers' contexts and the level milestones (synergismLevelMilestones, called with this) read it

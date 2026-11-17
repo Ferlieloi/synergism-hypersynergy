@@ -4,7 +4,7 @@ import { HSGlobal } from "../hs-global";
 import type { GameData, RedAmbrosiaUpgrades } from "../../../types/data-types/hs-player-savedata";
 import type { AmbrosiaUpgradeNames, AmbrosiaUpgradeRewards, AmbrosiaUpgradeCalculationCollection, AmbrosiaUpgradeCalculationConfig, AmbrosiaUpgradeEffectContext, RedAmbrosiaUpgradeRewards, RedAmbrosiaUpgradeKey, CalculationCache, CalculationMode, HSCalculationComponents } from "../../../types/data-types/hs-gamedata-api-types";
 import { calculateAmbrosiaBarIncome } from "./hs-ambrosia-bar-income";
-import type { AmbrosiaBarIncome } from "../../../types/data-types/hs-ambrosia-income-types";
+import type { AmbrosiaBarIncome, AmbrosiaBarIncomeInput } from "../../../types/data-types/hs-ambrosia-income-types";
 import type { HSGameDataAPI } from "./hs-gamedata-api";
 
 type PurpleAmbrosiaEnchantmentConfig = {
@@ -1182,6 +1182,12 @@ export class AmbrosiaHelper {
     }
 
     calculateAmbrosiaBarIncome(): AmbrosiaBarIncome | null {
+        const input = this.buildAmbrosiaBarIncomeInput();
+        return input ? calculateAmbrosiaBarIncome(input) : null;
+    }
+
+    /** The save's stats for calculateAmbrosiaBarIncome; null without save data or with a bar requirement of 0. */
+    buildAmbrosiaBarIncomeInput(): AmbrosiaBarIncomeInput | null {
         const data = this.#api.getGameData();
         if (!data) return null;
 
@@ -1211,7 +1217,7 @@ export class AmbrosiaHelper {
             * (this.calculateBlueberryInventory(true) as number);
         const reactorData = data.purpleReactor;
 
-        return calculateAmbrosiaBarIncome({
+        return {
             reactor: {
                 blueRoutingPercent: Number(reactorData?.ambrosiaBarPointPercentage ?? 0),
                 redRoutingPercent: Number(reactorData?.redAmbrosiaBarPointPercentage ?? 0),
@@ -1252,7 +1258,7 @@ export class AmbrosiaHelper {
                 this.#api.ambrosia.getRedAmbrosiaUpgradeEffects('redAmbrosiaAccelerator').ambrosiaTimePerRedAmbrosia
             ),
             twoMind: Boolean(this.getAmbrosiaUpgradeEffects('twoMind').twoMindEnabled),
-        });
+        };
     }
 
     calculateRequiredBlueberryTime(ignoreTwoMind = false, ignoreBrickOfLead = false) {
