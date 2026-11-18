@@ -431,7 +431,7 @@ function writeFileVersion(file, re, version) {
 /**
  * Before the release commit, compare the web loader files with the previous release, and offer to bump
  * the version of a changed file whose version is unchanged:
- * - the Tampermonkey bridge: players only receive an update if its @version increases;
+ * - the Tampermonkey bridge: players only receive an update if its @version increases (default no, never with --yes);
  * - the patcher: its loaderVersion labels the console logs ([HS-LOADER vX]), telling which patcher a player runs.
  * (hypersynergism.user.js is downloaded fresh by the bridge on every load: its @version is never used.)
  */
@@ -452,19 +452,22 @@ async function checkLoaderVersions(status) {
     const changed = new Set(String(diff.stdout).split(/\r?\n/).map(line => line.trim()).filter(Boolean));
     const regenerate = [];
 
-    // 1) Bridge: a changed bridge needs a higher @version, or Tampermonkey never updates it
+    // 1) Bridge: Tampermonkey updates installed bridges only when @version increases, but an update costs
+    //    players: it can open a Tampermonkey tab (an AFK autosing tab loses focus) and resets an edited
+    //    repo/version line (a Dev player goes back to Live). So a bump is the exception, never automatic.
     if (changed.has(bridgeFile)) {
         const before = readFileVersion(bridgeFile, userscriptVersionRe, previousTag);
         const now = readFileVersion(bridgeFile, userscriptVersionRe);
         if (now && before === now) {
             const bumped = bumpLastNumber(now);
-            warn(`${bridgeFile} changed since ${previousTag} but its @version is still ${now}: Tampermonkey won't update it for players.`);
-            if (await askYesNo(`Bump the bridge @version from ${now} to ${bumped}?`)) {
+            info(`${bridgeFile} changed since ${previousTag}; its @version is still ${now}, so installed bridges keep the old one (new installs get the new one).`);
+            info('Bump only if installed bridges stop working or lack something players need: an update can open a Tampermonkey tab and resets an edited repo/version line.');
+            if (skipPrompts) {
+                info('--yes never bumps the bridge @version: run without --yes to bump it.');
+            } else if (await askYesNo(`Bump the bridge @version from ${now} to ${bumped}?`)) {
                 writeFileVersion(bridgeVersionsFile, bridgeSourceVersionRe, bumped);
                 regenerate.push(bridgeVersionsFile, bridgeFile);
                 success(`Bridge @version bumped to ${bumped}.`);
-            } else {
-                warn('Bridge @version not bumped: players with the bridge installed will keep the old one.');
             }
         }
     }
