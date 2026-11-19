@@ -13,13 +13,27 @@ import { escapeLogText } from '../../../hs-utils/hs-escape';
  * Class: HSAutosingStrategyControls
  * IsExplicitHSModule: No
  * Description:
- *     The strategy controls of the Auto-Sing settings page: the strategy dropdown (default strategies, the old
- *     "-temp" ones, then the player's), and its Edit, Delete, Export and Import buttons. New and edited strategies come from the strategy
+ *     The strategy controls of the Auto-Sing settings page: the strategy dropdown (default strategies, their previous
+ *     versions, the "-temp" ones not yet retuned, then the player's), and its Edit, Delete, Export and Import buttons. New and edited strategies come from the strategy
  *     editor (HSAutosingStrategyModal), which refreshes the dropdown through this class.
  * Author: XxMolkxX, Shewchou
  */
 export class HSAutosingStrategyControls {
     static readonly #context = 'HSAutosingStrategyControls';
+    static readonly #deleteButtonId = 'hs-setting-auto-sing-strategy-deleter-button';
+    static readonly #watchedSelects = new WeakSet<HTMLSelectElement>();
+
+    /** Greys the Delete button while a default strategy is selected, which Delete refuses. Still clickable: the click says why */
+    static #refreshDeleteButton(selected: string): void {
+        const button = document.getElementById(HSAutosingStrategyControls.#deleteButtonId);
+        if (!button) return;
+        const locked = HSStrategyManager.getDefaultStrategyNames().includes(selected);
+        // Its own title (the setting's help text), kept for when a player's strategy is selected again
+        button.dataset.unlockedTitle ??= button.title;
+        button.classList.toggle('hs-strategy-delete-locked', locked);
+        button.setAttribute('aria-disabled', String(locked));
+        button.title = locked ? "Default strategies can't be deleted" : button.dataset.unlockedTitle;
+    }
 
     static updateStrategyDropdownList(): void {
         const setting = HSSettings.getSetting("autosingStrategy");
@@ -45,7 +59,8 @@ export class HSAutosingStrategyControls {
         const selectEl = document.querySelector(`#${control.controlId}`) as HTMLSelectElement | null;
         if (selectEl) {
             selectEl.innerHTML = "";
-            const appendGroup = (label: string, options: { text: string; value: string }[], isDefault: boolean) => {
+            // Secondary groups (previous versions, not yet retuned) in grey: players pick from the others
+            const appendGroup = (label: string, options: { text: string; value: string }[], isSecondary: boolean) => {
                 if (options.length === 0) return;
                 const optgroup = document.createElement('optgroup');
                 optgroup.label = label;
@@ -53,15 +68,22 @@ export class HSAutosingStrategyControls {
                     const option = document.createElement('option');
                     option.text = opt.text;
                     option.value = String(opt.value);
-                    option.setAttribute('data-default', String(isDefault));
+                    if (isSecondary) option.classList.add('hs-strategy-option-secondary');
                     optgroup.appendChild(option);
                 }
                 selectEl.appendChild(optgroup);
             };
-            const isOld = (opt: { value: string }) => HSStrategyManager.isOldDefaultStrategy(opt.value);
-            appendGroup('Default Strategies', defaultStrategiesOptions.filter(opt => !isOld(opt)), true);
-            appendGroup('Old Strategies', defaultStrategiesOptions.filter(isOld), true);
+            const previousVersions = HSStrategyManager.previousVersionNames(defaultStrategiesOptions.map(opt => opt.value));
+            const isPrevious = (opt: { value: string }) => previousVersions.has(opt.value);
+            const isNotRetuned = (opt: { value: string }) => HSStrategyManager.isNotRetunedDefaultStrategy(opt.value);
+            appendGroup('Default Strategies', defaultStrategiesOptions.filter(opt => !isPrevious(opt) && !isNotRetuned(opt)), false);
+            appendGroup('Previous Versions', defaultStrategiesOptions.filter(isPrevious), true);
+            appendGroup('Not Yet Retuned', defaultStrategiesOptions.filter(opt => !isPrevious(opt) && isNotRetuned(opt)), true);
             appendGroup('User Strategies', userStrategiesOptions, false);
+            if (!HSAutosingStrategyControls.#watchedSelects.has(selectEl)) {
+                HSAutosingStrategyControls.#watchedSelects.add(selectEl);
+                selectEl.addEventListener('change', () => HSAutosingStrategyControls.#refreshDeleteButton(selectEl.value));
+            }
 
             let toSelect = savedStrategy;
             if (!toSelect || !Array.from(selectEl.options).some(opt => opt.value === toSelect)) {
@@ -73,6 +95,7 @@ export class HSAutosingStrategyControls {
                 selectEl.value = toSelect;
                 setting.setValue(toSelect);
             }
+            HSAutosingStrategyControls.#refreshDeleteButton(selectEl.value);
             HSLogger.log(`Strategy dropdown rebuilt with ${defaultStrategiesOptions.length} default and ${userStrategiesOptions.length} user strategies. Selected: ${escapeLogText(toSelect)}`, this.#context);
         }
     }
@@ -84,6 +107,7 @@ export class HSAutosingStrategyControls {
             const selectEl = document.querySelector(`#${control.controlId}`) as HTMLSelectElement | null;
             if (selectEl) {
                 selectEl.value = strategyName;
+                HSAutosingStrategyControls.#refreshDeleteButton(selectEl.value);
             }
             setting.setValue(strategyName);
         } else {
@@ -114,6 +138,7 @@ export class HSAutosingStrategyControls {
         const strategyName = selectedOption.value.toString();
         const defaultNames = HSStrategyManager.getDefaultStrategyNames();
         if (defaultNames.includes(strategyName)) {
+            HSLogger.log(`Delete refused: '${escapeLogText(strategyName)}' is a default strategy`, this.#context);
             HSUI.Notify("You cannot delete default strategies.", { notificationType: "warning" });
             return;
         }

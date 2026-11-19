@@ -82,8 +82,30 @@ export class HSStrategyManager {
     }
 
     /** A default strategy not yet retuned since the game's 4.4.0 corruption rework: its file name ends in "-temp". */
-    static isOldDefaultStrategy(name: string): boolean {
+    static isNotRetunedDefaultStrategy(name: string): boolean {
         return name.endsWith("-temp");
+    }
+
+    /**
+     * The default strategies that are an earlier version of another one: same name before " v", lower version
+     * ("Demon King (rus) v2.0" when "Demon King (rus) v2.1" is there). Names without a version at the end
+     * ("-temp" ones included) are never one.
+     */
+    static previousVersionNames(names: string[]): Set<string> {
+        const parsed = names.flatMap(name => {
+            const match = /^(.+) v(\d+(?:\.\d+)*)$/.exec(name);
+            return match ? [{ name, base: match[1], version: match[2].split('.').map(Number) }] : [];
+        });
+        const isLower = (a: number[], b: number[]) => {
+            for (let i = 0; i < Math.max(a.length, b.length); i++) {
+                const diff = (a[i] ?? 0) - (b[i] ?? 0);
+                if (diff !== 0) return diff < 0;
+            }
+            return false;
+        };
+        return new Set(parsed
+            .filter(p => parsed.some(other => other.base === p.base && isLower(p.version, other.version)))
+            .map(p => p.name));
     }
 
     static async loadDefaultStrategyByName(name: string, context = ''): Promise<HSAutosingStrategy | null> {

@@ -128,6 +128,12 @@ async function main() {
             const checked = manager.validateStrategy(JSON.parse(fs.readFileSync(path.join(directory, file), 'utf8')));
             assert.equal(manager.finalPhaseProblem(checked), null, `${file} ends with singularity → end`);
         }
+        // Previous versions of a default strategy: same name before " v", lower version
+        const previousOf = names => [...manager.previousVersionNames(names)].sort();
+        assert.deepEqual(previousOf(['DK (rus) v2.0', 'DK (rus) v2.1', 'DK (rus) v1.10', 'Other v3.0']), ['DK (rus) v1.10', 'DK (rus) v2.0']);
+        assert.deepEqual(previousOf(['A v1.9', 'A v1.10']), ['A v1.9'], 'numeric, not text, comparison');
+        assert.deepEqual(previousOf(['A v2', 'A v2.0', 'A v2.0.1']), ['A v2', 'A v2.0'], 'missing parts count as 0');
+        assert.deepEqual(previousOf(['Basic v1.3-temp', 'Basic v1.4', 'No version', 'AB v1.0', 'B v2.0']), [], 'no version at the end, or another name');
         // A final phase wider than singularity → end: refused at save, still loaded from storage (older strategies)
         const wide = valid();
         wide.strategy.splice(-2, 2, {...wide.strategy.at(-2), endPhase: 'end'});

@@ -32,7 +32,7 @@ const SESSION_SETTINGS = {
 // (C15 < 1e110, at most 5 jumps)
 const EDITOR_STRATEGY = 'Demon King (BTMco) v1.2-temp'
 // The strategy shown selected in the Auto-Sing settings (the guide's Getting started)
-const SETTINGS_STRATEGY = 'Demon King (rus) v2.0'
+const SETTINGS_STRATEGY = 'Demon King (rus) v2.1'
 // The Distributor's fields: Keep empty, Orbs %, then the ratios in the panel's order (Chronos to Multiplier)
 const DISTRIBUTOR_ORBS = 15, DISTRIBUTOR_RATIOS = [80, 2, 12, 5, 1, 1, 1]
 // The header grid's width in the header edit shot (Grid width setting): the window is 1600 px wide

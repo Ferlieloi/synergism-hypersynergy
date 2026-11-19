@@ -907,10 +907,20 @@
     background-color: maroon;
 }
 
-/* Mark visually the default strategies in dropdown list */
-select option[data-default="true"] {
-    font-weight: bold;
-    color: #888; 
+/* Strategy dropdown: previous versions and strategies not yet retuned, secondary choices */
+#hs-setting-auto-sing-strategy option.hs-strategy-option-secondary {
+    color: #888;
+}
+
+/* Delete while a default strategy is selected: greyed, still clickable (the click says why) */
+.hs-panel-btn.hs-strategy-delete-locked {
+    color: #888;
+    border-color: #555;
+    cursor: not-allowed;
+}
+
+.hs-panel-btn.hs-strategy-delete-locked:hover {
+    background-color: #101828;
 }
 
 .hs-strategy-error {

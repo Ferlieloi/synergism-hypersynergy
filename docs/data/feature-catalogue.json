@@ -1428,7 +1428,7 @@
           "details": [
             "Inspect built-in strategies, then copy or create one for your own tuning.",
             "Imports are validated and older strategy formats are normalized. Exports copy shareable strategy JSON.",
-            "Bundled strategies whose names carry -temp are listed under Old Strategies: their authors still need to tune them for the changed corruption system.",
+            "Bundled strategies whose names carry -temp are listed under Not Yet Retuned: their authors still need to tune them for the changed corruption system. A strategy's earlier versions stay available under Previous Versions.",
             "If a strategy cannot be saved, the draft stays open and the existing strategy list stays intact."
           ],
           "settings": [

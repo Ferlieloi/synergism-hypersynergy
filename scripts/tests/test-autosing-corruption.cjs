@@ -426,10 +426,13 @@ async function main() {
         for (const filename of fs.readdirSync(directory).filter(name => name.endsWith('.json') && name !== 'manifest.json')) {
             const strategy = JSON.parse(fs.readFileSync(path.join(directory, filename), 'utf8'));
             const validated = HSStrategyManager.validateStrategy(strategy);
-            // In the current format: its AOAG phase starts with level 0, and no second one is added
+            // In the current format: no second AOAG level step is added. The converted ones ("-temp") start their AOAG
+            // phase with level 0; a strategy its author sent may start it otherwise (an author's choice)
             assert.equal(strategy.formatVersion, 2, filename);
-            assert.deepEqual([strategy.aoagPhase.strat[0].challengeNumber, strategy.aoagPhase.strat[0].corruptionLevel,
-                strategy.aoagPhase.strat[0].comment], [403, 0, AOAG_LEVEL_STEP_COMMENT], filename);
+            if (filename.endsWith('-temp.json')) {
+                assert.deepEqual([strategy.aoagPhase.strat[0].challengeNumber, strategy.aoagPhase.strat[0].corruptionLevel,
+                    strategy.aoagPhase.strat[0].comment], [403, 0, AOAG_LEVEL_STEP_COMMENT], filename);
+            }
             assert.equal(validated.aoagPhase.strat.length, strategy.aoagPhase.strat.length, filename);
             for (const entry of [...strategy.strategy, strategy.aoagPhase].filter(Boolean)) {
                 assert.ok(entry.strat.every(action => action.challengeNumber !== 404), filename);
