@@ -92,6 +92,7 @@ export class HSAutosing extends HSModule {
     #hasStageFunc: boolean = false;
     #hasLivePlayer: boolean = false;
     #hasMaxChallenges: boolean = false;
+    #hasAfterTackHook: boolean = false;
     // The game internals found or not at the last start (shown in the timer's footer)
     #exposureParts: HSAutosingExposureParts = { fastPaths: {}, other: {} };
     #gamestate!: HSGameState;
@@ -152,6 +153,7 @@ export class HSAutosing extends HSModule {
         // Without the dialog hook, HSGameDialogs' watcher clicks the dialogs as they show, before autosing's
         // next step runs. Without the export output, only the quark export at each singularity's end is skipped.
         const isAfterTackHooked = HSUtils.cacheAfterTackHook();
+        this.#hasAfterTackHook = isAfterTackHooked;
         const isDialogHookPatched = HSGameDialogs.isHookPatched();
         const isExportOutputPatched = !!window.__HS_EXPORT_OUTPUT_PATCHED;
 
@@ -1538,7 +1540,9 @@ export class HSAutosing extends HSModule {
         // The ants pay all their quarks again at the current quark multiplier, minus what they paid: one game tick in
         // the quark loadout pays them the difference (nothing else gives the game a tick before the singularity).
         // Loadout switches off: the multiplier didn't change, nothing to pay.
-        if (!this.#dom.ambrosiaSwitchesOff) await HSUtils.waitForNextTack();
+        // Without the after-tack hook the wait is a 5 ms sleep, and the game runs a tack only once more than 5 ms
+        // have passed since the last one: two sleeps make sure one ran.
+        if (!this.#dom.ambrosiaSwitchesOff) await HSUtils.waitForNextTack(this.#hasAfterTackHook ? 1 : 2);
         const exportSynergism = window.__HS_exportSynergism;
         if (typeof exportSynergism === 'function' && window.__HS_EXPORT_OUTPUT_PATCHED) {
             window.__HS_SUPPRESS_EXPORT_ONCE = true;
