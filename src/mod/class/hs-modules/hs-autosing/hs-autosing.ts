@@ -1535,6 +1535,10 @@ export class HSAutosing extends HSModule {
 
         // Export to gather a few quarks
         await this.#setAmbrosiaLoadout(this.#dom.ambrosia_quark);
+        // The ants pay all their quarks again at the current quark multiplier, minus what they paid: one game tick in
+        // the quark loadout pays them the difference (nothing else gives the game a tick before the singularity).
+        // Loadout switches off: the multiplier didn't change, nothing to pay.
+        if (!this.#dom.ambrosiaSwitchesOff) await HSUtils.waitForNextTack();
         const exportSynergism = window.__HS_exportSynergism;
         if (typeof exportSynergism === 'function' && window.__HS_EXPORT_OUTPUT_PATCHED) {
             window.__HS_SUPPRESS_EXPORT_ONCE = true;

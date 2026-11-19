@@ -119,6 +119,7 @@ Test: `npm run test:autosing`.
 ## Run panel: quarks
 - **"Gained" is the balance's rise** (`worlds`, read after the Exalt), so spending lowers it. Autosing is meant for players who completed Limited Time once: without it the game resets the balance at each singularity and "Gained" stays at `-`, which is expected.
 - **`(12.34% ants)` after "Gained":** the run's total of `ants.quarksGainedFromAnts` over its total of `quarksThisSingularity`, in grey, shown with or without details; that total of ant quarks in its tooltip. Not over "Gained": spending would then raise the share with the ants earning the same.
+- **One game tick after the quark loadout** (`#performFinalStage`, before the export; none with loadout switches off): the ants pay their total at the current quark multiplier minus what they already paid (`calculate-quarks.ts`), so that tick pays the difference. Without it nothing gave the game a tick before the singularity: measured on an S282 save with Demon King (rus) v2.1, the ants gave 0.01% of the quarks instead of 2.7%, and the run 2.6% fewer quarks per hour; a tick costs 1–8 ms.
 - Both are read at the top of `#performSingularity`, before the Exalt click: the singularity resets both. The first singularity at the start isn't counted, like every other figure. A singularity crossing the real-life day change under-reports its ant quarks (the game resets the counter then too); negligible over a run.
 
 ## Step timings (`autosingStepTimings`)
