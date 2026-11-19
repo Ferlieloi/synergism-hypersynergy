@@ -38,6 +38,8 @@ const ALLOWED_REGEX = new RegExp(ALLOWED.join('|'));
  */
 export class HSAutosing extends HSModule {
     static readonly #DECIMAL_0 = new Decimal(0);
+    // A challenge entry still refused after this long gets one warning (the entry keeps retrying)
+    static readonly #ENTRY_WARN_MS = 2000;
     #gameDataAPI?: HSGameDataAPI;
 
     #corruptionManager!: HSAutosingCorruption;
@@ -1079,9 +1081,21 @@ export class HSAutosing extends HSModule {
 
             // Challenge state is advanced by the game tack. Retrying faster than that
             // only floods the DOM event handlers and can delay the tack we need.
+            // An entry the game refuses (a locked C11-C15) is retried for as long as autosing runs: warned once
+            let refusedSince = 0;
+            let warned = false;
             while (this.#autosingEnabled && !isChallengeActive()) {
                 this.#fastDoubleClick(challengeBtn!);
-                if (!isChallengeActive()) await HSUtils.waitForNextTack();
+                if (isChallengeActive()) break;
+                if (!warned) {
+                    const now = performance.now();
+                    if (refusedSince === 0) refusedSince = now;
+                    else if (now - refusedSince >= HSAutosing.#ENTRY_WARN_MS) {
+                        warned = true;
+                        HSLogger.warn(`-------> ${stepTag ? `${stepTag()} - ` : ""}C${challengeIndex}: the game has refused the entry for ${HSAutosing.#ENTRY_WARN_MS / 1000} s (locked challenge?), still retrying`, this.context);
+                    }
+                }
+                await HSUtils.waitForNextTack();
             }
         } else {
             const progressUpdated = this.#domWaits.waitForInnerText(

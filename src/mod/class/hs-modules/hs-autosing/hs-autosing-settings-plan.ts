@@ -40,6 +40,9 @@ export function getAutosingGameSettings(config: HSAutosingSettingsConfig): HSAut
     // Ascension confirmation: on, the game refuses an Ascend or an ascension challenge entry from a C1-C10 challenge
     // until C10 is completed again (autosing would retry the entry forever), and its Confirm delays the others
     toggle('toggles.31', 'toggle31', false);
+    // Ant sacrifice confirmation: on, the sacrifice lands a few microtasks after the click (once its Confirm is
+    // answered), after a next step without wait: a loadout switch there would change its rewards
+    toggle('toggles.32', 'toggle32', false);
     for (let index = 1; index <= 5; index++) toggle(`autoTesseracts.${index}`, `tesseractAutoToggle${index}`, true);
     toggle('tesseractAutoBuyerToggle', 'tesseractautobuytoggle', true);
     settings.push({ path: 'resetToggleModes.ascension', control: 'tesseractautobuymode', target: 1, values: [0, 1], kind: 'toggle' });
