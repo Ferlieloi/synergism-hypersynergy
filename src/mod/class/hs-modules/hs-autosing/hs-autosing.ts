@@ -326,7 +326,6 @@ export class HSAutosing extends HSModule {
 
         this.#autosingEnabled = true;
         if (HSSettings.getSetting("autosingKeepAwake").isEnabled()) this.#wakeLock.start();
-        if (HSSettings.getSetting("autosingKeepAwake").isEnabled()) this.#wakeLock.start();
         this.#stopAtSingularitysEnd = false;
         this.#endStageDone = false;
         this.#antiquitiesObserverActivated = false;
@@ -470,7 +469,6 @@ export class HSAutosing extends HSModule {
 
     async #stopAutosingCore(options: { modalDisposition: 'review' | 'destroy', leaveExalt: boolean }): Promise<void> {
         this.#autosingEnabled = false;
-        this.#wakeLock.stop();
         this.#wakeLock.stop();
 
         // Stopped between entering Exalt 2 and leaving it: leave it, or the player stays inside.
