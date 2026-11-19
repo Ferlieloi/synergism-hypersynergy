@@ -507,7 +507,7 @@ export class HSAutosingChallengeModal {
             <div class="hs-challenges-footer">
                 <div class="hs-challenges-footer-btn hs-challenges-small-btn hs-challenges-help-btn">?</div>
                 <div class="hs-challenges-footer-btn hs-challenges-small-btn hs-challenges-undo-btn" data-action="undo" title="Undo (Ctrl+Z)">↶ Undo</div>
-                <div class="hs-challenges-footer-btn hs-challenges-small-btn hs-challenges-undo-btn" data-action="redo" title="Redo (Ctrl+Y)">↷ Redo</div>
+                <div class="hs-challenges-footer-btn hs-challenges-small-btn hs-challenges-undo-btn" data-action="redo" title="Redo (Ctrl+Y)">Redo ↷</div>
                 <div class="hs-challenges-fixed-time" title="Every Wait before, plus the Wait inside of challenges and C1-C10 steps. IF jumps not followed."></div>
                 <div class="hs-challenges-footer-btn hs-challenges-cancel-btn" data-action="cancel">Cancel</div>
                 <div class="hs-challenges-footer-btn hs-challenges-save-btn" data-action="save">Save</div>
