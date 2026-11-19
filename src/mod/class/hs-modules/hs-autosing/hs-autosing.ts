@@ -618,6 +618,8 @@ export class HSAutosing extends HSModule {
 
     async #performAutosingLogic(): Promise<void> {
         try {
+            // Before the panel reads its starting balances: the time since the player's last export isn't the run's
+            await this.#exportInQuarkLoadout();
             await this.#useAddAndTimeCodes();
             if (!this.#autosingEnabled) return;
 
@@ -1598,7 +1600,28 @@ export class HSAutosing extends HSModule {
         await this.#executePhase(finalPhase, { ignoreObserverActivated: true });
         if (!this.#autosingEnabled) return; // If the user stopped during the very last step
 
-        // Export to gather a few quarks
+        await this.#exportInQuarkLoadout();
+
+        this.#clickResetButton(this.#dom.ascendBtn);
+
+        if (this.#stopAtSingularitysEnd && this.#autosingEnabled) {
+            HSUI.Notify("Standard strategy exited: Auto-Sing will now push this sing before stopping.");
+            await this.#pushSingularityBeforeStop();
+            // Stopped during the push: stopping again would cancel a start waiting for this chain
+            if (!this.#autosingEnabled) return;
+            HSUI.Notify("Auto-Sing stopped at end of singularity as requested.");
+            this.stopAutosing();
+            return;
+        }
+
+        this.#endStagePromiseResolve?.();
+        this.#endStagePromise = undefined;
+        this.#endStagePromiseResolve = undefined;
+    }
+
+    /** Exports the save (no file) in the quark loadout for the export's quarks. At the start too: the export pays
+     *  all the time since the last one, so it lands before the run's stats, at the player's own (usually stronger) state. */
+    async #exportInQuarkLoadout(): Promise<void> {
         await this.#setAmbrosiaLoadout(this.#dom.ambrosia_quark);
         // The ants pay all their quarks again at the current quark multiplier, minus what they paid: one game tick in
         // the quark loadout pays them the difference (nothing else gives the game a tick before the singularity).
@@ -1618,22 +1641,6 @@ export class HSAutosing extends HSModule {
         } else {
             HSLogger.warn('Quark-only export unavailable: the game export-output hook was not patched.', this.context);
         }
-
-        this.#clickResetButton(this.#dom.ascendBtn);
-
-        if (this.#stopAtSingularitysEnd && this.#autosingEnabled) {
-            HSUI.Notify("Standard strategy exited: Auto-Sing will now push this sing before stopping.");
-            await this.#pushSingularityBeforeStop();
-            // Stopped during the push: stopping again would cancel a start waiting for this chain
-            if (!this.#autosingEnabled) return;
-            HSUI.Notify("Auto-Sing stopped at end of singularity as requested.");
-            this.stopAutosing();
-            return;
-        }
-
-        this.#endStagePromiseResolve?.();
-        this.#endStagePromise = undefined;
-        this.#endStagePromiseResolve = undefined;
     }
 
     // ============================================================================

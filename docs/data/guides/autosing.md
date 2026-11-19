@@ -57,7 +57,7 @@ A strategy is a list of **phases**. Each phase covers a part of the singularity,
 - Auto-Sing reads the current stage, runs the steps of the phase that covers it from top to bottom, then reads the stage again. A phase runs again as long as the stage stays in its range.
 - A phase doesn't reset by itself. Only Ascend, Exit Ascension challenge, entering an ascension challenge and "Set corruption level" (with Ascend immediately) do.
 - **AOAG phase:** once the AOAG rune is unlocked (P4x5), Auto-Sing stops the current phase and runs the AOAG phase, then singularity → end. It starts with "Set corruption level" 0: no offering penalty to buy the AoAG rune.
-- At the end, Auto-Sing switches to your Quark loadout, ascends and exports the save for the bonus quarks, then starts a new singularity.
+- At the end, Auto-Sing switches to your Quark loadout, ascends and exports the save for the bonus quarks, then starts a new singularity. It also exports once when it starts, so the quarks saved up since your last export are collected at your current strength and kept out of the run's stats.
 
 ### The strategy window
 
