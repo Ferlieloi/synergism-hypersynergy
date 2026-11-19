@@ -113,6 +113,17 @@ async function main() {
         manager.validateStrategy(s);
         first(s).ifJump.ifJumpMultiplier = Infinity;
         assert.throws(() => manager.validateStrategy(s), /multiplier/);
+        // AOAG mode: a boolean choice, no operator needed
+        first(s).ifJump.ifJumpMode = 'aoag';
+        delete first(s).ifJump.ifJumpOperator;
+        for (const bought of [true, false]) {
+            first(s).ifJump.ifJumpAoagBought = bought;
+            assert.equal(first(manager.validateStrategy(s)).ifJump.ifJumpAoagBought, bought);
+        }
+        for (const bought of [undefined, 'true', 1, null]) {
+            first(s).ifJump.ifJumpAoagBought = bought;
+            assert.throws(() => manager.validateStrategy(s), /AOAG bought/); checks++;
+        }
 
         const legacy = valid();
         first(legacy).challengeNumber = 404;

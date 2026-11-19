@@ -62,6 +62,8 @@ export class HSAutosing extends HSModule {
     #obtSwitchRemovedPhase: AutosingStrategyPhase | null = null;
     #stopAtSingularitysEnd: boolean = false;
     #hasWarnedMissingStageFunc: boolean = false;
+    // An AOAG IF found the purchase unreadable in this run (one warning per run)
+    #hasWarnedAoagUnreadable: boolean = false;
     #storedC15: number = 0;
     #settingsFixer = new HSAutosingSettingsFixer();
     #wakeLock = new HSAutosingWakeLock();
@@ -330,6 +332,7 @@ export class HSAutosing extends HSModule {
         this.#antiquitiesObserverActivated = false;
         this.#endStagePromise = undefined;
         this.#hasWarnedMissingStageFunc = false;
+        this.#hasWarnedAoagUnreadable = false;
         this.#storedC15 = 0;
         this.#dom.resetChallenge15Score();
 
@@ -906,8 +909,35 @@ export class HSAutosing extends HSModule {
                 logIfJump(condition, false, 0);
                 break;
             }
+            case "aoag": {
+                const wanted = jump!.ifJumpAoagBought === true;
+                const wantedText = wanted ? "AOAG bought" : "AOAG not bought";
+                const bought = this.#isAoagBought();
+                if (bought === undefined) {
+                    if (!this.#hasWarnedAoagUnreadable) {
+                        this.#hasWarnedAoagUnreadable = true;
+                        HSLogger.warn(`${tag()} - IF ${wantedText} (${IF_JUMP_VALUE}): the AOAG purchase can't be read on this game (bookmarklet, or a Steam game not updated), this IF never jumps`, this.context);
+                    }
+                    logIfJump(`${wantedText} (unknown)`, false, 0);
+                    break;
+                }
+                const condition = `${wantedText} (${bought ? "bought" : "not bought"})`;
+                if (jumpIndex !== undefined && bought === wanted) return jumpOrNot(condition);
+                logIfJump(condition, false, 0);
+                break;
+            }
         }
         return null;
+    }
+
+    /**
+     * The Antiquities rune bought: its level in the live player's runeLevels (RuneType.Antiquities = 6), as the game
+     * checks it. undefined without the live player (bookmarklet) or on a game from before its rune rework (Steam not
+     * updated), which kept the level outside the player.
+     */
+    #isAoagBought(): boolean | undefined {
+        const level = this.#exposedPlayer?.runeLevels?.[6];
+        return typeof level === 'number' ? level > 0 : undefined;
     }
 
     // ============================================================================
@@ -1040,6 +1070,10 @@ export class HSAutosing extends HSModule {
                 break;
             case 901:
                 this.#dom.AOAG.click();
+                // The game buys at once (no dialog). Checked only where the purchase can be read (#isAoagBought)
+                if (this.#isAoagBought() === false) {
+                    HSLogger.warn(`${stepTag()} - Click AOAG (901): the game did not buy the Antiquities rune (not enough offerings?)`, this.context);
+                }
                 break;
             case 902: // Restart AutoSing
                 this.restartAutosing();

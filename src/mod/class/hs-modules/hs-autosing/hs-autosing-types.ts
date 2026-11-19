@@ -197,11 +197,12 @@ export interface AutosingStrategyPhase {
 
 export interface IfJumpParams {
     id: string;
-    ifJumpMode?: "challenges" | "stored_c15";  // Mode for if-jump comparison
+    ifJumpMode?: "challenges" | "stored_c15" | "aoag";  // Mode for if-jump comparison
     ifJumpChallenge: number;   // 1–15 (used in challenges mode)
-    ifJumpOperator: ">" | "<";
+    ifJumpOperator: ">" | "<"; // Not used in aoag mode
     ifJumpValue: number;       // Comparison value (used in challenges mode)
     ifJumpMultiplier?: number; // 10^x multiplier (used in stored_c15 mode)
+    ifJumpAoagBought?: boolean; // aoag mode: jumps when the Antiquities rune is bought (true) or not bought (false)
     ifJumpIndex: number;
     // Jumps taken at most per phase pass, then the IF goes on to the next step (absent or 0: no limit)
     ifJumpMaxJumps?: number;

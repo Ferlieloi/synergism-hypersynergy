@@ -335,14 +335,16 @@ export class HSStrategyManager {
             ids.add(jump.id);
             // Older strategies omit the mode; the editor already treats these as challenge comparisons.
             if (jump.ifJumpMode === undefined) jump.ifJumpMode = 'challenges';
-            if (jump.ifJumpMode !== 'challenges' && jump.ifJumpMode !== 'stored_c15') throw new Error(`${tag}: invalid IF mode`);
-            if (jump.ifJumpOperator !== '>' && jump.ifJumpOperator !== '<') throw new Error(`${tag}: IF operator must be > or <`);
+            if (jump.ifJumpMode !== 'challenges' && jump.ifJumpMode !== 'stored_c15' && jump.ifJumpMode !== 'aoag') throw new Error(`${tag}: invalid IF mode`);
+            if (jump.ifJumpMode !== 'aoag' && jump.ifJumpOperator !== '>' && jump.ifJumpOperator !== '<') throw new Error(`${tag}: IF operator must be > or <`);
             if (!Number.isInteger(jump.ifJumpIndex) || jump.ifJumpIndex < 0 || jump.ifJumpIndex > phase.strat.length) {
                 throw new Error(`${tag}: IF destination must be a step index from 0 to ${phase.strat.length} (end of phase)`);
             }
             if (jump.ifJumpMode === 'challenges') {
                 if (!Number.isInteger(jump.ifJumpChallenge) || jump.ifJumpChallenge < 1 || jump.ifJumpChallenge > 15) throw new Error(`${tag}: IF challenge must be 1 to 15`);
                 if (typeof jump.ifJumpValue !== 'number' || !Number.isFinite(jump.ifJumpValue)) throw new Error(`${tag}: IF value must be a finite number`);
+            } else if (jump.ifJumpMode === 'aoag') {
+                if (typeof jump.ifJumpAoagBought !== 'boolean') throw new Error(`${tag}: IF AOAG bought must be true or false`);
             } else if (jump.ifJumpMultiplier !== undefined && (typeof jump.ifJumpMultiplier !== 'number' || !Number.isFinite(jump.ifJumpMultiplier))) {
                 throw new Error(`${tag}: IF multiplier must be a finite number`);
             }

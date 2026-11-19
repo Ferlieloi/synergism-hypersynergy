@@ -850,7 +850,7 @@ export type DeepReadonly<T> =
  * the rune rework (runes, runeBlessings, runeSpirits, firstPaidCoin...), and these vanilla fields aren't
  * declared, as no feature reads them through this type (add one when a feature needs it):
  * - diamondBuildings, mythosBuildings, particleBuildings, accelerators, multipliers, acceleratorBoosts
- * - runeLevels, blessingLevels, spiritLevels (GDS derives the levels from the EXP), autoSacrificeRune
+ * - blessingLevels, spiritLevels (GDS derives the levels from the EXP), autoSacrificeRune
  * - coinsThisAscension, coinsThisSingularity, ascensionAttemptCounter
  * - autoAscendRules
  * - headerLayouts (the header files read it through their own casts)
@@ -966,6 +966,9 @@ interface GameDataFields {
     runes?: Runes;
     runeBlessings?: Record<RuneBlessingKeys, GameDecimal>;
     runeSpirits?: Record<RuneSpiritKeys, GameDecimal>;
+    // Each rune's purchased level, by RuneType, since the rune rework (absent before it). Only autosing's AOAG IF reads
+    // it, from the live player; GDS derives the levels from the EXP
+    runeLevels?: number[];
     offerings: GameDecimal;
     maxOfferings: GameDecimal;
 

@@ -19,7 +19,7 @@ interface FieldContext {
 }
 
 type FieldKey = 'action' | 'challengeNum' | 'forgeItem' | 'completions' | 'corruptionLevel' | 'ascendAfterCorruption' | 'cleanseToHighest' | 'toggleOn' | 'waitBefore' | 'waitInside' | 'maxTime'
-    | 'comment' | 'ifJumpMode' | 'ifJumpChallenge' | 'ifJumpMultiplier' | 'ifJumpOperator' | 'ifJumpValue' | 'ifJumpMaxJumps';
+    | 'comment' | 'ifJumpMode' | 'ifJumpChallenge' | 'ifJumpMultiplier' | 'ifJumpAoagBought' | 'ifJumpOperator' | 'ifJumpValue' | 'ifJumpMaxJumps';
 
 interface FieldRowBase {
     label: string;
@@ -61,7 +61,7 @@ const isSpecialStep = (step: Challenge) => SPECIAL_ACTION_BY_ID.has(step.challen
 // A step's own value, for the fields of a standard challenge or special action (not an IF jump)
 const fromAction = (read: (step: Challenge) => string | number | boolean | undefined) =>
     (step: Challenge) => isIfJumpStep(step) ? undefined : read(step);
-const fromIfJump = (read: (jump: IfJumpParams) => string | number | undefined) =>
+const fromIfJump = (read: (jump: IfJumpParams) => string | number | boolean | undefined) =>
     (step: Challenge) => isIfJumpStep(step) ? read(step.ifJump) : undefined;
 const inIfJumpMode = (mode: IfJumpMode) => (c: FieldContext) => c.isIfJump && c.ifJumpMode === mode;
 
@@ -214,8 +214,13 @@ const FIELD_ROWS: readonly FieldRow[] = [
     },
     {
         key: 'ifJumpMode', label: "If Jump Mode:", initial: "challenges",
-        options: `<option value="challenges">Challenges</option><option value="stored_c15">Stored C15 value</option>`,
+        options: `<option value="challenges">Challenges</option><option value="stored_c15">Stored C15 value</option><option value="aoag">AOAG bought</option>`,
         shown: c => c.isIfJump, load: fromIfJump(jump => jump.ifJumpMode),
+    },
+    {
+        key: 'ifJumpAoagBought', label: "AOAG:", initial: "false",
+        options: `<option value="false">Not bought</option><option value="true">Bought</option>`,
+        shown: inIfJumpMode("aoag"), load: fromIfJump(jump => jump.ifJumpAoagBought),
     },
     {
         key: 'ifJumpChallenge', label: "If Challenge:", attributes: `min="1" max="15"`, initial: "1", check: fixedCheck(CHALLENGE_NUMBER),
@@ -228,7 +233,7 @@ const FIELD_ROWS: readonly FieldRow[] = [
     {
         key: 'ifJumpOperator', label: "Condition:", initial: ">",
         options: `<option value=">">&gt;</option><option value="<">&lt;</option>`,
-        shown: c => c.isIfJump, load: fromIfJump(jump => jump.ifJumpOperator),
+        shown: c => c.isIfJump && c.ifJumpMode !== "aoag", load: fromIfJump(jump => jump.ifJumpOperator),
     },
     {
         key: 'ifJumpValue', label: "Value:", initial: "1",
@@ -656,8 +661,10 @@ export class HSAutosingChallengeModal {
         const actionId = (id: number) => `<span class="hs-challenge-action-id">(${id})</span>`;
         if (isIfJumpStep(step)) {
             const jump = step.ifJump;
-            const condition = (jump.ifJumpMode ?? "challenges") === "challenges"
+            const mode = jump.ifJumpMode ?? "challenges";
+            const condition = mode === "challenges"
                 ? `challenge ${jump.ifJumpChallenge} ${jump.ifJumpOperator} ${formatStrategyNumber(jump.ifJumpValue)}`
+                : mode === "aoag" ? (jump.ifJumpAoagBought === true ? "AOAG bought" : "AOAG not bought")
                 : `Stored C15${jump.ifJumpMultiplier ? ` × 10^${jump.ifJumpMultiplier}` : ""} ${jump.ifJumpOperator} Current C15`;
             // The step that runs next when the condition holds (the logs' "jump to step N"); a click shows its "Jump here" row
             return `<strong>IF</strong> ${escapeHtml(condition)} `
@@ -814,6 +821,7 @@ export class HSAutosingChallengeModal {
         if (action === String(IF_JUMP_VALUE)) {
             const mode = this.#field('ifJumpMode').value as IfJumpMode;
             const isChallengesMode = mode === "challenges";
+            const isAoagMode = mode === "aoag";
             // A new IF jumps to the step after it
             // Written only when set: an old IF updated without one stays unchanged
             const maxJumps = this.#number('ifJumpMaxJumps');
@@ -826,11 +834,13 @@ export class HSAutosingChallengeModal {
                 ifJump: {
                     id: previous?.ifJump?.id ?? HSUtils.uuidv4(),
                     ifJumpMode: mode,
-                    // Stored C15 mode compares C15; the value and multiplier are each one mode's only
+                    // Stored C15 mode compares C15; the value, multiplier and AOAG choice are each one mode's only.
+                    // AOAG mode has no operator: ">" fills the field
                     ifJumpChallenge: isChallengesMode ? this.#number('ifJumpChallenge') : 15,
-                    ifJumpOperator: this.#field('ifJumpOperator').value as IfJumpParams["ifJumpOperator"],
+                    ifJumpOperator: isAoagMode ? ">" : this.#field('ifJumpOperator').value as IfJumpParams["ifJumpOperator"],
                     ifJumpValue: isChallengesMode ? this.#number('ifJumpValue') : 0,
-                    ifJumpMultiplier: isChallengesMode ? 0 : this.#number('ifJumpMultiplier'),
+                    ifJumpMultiplier: mode === "stored_c15" ? this.#number('ifJumpMultiplier') : 0,
+                    ...(isAoagMode ? { ifJumpAoagBought: this.#field('ifJumpAoagBought').value === "true" } : {}),
                     ifJumpIndex: previous?.ifJump?.ifJumpIndex ?? (this.#editingIndex ?? this.#separatorIndex) + 1,
                     ...(maxJumps > 0 ? { ifJumpMaxJumps: maxJumps } : {}),
                 },
