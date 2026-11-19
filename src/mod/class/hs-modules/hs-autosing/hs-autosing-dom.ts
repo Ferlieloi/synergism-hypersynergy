@@ -76,7 +76,6 @@ export class HSAutosingDom {
     exalt2Btn!: HTMLButtonElement;
     addCodeAllBtn!: HTMLButtonElement;
     timeCodeBtn!: HTMLButtonElement;
-    upg81Btn!: HTMLButtonElement;
 
     // DOM Elements - Antiquities
     antiquitiesRuneLockedContainer!: HTMLDivElement;
@@ -153,7 +152,6 @@ export class HSAutosingDom {
             exalt2Btn: document.getElementById('oneChallengeCap') as HTMLButtonElement | null,
             elevatorTeleportButton: document.getElementById('elevatorTeleportButton') as HTMLButtonElement | null,
             elevatorInput: document.getElementById('elevatorTargetInput') as HTMLInputElement | null,
-            upg81Btn: document.getElementById('upg81') as HTMLButtonElement | null,
         };
         if (!this.#ensureElements(elements)) return false;
 
@@ -169,7 +167,6 @@ export class HSAutosingDom {
         this.exalt2Btn = elements.exalt2Btn;
         this.elevatorTeleportButton = elements.elevatorTeleportButton;
         this.elevatorInput = elements.elevatorInput;
-        this.upg81Btn = elements.upg81Btn;
         return true;
     }
 

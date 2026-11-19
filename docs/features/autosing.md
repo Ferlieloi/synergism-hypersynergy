@@ -6,8 +6,8 @@ Singularity automation driven by JSON "strategies" (`autosing-strategies.md`). T
 
 `HSAutosing` owns the run and the game actions. `HSAutosingDom` caches elements at start and reads fallback challenge
 progress. `HSAutosingDomWaits` owns the Exalt, challenge progress, class and text observers. Starting prepares them,
-and stopping disconnects them and settles their pending waits. Autosing itself owns game-tick waits and the observers
-that drive the Antiquities and upgrade 81 actions.
+and stopping disconnects them and settles their pending waits. Autosing itself owns game-tick waits and the observer
+that drives the Antiquities action.
 
 ## Speed comes first where it counts
 Autosing loops singularities for hours, so what runs inside its main loop, and the mod's background work and other features while it runs, must be as light as possible.
@@ -112,7 +112,8 @@ Test: `npm run test:autosing`.
 - A `===== Executing phase: X =====` debug line at every phase run, kept at debug level (even though timeout warnings show without debug and then have no phase).
 - Debug lines for every step, 403 and IF jumps included, with their outcome (a capped IF's jump with its count, "(2/5)"); the step is named on timeout warnings (C1–C10 steps with a minimum, Max C11–C14; never C11–C15 steps, which work differently). An IF that reached its max jumps writes a normal log line instead (`autosing-strategies.md`, "IF steps").
 - **The log during a run** ("Full log during Auto-Sing", `autosingFullLog`, off by default, read at the start): only warnings and errors, no debug line (`HSLogger.setQuietMode`), lifted at every stop; a log line at the start says so and how to get the full log. On: every line, debug lines included; the Log tab's box decides whether debug lines show. Measured on S260 with debug lines: about +5% per singularity with the Log tab closed; with it open, +35% and growing with the log while each line was drawn on its own (now drawn in batches every 250 ms: about +17%).
-- The first phase runs with "Anti buy coin bug" (999) inserted first and a leading 304 removed (`#insertAntiBuyCoinBugStep`), so `#stepNumber` corrects that phase's indices; the inserted step logs as Step 0.
+- A first phase starting with an Obtainium loadout step (304) runs without it (`#removeLeadingObtSwitch`; `#performSingularity` switches to that loadout right after the singularity), so `#stepNumber` adds it back to that phase's numbers.
+- **No step waits for upgrade 81 (Workers auto-buyer) any more.** The game used to give upgrades 81–100 back through its automation auto-buyer (every 50 ms, from S25), so a challenge entered right after a singularity could leave Workers unbought, now and then; autosing inserted a step 999 that clicked `#upg81` until it was bought. Since the game's commit `95bfcabc6` (2026-09-24, browser and Steam) the singularity reset gives them itself. What's left: a warning in the log if `upgrades[81]` is 0 after a singularity (live player only).
 - The current step in the run panel was refused (changes too often; the logs cover it).
 
 ## Run panel: quarks

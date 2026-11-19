@@ -56,10 +56,8 @@ export class HSAutosing extends HSModule {
     #restartTimer?: number;
     #targetSingularity = 0;
     #prevActionTime: number = 0;
-    // Steps added to (and removed from) the first phase at load: the logs number steps as the strategy editor does
-    #insertedStepsPhase: AutosingStrategyPhase | null = null;
-    #insertedStepCount: number = 0;
-    #removedStepCount: number = 0;
+    // The first phase, when its leading Obtainium loadout step was removed at load: the logs number steps as the strategy editor does
+    #obtSwitchRemovedPhase: AutosingStrategyPhase | null = null;
     #stopAtSingularitysEnd: boolean = false;
     #hasWarnedMissingStageFunc: boolean = false;
     #storedC15: number = 0;
@@ -82,11 +80,6 @@ export class HSAutosing extends HSModule {
     #antiquitiesObserverActivated: boolean = false;
     #endStagePromise?: Promise<void>;
     #endStagePromiseResolve?: () => void;
-    #upg81Observer?: MutationObserver;
-    #upg81Promise?: Promise<boolean>;
-    #upg81PromiseResolve?: (value: boolean) => void;
-    #upg81ClickLoopActive: boolean = false;
-    #upg81ClickLoopGeneration: number = 0;
     // Step of #enterAndLeaveExalt(): a stop while 'entering' leaves the Exalt autosing entered
     #exaltStep: 'none' | 'entering' | 'leaving' = 'none';
     // Exalt waits of the current #enterAndLeaveExalt() that a game tick ended, not the game's Exalt attribute (debug line)
@@ -124,24 +117,6 @@ export class HSAutosing extends HSModule {
     }
 
     #cacheObservers(): void {
-        // upg81 observer, for the antiBuyCoinBug
-        if (!this.#upg81Observer && this.#dom.upg81Btn) {
-            this.#upg81Observer = new MutationObserver((mutations) => {
-                for (const mutation of mutations) {
-                    if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-                        const isGreen = this.#dom.upg81Btn.classList.contains('green-background');
-                        if (isGreen && this.#upg81PromiseResolve) {
-                            HSLogger.debug(() => `-------> #upg81 turned green o/`, this.context);
-                            this.#stopUpg81Clicking();
-                            this.#upg81PromiseResolve(true);
-                            this.#upg81PromiseResolve = undefined;
-                            this.#upg81Observer?.disconnect();
-                        }
-                    }
-                }
-            });
-        }
-
         // Antiquities observer, starting AOAG phase
         if (!this.#antiquitiesObserver && this.#dom.antiquitiesRuneLockedContainer) {
             this.#antiquitiesObserver = new MutationObserver(mutations => {
@@ -504,14 +479,6 @@ export class HSAutosing extends HSModule {
         this.#antiquitiesObserver?.disconnect();
         this.#antiquitiesObserver = undefined;
 
-        this.#upg81Observer?.disconnect();
-        this.#upg81Observer = undefined;
-        this.#stopUpg81Clicking();
-        // Ends the wait of strategy step 999, so its chain ends (a start waits for it)
-        this.#upg81PromiseResolve?.(false);
-        this.#upg81PromiseResolve = undefined;
-        this.#upg81Promise = undefined;
-
         this.#domWaits.stop();
         this.#playerTab = undefined;
 
@@ -613,51 +580,28 @@ export class HSAutosing extends HSModule {
             return null;
         }
 
-        // Insert special steps at the start of the first phase
-        this.#insertAntiBuyCoinBugStep(runtimeStrategy);
-        HSLogger.log(`Loaded strategy "${escapeLogText(selectedRawName)}" (AntiBuyCoinBug step inserted as first step, and potential obt-switch step removed)`, this.context);
+        const removed = this.#removeLeadingObtSwitch(runtimeStrategy);
+        HSLogger.log(`Loaded strategy "${escapeLogText(selectedRawName)}"${removed ? " (its first Obtainium loadout step skipped: autosing switches to it after each singularity)" : ""}`, this.context);
 
         return runtimeStrategy;
     }
 
-    /** Inserts special steps at the start of the first phase's strat array, adjusting ifJump indices. */
-    #insertAntiBuyCoinBugStep(strategy: any): void {
-        const stepsToInsert = [
-            {
-                comment: "==> Anti buy coin bug",
-                challengeNumber: 999,
-                challengeCompletions: 0,
-                challengeWaitBefore: 0,
-                challengeWaitTime: 0,
-                challengeMaxTime: 0
-            }
-        ];
-
-        this.#insertedStepsPhase = null;
-        if (!strategy || !Array.isArray(strategy.strategy) || strategy.strategy.length === 0) return;
+    /**
+     * Removes a first phase's leading Obtainium loadout step (304): #performSingularity switches to that loadout right
+     * after the singularity, earlier than the step would. IF jumps of that phase are shifted to match.
+     * @returns Whether a step was removed
+     */
+    #removeLeadingObtSwitch(strategy: HSAutosingStrategy): boolean {
+        this.#obtSwitchRemovedPhase = null;
         const firstPhase = strategy.strategy[0];
-        if (!firstPhase || !Array.isArray(firstPhase.strat)) return;
-        let nbSteps = stepsToInsert.length;
-        this.#removedStepCount = 0;
-
-        // Remove probable pre-existing Obt switch as first step
-        if (firstPhase.strat[0]?.challengeNumber === 304) {
-            firstPhase.strat.splice(0, 1);
-            nbSteps--;
-            this.#removedStepCount = 1;
-        }
-
-        // Insert at the start
-        firstPhase.strat.unshift(...stepsToInsert);
-        this.#insertedStepsPhase = firstPhase;
-        this.#insertedStepCount = stepsToInsert.length;
-
-        // Adjust ifJump.ifJumpIndex for all steps in the first phase
+        if (firstPhase?.strat[0]?.challengeNumber !== 304) return false;
+        firstPhase.strat.splice(0, 1);
+        // A jump to the removed step lands on the step that followed it
         for (const step of firstPhase.strat) {
-            if (step.ifJump && typeof step.ifJump.ifJumpIndex === 'number') {
-                step.ifJump.ifJumpIndex += nbSteps;
-            }
+            if (step.ifJump) step.ifJump.ifJumpIndex = Math.max(0, step.ifJump.ifJumpIndex - 1);
         }
+        this.#obtSwitchRemovedPhase = firstPhase;
+        return true;
     }
 
     // ============================================================================
@@ -814,11 +758,9 @@ export class HSAutosing extends HSModule {
         if (passRecord) HSAutosingRecorder.endPass(passRecord, 'done');
     }
 
-    /** A step's number in the strategy editor (from 1), 0 for a step inserted at load. */
+    /** A step's number in the strategy editor (from 1), counting a leading Obtainium loadout step removed at load. */
     #stepNumber(phaseConfig: AutosingStrategyPhase, index: number): number {
-        if (phaseConfig !== this.#insertedStepsPhase) return index + 1;
-        if (index < this.#insertedStepCount) return 0;
-        return index + 1 - this.#insertedStepCount + this.#removedStepCount;
+        return phaseConfig === this.#obtSwitchRemovedPhase ? index + 2 : index + 1;
     }
 
     /**
@@ -1100,9 +1042,6 @@ export class HSAutosing extends HSModule {
                 break;
             case 903: // Stop AutoSing
                 this.stopAutosing();
-                break;
-            case 999: // Anti buy coin bug, in order to be inserted in the strategy
-                await this.#waitForGreenUpg81();
                 break;
             default:
                 HSLogger.warn(`Unknown special action ${actionId}`, this.context);
@@ -1438,10 +1377,6 @@ export class HSAutosing extends HSModule {
 
         const happyHourStackAmount = this.#gameDataAPI?.getEventData()?.HAPPY_HOUR_BELL.amount ?? 0;
 
-        // antiBuyCoinBug setup (hard-coded inserted first step of the strategy should ensure this promise is resolved)
-        this.#upg81Promise = new Promise<boolean>((resolve) => { this.#upg81PromiseResolve = resolve; });
-        this.#upg81Observer?.observe(this.#dom.upg81Btn, { attributes: true, attributeFilter: ['class'] });
-
         this.#notePlayerTab();
         if (!await this.#enterAndLeaveExalt()) {
             if (this.#autosingEnabled) {
@@ -1493,8 +1428,11 @@ export class HSAutosing extends HSModule {
 
         HSLogger.debug(() => "===== Singularity performed =====", this.context);
 
-        // antiBuyCoinBug next step: loop-click upg81 until it turns green (upg81Promise resolved)
-        this.#startUpg81Clicking();
+        // The game gives upgrades 81-100 within the singularity reset since its 2026-09-24 change; before, its automation
+        // auto-buyer bought them up to 50 ms later, and a challenge entered in between left Workers unbought
+        if (this.#hasLivePlayer && this.#exposedPlayer!.upgrades[81] === 0) {
+            HSLogger.warn("Upgrade 81 (Workers auto-buyer) not bought after the singularity: the game may have changed", this.context);
+        }
 
         // Obt switch so we start producing Obt ASAP every sing
         await this.#setAmbrosiaLoadout(this.#dom.ambrosia_obt);
@@ -1872,46 +1810,6 @@ export class HSAutosing extends HSModule {
             this.#dom.antiquitiesRuneLockedContainer,
             { attributes: true, attributeFilter: ['style'] }
         );
-    }
-
-    #startUpg81Clicking(): void {
-        if (this.#upg81ClickLoopActive || !this.#dom.upg81Btn) return;
-
-        const generation = ++this.#upg81ClickLoopGeneration;
-        this.#upg81ClickLoopActive = true;
-
-        void (async (): Promise<void> => {
-            try {
-                while (
-                    generation === this.#upg81ClickLoopGeneration
-                    && this.#autosingEnabled
-                    && this.#upg81Promise
-                ) {
-                    this.#dom.upg81Btn.click();
-                    await HSUtils.waitForNextTack();
-                }
-            } finally {
-                if (generation === this.#upg81ClickLoopGeneration) {
-                    this.#upg81ClickLoopActive = false;
-                }
-            }
-        })();
-    }
-
-    #stopUpg81Clicking(): void {
-        this.#upg81ClickLoopGeneration++;
-        this.#upg81ClickLoopActive = false;
-    }
-
-    async #waitForGreenUpg81(): Promise<void> {
-        if (!this.#upg81Promise) return;
-
-        await this.#upg81Promise;
-
-        this.#stopUpg81Clicking();
-        this.#upg81Observer?.disconnect();
-        this.#upg81PromiseResolve = undefined;
-        this.#upg81Promise = undefined;
     }
 
     #isExpectedAoagWaitSupersession(error: unknown): boolean {
