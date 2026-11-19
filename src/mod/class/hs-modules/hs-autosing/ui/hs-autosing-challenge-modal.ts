@@ -5,6 +5,7 @@ import { HSUtils } from "../../../hs-utils/hs-utils";
 import { HSUIXY } from "../../../../types/module-types/hs-ui-types";
 import { escapeHtml } from "../../../hs-utils/hs-escape";
 import { isIfJumpStep, moveStep, stepListRows, stepSlot, type PairedJump } from "./hs-autosing-step-rows";
+import { formatStrategyNumber } from "../hs-autosingFormatUtils";
 
 type IfJumpMode = NonNullable<IfJumpParams["ifJumpMode"]>;
 
@@ -231,7 +232,8 @@ const FIELD_ROWS: readonly FieldRow[] = [
     },
     {
         key: 'ifJumpValue', label: "Value:", initial: "1",
-        shown: inIfJumpMode("challenges"), load: fromIfJump(jump => jump.ifJumpValue),
+        // A number field accepts 1e12: shown as in the step list
+        shown: inIfJumpMode("challenges"), load: fromIfJump(jump => formatStrategyNumber(jump.ifJumpValue)),
     },
     {
         label: "", note: "Compares to the current C15",
@@ -655,7 +657,7 @@ export class HSAutosingChallengeModal {
         if (isIfJumpStep(step)) {
             const jump = step.ifJump;
             const condition = (jump.ifJumpMode ?? "challenges") === "challenges"
-                ? `challenge ${jump.ifJumpChallenge} ${jump.ifJumpOperator} ${jump.ifJumpValue}`
+                ? `challenge ${jump.ifJumpChallenge} ${jump.ifJumpOperator} ${formatStrategyNumber(jump.ifJumpValue)}`
                 : `Stored C15${jump.ifJumpMultiplier ? ` × 10^${jump.ifJumpMultiplier}` : ""} ${jump.ifJumpOperator} Current C15`;
             // The step that runs next when the condition holds (the logs' "jump to step N"); a click shows its "Jump here" row
             return `<strong>IF</strong> ${escapeHtml(condition)} `

@@ -22,6 +22,7 @@ import { HSAutosingWakeLock } from './hs-autosingWakeLock';
 import { HSGameDialogs } from "../../hs-core/dialogs/hs-game-dialogs";
 import { HSSubtabMemory } from "../hs-subtab-memory";
 import { escapeLogText } from "../../hs-utils/hs-escape";
+import { formatMeasuredNumber, formatStrategyNumber } from "./hs-autosingFormatUtils";
 
 import { HSAutosingDom } from "./hs-autosing-dom";
 import { EXALT_STATE_ATTRIBUTE, HSAutosingDomWaits, HSAutosingTextWaitSupersededError } from "./hs-autosing-dom-waits";
@@ -940,7 +941,7 @@ export class HSAutosing extends HSModule {
                 const shouldJump = jumpIndex !== undefined &&
                     ((operator === ">" && completions > value) ||
                         (operator === "<" && completions < value));
-                const condition = `C${ifIdx} (${completions}) ${operator} ${value}`;
+                const condition = `C${ifIdx} (${formatMeasuredNumber(completions)}) ${operator} ${formatStrategyNumber(value)}`;
                 if (shouldJump) return jumpOrNot(condition);
                 logIfJump(condition, false, 0);
                 break;
@@ -954,7 +955,7 @@ export class HSAutosing extends HSModule {
                 const shouldJump = jumpIndex !== undefined &&
                     ((operator === ">" && threshold > c15Score) ||
                         (operator === "<" && threshold < c15Score));
-                const condition = `stored C15 × 10^${exponent} (${threshold}) ${operator} current C15 (${c15Score})`;
+                const condition = `stored C15 × 10^${exponent} (${formatMeasuredNumber(threshold)}) ${operator} current C15 (${formatMeasuredNumber(c15Score)})`;
                 if (shouldJump) return jumpOrNot(condition);
                 logIfJump(condition, false, 0);
                 break;
