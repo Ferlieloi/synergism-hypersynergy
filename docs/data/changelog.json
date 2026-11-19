@@ -27,6 +27,139 @@
   ],
   "entries": [
     {
+      "id": "dev-2.14.8b-dev1",
+      "version": "2.14.8b-dev1",
+      "channel": "dev",
+      "repository": "maenhiir/synergism-hypersynergy",
+      "commit": "030defbf4f29e727ba1ac407aabed66ef2e72c7b",
+      "previous_commit": "32dc33bcf5c2785857316f1f21aeb5e849466a8e",
+      "date": "2026-11-19",
+      "date_kind": "published",
+      "status": "published",
+      "release_url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.14.8b-dev1",
+      "sources": [
+        {
+          "label": "Published release",
+          "url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.14.8b-dev1"
+        }
+      ],
+      "notes": [],
+      "changes": [
+        {
+          "type": "fixed",
+          "text": "Auto-Sing collects the Ants to Quark Corner's quarks at the quark loadout's multiplier, about 3% more quarks per hour at no time cost.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/1ff4b63efa3e91da86452a1f12b76eff67657aec",
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/35b0eb6c59ca8afcaf658f0eed12527ea671a6a4"
+          ]
+        },
+        {
+          "type": "fixed",
+          "text": "Auto-Sing no longer gets stuck when the game's ascension confirmation is on. It turns the ascension and ant sacrifice confirmations off for the run and restores them when it stops, and logs a warning when the game keeps refusing a challenge entry.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/d3901004ace4c8f6b5b777de3dbc294e54b24b50",
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/85aedccb528136c7be1dfae9e88d6dcdce81ef9b"
+          ]
+        },
+        {
+          "type": "fixed",
+          "text": "Auto-Sing exports once when it starts, so the quarks saved up since the last export no longer inflate the first counted singularity.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/2416a722a47a893d68eb6ac5a4220eb361b9380a"
+          ]
+        },
+        {
+          "type": "fixed",
+          "text": "An IF that loops back with no wait in between no longer freezes the game: it checks its condition once per game tick.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/30c90e486c7ac81b3433e32635f72b215a453407"
+          ]
+        },
+        {
+          "type": "added",
+          "text": "The strategy editor has an AOAG bought IF mode, to retry when Click AOAG didn't buy the rune. Click AOAG logs a warning in that case.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/b7d87bddd96f9d0f5cc8371e846047314b54831a"
+          ]
+        },
+        {
+          "type": "changed",
+          "text": "A strategy's last phase is always singularity to end, and a new strategy starts with start to singularity and singularity to end. A last phase starting earlier no longer keeps running during the AOAG phase; saved strategies keep working.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/9490467809559ed54fdd99f438c2ee4337870d62",
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/584f7c859b26646ec6b4cffa343d796461f5aae6",
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/010d7719bbd2d27502b3a60fd7b747fe28b18981"
+          ]
+        },
+        {
+          "type": "removed",
+          "text": "The Anti buy coin bug step is removed: the game now gives the Workers auto-buyer at the singularity itself.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/0b5ab1eb71eda9cabe1e1a86f8d55176989eeeb9"
+          ]
+        },
+        {
+          "type": "changed",
+          "text": "Demon King (rus) is updated to v2.1, with v2.0 under Previous Versions. Old Strategies is renamed Not Yet Retuned, and Delete is greyed for default strategies.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/57cb681d77bcbb42c432c4fae2e00a8e3300a622"
+          ]
+        },
+        {
+          "type": "changed",
+          "text": "The strategy editor shows large IF values in scientific notation, and Undo and Redo mirror each other.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/decb03ff328925c717234e0d7e5c2381b3eb0a7d",
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/8d9860dc41cac214f62b484cee59c59f7b20d0f3"
+          ]
+        },
+        {
+          "type": "fixed",
+          "text": "The Automation quickbar shows Auto Ascend as soon as the game unlocks it, and hides buttons whose game toggles are all still locked.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/96d59ebd97b90bde7bbb378e309bed046c419abd",
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/4b4668672d1372b601d7af0f82c6d1691cf528ba"
+          ]
+        },
+        {
+          "type": "changed",
+          "text": "The Hepteract Forge ratios line is smaller and closer to the grid. Closing the Ambrosia Heater results no longer logs a warning.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/99f3de31e2c73c3dcbbc66858c824ab964a35030",
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/7f27b2b1efe66cfb5b71b879b1c83e1fe6dcae3f"
+          ]
+        }
+      ],
+      "contributors": [
+        {
+          "id": "maenhiir",
+          "roles": [
+            "changes",
+            "merge"
+          ],
+          "commits": [
+            "1ff4b63efa3e91da86452a1f12b76eff67657aec",
+            "d3901004ace4c8f6b5b777de3dbc294e54b24b50",
+            "b7d87bddd96f9d0f5cc8371e846047314b54831a",
+            "33226d0b47f378e55d4c4f5c9c72488337883a8d"
+          ]
+        }
+      ],
+      "merges": [
+        {
+          "direction": "live-to-dev",
+          "commit": "33226d0b47f378e55d4c4f5c9c72488337883a8d",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/33226d0b47f378e55d4c4f5c9c72488337883a8d"
+          ],
+          "summary": "Includes changes from Live through v2.14.8b.",
+          "from_entry_ids": [
+            "live-2.14.8b"
+          ]
+        }
+      ]
+    },
+    {
       "id": "live-2.14.8b",
       "version": "2.14.8b",
       "channel": "live",
