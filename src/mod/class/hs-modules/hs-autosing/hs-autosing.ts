@@ -40,6 +40,9 @@ export class HSAutosing extends HSModule {
     static readonly #DECIMAL_0 = new Decimal(0);
     // A challenge entry still refused after this long gets one warning (the entry keeps retrying)
     static readonly #ENTRY_WARN_MS = 2000;
+    // An IF checked again sooner than this in the same pass (one game tick) waits for the rest of it first: a loop
+    // whose steps never wait would otherwise run in microtasks only, the game could never tick and the page froze
+    static readonly #IF_RECHECK_MS = 5;
     #gameDataAPI?: HSGameDataAPI;
 
     #corruptionManager!: HSAutosingCorruption;
@@ -737,6 +740,8 @@ export class HSAutosing extends HSModule {
 
         // Jumps taken by each IF with a max jumps in this pass, by its index
         const jumpCounts = new Map<number, number>();
+        // When each IF last read its condition in this pass, by its index (#IF_RECHECK_MS)
+        const ifCheckedAt = new Map<number, number>();
         for (let i = 0; i < phaseConfig.strat.length; i++) {
             if (this.#autosingModal?.getIsPaused()) await this.#waitIfAutosingPaused();
 
@@ -748,7 +753,7 @@ export class HSAutosing extends HSModule {
             }
 
             const stepStartedAt = passRecord ? performance.now() : 0;
-            const jumpIndex = await this.#executeStrategyAction(phaseConfig, i, jumpCounts, passRecord);
+            const jumpIndex = await this.#executeStrategyAction(phaseConfig, i, jumpCounts, ifCheckedAt, passRecord);
             if (passRecord) HSAutosingRecorder.step(passRecord, phaseConfig.strat[i], i, this.#stepNumber(phaseConfig, i), stepStartedAt, jumpIndex);
             if (typeof jumpIndex === 'number') {
                 // set loop index to jumpIndex-1 because the for-loop will increment it
@@ -770,10 +775,11 @@ export class HSAutosing extends HSModule {
 
     /**
      * @param jumpCounts The pass's jumps taken by each IF with a max jumps, by its index
+     * @param ifCheckedAt When each IF last read its condition in this pass, by its index
      * @param passRecord With "Record step timings" on: the recorder's pass, which gets the time slept before the step
      */
     async #executeStrategyAction(phaseConfig: AutosingStrategyPhase, actionIndex: number, jumpCounts: Map<number, number>,
-        passRecord?: HSAutosingPassRecord): Promise<number | null> {
+        ifCheckedAt: Map<number, number>, passRecord?: HSAutosingPassRecord): Promise<number | null> {
         const challenge = phaseConfig.strat[actionIndex];
 
         const wb = challenge.challengeWaitBefore ?? 0;
@@ -803,8 +809,18 @@ export class HSAutosing extends HSModule {
             case 158:
                 this.#setAutoToggle(challenge.challengeNumber, challenge.toggleOn !== false, () => `${tag()} - SA: ${actionText()}`);
                 break;
-            case IF_JUMP_VALUE:
+            case IF_JUMP_VALUE: {
+                // Checked again within one game tick: a loop with nothing that waits. Its condition can't change
+                // before the next tick anyway. A loop that waits elsewhere (Wait before, completions) never sleeps here
+                const lastCheck = ifCheckedAt.get(actionIndex);
+                const remaining = lastCheck === undefined ? 0 : HSAutosing.#IF_RECHECK_MS - (performance.now() - lastCheck);
+                if (remaining > 0) {
+                    await HSUtils.sleep(remaining);
+                    if (!this.#autosingEnabled) return null;
+                }
+                ifCheckedAt.set(actionIndex, performance.now());
                 return this.#handleIfJumpAction(challenge, phaseConfig, actionIndex, jumpCounts, tag);
+            }
             default:
                 if (challenge.challengeNumber >= 100) {
                     HSLogger.debug(() => `${tag()} - SA: ${actionText()}`, this.context);

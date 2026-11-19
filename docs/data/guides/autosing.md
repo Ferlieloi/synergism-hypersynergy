@@ -104,6 +104,7 @@ An If-jump step (an IF row ① in the list) jumps to its **Jump here** row ② w
 - **Stored C15 value** mode: compares C15's current score with the stored score × 10^Multiplier.
 - **AOAG bought** mode: jumps when the AOAG rune is bought, or not bought, as chosen. Put it after a Click AOAG step to retry when the purchase failed: jump back to a step that waits or ascends first, and set Max jumps. Needs the mod's patched game (not the bookmarklet): elsewhere it never jumps, with a warning in the log.
 - **Max jumps** ③: the IF jumps at most this many times per phase run, then continues below it even if its condition still holds (0 = no limit). It keeps an account that never reaches a C15 target from looping forever. The default strategies' last C15 loop has 5.
+- An IF checks its condition at most once per game tick (5 ms). A loop with nothing that waits, such as an IF jumping to itself, checks once per tick: Max jumps 100 then lasts about half a second. Add a Wait before to check less often.
 - The IF row says where it jumps (→ step N), and the Jump here row which IF it belongs to: click either one to see the other. ↺ means the IF jumps back (a loop).
 - Follow the colored line from an IF to its **Jump here** row. Drag the arrow or the row’s handle to change the destination. Hold Shift while dragging an IF to pick up its jump marker. Release Shift to leave the marker where it is.
 

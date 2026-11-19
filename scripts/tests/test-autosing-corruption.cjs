@@ -27,6 +27,7 @@ async function main() {
         };`,
         'hs-utils': `export const HSUtils = {
             sleepUntilElapsed: async () => { globalThis.__corruptionTest.beforeWait?.(); },
+            sleep: async ms => { globalThis.__corruptionTest.sleeps.push(ms); },
             waitForNextTack() { throw new Error('Corruption actions must not wait for a game tick'); }
         };`,
     };
@@ -85,7 +86,7 @@ async function main() {
         const setup = ({ next = 5, used = 5, cap = 100, live = true, confirm = false, challenge = 0 } = {}) => {
             const state = globalThis.__corruptionTest = {
                 player: { corruptions: { next, used }, currentChallenge: { ascension: challenge } },
-                live, events: [], logs: [], dialogWaits: 0, c15Coins: 42, savedC15Score: 0,
+                live, events: [], logs: [], sleeps: [], dialogWaits: 0, c15Coins: 42, savedC15Score: 0,
             };
             const progress = { textContent: challenge ? 'Challenge 15: 42' : '' };
             const input = {
@@ -325,6 +326,9 @@ async function main() {
         await runner.runPhaseForTest(cappedLoop);
         assert.deepEqual(state.events, [...onePass, ...onePass]);
         assert.equal(state.logs.filter(line => line.includes('max jumps (3) reached')).length, 2);
+        // Nothing in that loop waits: each check after the first sleeps up to one game tick (5 ms), never across passes
+        assert.equal(state.sleeps.length, 6);
+        assert.ok(state.sleeps.every(ms => ms > 0 && ms <= 5));
         scenarios++;
 
         // A false condition never counts: the IF still jumps 3 times after it.
