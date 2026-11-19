@@ -1208,7 +1208,8 @@ export class HSAutosing extends HSModule {
 
     async #C1to10UntilNoMoreCompletions(challengeIndex: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10, initialWaitTime: number, maxTime: number): Promise<void> {
         await this.#waitForCompletion(challengeIndex, 0, 0, 0);
-        await HSUtils.sleep(initialWaitTime);
+        // A 0 ms timer set from the game's tick (itself a chain of timers) is stretched to 4 ms by the browser
+        if (initialWaitTime > 0) await HSUtils.sleep(initialWaitTime);
 
         // Fast path: use exposedPlayer.challengecompletions instead of MutationObserver/class polling.
         if (this.#hasMaxChallenges) {
