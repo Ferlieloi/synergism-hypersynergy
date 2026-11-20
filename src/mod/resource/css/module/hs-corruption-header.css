@@ -1,5 +1,4 @@
-/* The game's "Corruption level" header module (HSCorruptionHeader): the next level after its text, and the popover
-   of level controls a click opens */
+/* The game's "Corruption level" header module, its disclosure button and its popover */
 
 html.hs-corruption-header-controls #mainHeader:not(.headerEditMode) #corruptionLevelHeader {
    cursor: pointer;
@@ -10,6 +9,45 @@ html.hs-corruption-header-controls #mainHeader:not(.headerEditMode) #corruptionL
    color: silver;
 }
 #corruptionLevelHeader > .hs-corruption-header-next:empty {
+   display: none;
+}
+
+#corruptionLevelHeader > .hs-corr-menu-toggle {
+   display: inline-grid;
+   place-items: center;
+   flex: none;
+   box-sizing: border-box;
+   width: 20px;
+   height: 20px;
+   min-height: 0;
+   margin: 0;
+   margin-inline-end: 5px;
+   padding: 0;
+   border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+   border-radius: 4px;
+   background-color: transparent;
+   color: inherit;
+   cursor: pointer;
+}
+#corruptionLevelHeader > .hs-corr-menu-toggle:is(:hover, [aria-expanded="true"]) {
+   background-color: color-mix(in srgb, currentColor 14%, transparent);
+}
+#corruptionLevelHeader > .hs-corr-menu-toggle:focus-visible {
+   outline: 1px solid currentColor;
+   outline-offset: 2px;
+}
+#corruptionLevelHeader > .hs-corr-menu-toggle::before {
+   content: '';
+   width: 6px;
+   height: 6px;
+   border: solid currentColor;
+   border-width: 0 2px 2px 0;
+   transform: translateY(-2px) rotate(45deg);
+}
+#corruptionLevelHeader > .hs-corr-menu-toggle[aria-expanded="true"]::before {
+   transform: translateY(2px) rotate(225deg);
+}
+#mainHeader.headerEditMode #corruptionLevelHeader > .hs-corr-menu-toggle {
    display: none;
 }
 

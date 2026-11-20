@@ -235,7 +235,7 @@
     cursor: help;
 }
 
-/* In place of the × the AOAG row doesn't have, so that its ✎ lines up with the phases' */
+/* In place of the × a row doesn't have (AOAG, the last phase, the only one before it), so that its ✎ lines up */
 .hs-strategy-btn-spacer {
     flex: none;
     width: 28px;
@@ -257,30 +257,11 @@
     outline: none;
 }
 
-/* "Add phase until…", below the last phase */
-.hs-strategy-add-select {
-    display: block;
-    padding: 4px 10px;
-    background-color: #101828;
-    border: 1px dashed #888;
-    border-radius: 3px;
-    color: #c8c8c8;
-    font-weight: 600;
-    font-size: 12px;
-    cursor: pointer;
-}
-
-.hs-strategy-add-select:hover,
-.hs-strategy-add-select:focus {
-    background-color: #005;
-    border-color: cyan;
-    color: white;
-    outline: none;
-}
-
-.hs-strategy-add-select option {
-    background-color: #101828;
-    color: white;
+/* The last two phases' ends are fixed */
+.hs-strategy-end-select:disabled {
+    border-color: #666;
+    color: #aaa;
+    cursor: default;
 }
 
 
@@ -357,13 +338,6 @@
 
 .hs-strategy-btn-delete:hover {
     background-color: maroon;
-}
-
-.hs-strategy-empty-state {
-    text-align: center;
-    color: #888;
-    padding: 40px 20px;
-    font-style: italic;
 }
 
 /* ===== CHALLENGES MODAL ===== */
@@ -763,7 +737,8 @@
 /* Mid-way along the game's ambrosia bar (navy to darkturquoise); darkturquoise itself is too close to the step's meta line */
 .hs-step-ambrosia { color: #3c8fd8; }
 .hs-step-corruption { color: #e07a7a; }
-.hs-step-autosing { color: #e8d27a; }
+.hs-step-rune { color: #e8d27a; }
+.hs-step-autosing { color: #7fd1d6; }
 
 /* An action's id, after its label */
 .hs-challenge-action-id {
@@ -933,10 +908,20 @@
     background-color: maroon;
 }
 
-/* Mark visually the default strategies in dropdown list */
-select option[data-default="true"] {
-    font-weight: bold;
-    color: #888; 
+/* Strategy dropdown: previous versions and strategies not yet retuned, secondary choices */
+#hs-setting-auto-sing-strategy option.hs-strategy-option-secondary {
+    color: #888;
+}
+
+/* Delete while a default strategy is selected: greyed, still clickable (the click says why) */
+.hs-panel-btn.hs-strategy-delete-locked {
+    color: #888;
+    border-color: #555;
+    cursor: not-allowed;
+}
+
+.hs-panel-btn.hs-strategy-delete-locked:hover {
+    background-color: #101828;
 }
 
 .hs-strategy-error {

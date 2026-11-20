@@ -565,7 +565,8 @@
             "centerQuickbars"
           ],
           "sources": [
-            "src/mod/class/hs-modules/hs-qol-quickbar/hs-qolQuickbarAutomation.ts"
+            "src/mod/class/hs-modules/hs-qol-quickbar/hs-qolQuickbarAutomation.ts",
+            "docs/features/quickbars.md"
           ]
         }
       ]
@@ -648,10 +649,25 @@
       "icon": "docs/res/categories/challenges.png",
       "intro": "Current versions use a single corruption level. The old corruption-loadout modules are no longer part of the mod.",
       "sources": [
+        "docs/features/corruption-predictor.md",
         "docs/features/header-corruption.md",
         "docs/features/header-challenge-progress.md"
       ],
       "features": [
+        {
+          "id": "corruption-predictor",
+          "title": "Corruption predictor",
+          "where": "Corruption tab → Find optimal level, or Corruption quickbar → Set best",
+          "summary": "Estimates which corruption level gives the most of your chosen reward on the next ascension.",
+          "details": [
+            "Auto targets the highest reward type you can earn. Choose another reward type to override it.",
+            "The quickbar's Set best calculates and applies the recommended level for your next ascension."
+          ],
+          "limits": [
+            "Requires corruption and Instant Challenge II. In an Exalt, clear C11 again first.",
+            "Challenge completions and rewards are estimates. Leave any active ascension challenge before calculating."
+          ]
+        },
         {
           "id": "corruption-next",
           "title": "Current and next corruption level",
@@ -1009,7 +1025,7 @@
           "id": "ambrosia-icons",
           "title": "Custom Ambrosia loadout icons",
           "where": "Header editor → slot icon chooser; Ambrosia tab",
-          "summary": "Gives saved loadouts recognizable icons instead of only numbers.",
+          "summary": "Lets a saved loadout use any game icon, not only the few the game offers.",
           "details": [
             "Choose an icon through the header slot's icon dialog, including the mod's Pick any game icon option. The mod applies its stored custom icon to the matching Ambrosia-tab slot too.",
             "The same stored icon is reused by the Heater slot row; choosing a native icon or plain number clears the mod's custom override."
@@ -1427,7 +1443,7 @@
           "details": [
             "Inspect built-in strategies, then copy or create one for your own tuning.",
             "Imports are validated and older strategy formats are normalized. Exports copy shareable strategy JSON.",
-            "Bundled strategies whose names carry -temp are listed under Old Strategies: their authors still need to tune them for the changed corruption system.",
+            "Bundled strategies whose names carry -temp are listed under Not Yet Retuned: their authors still need to tune them for the changed corruption system. A strategy's earlier versions stay available under Previous Versions.",
             "If a strategy cannot be saved, the draft stays open and the existing strategy list stays intact."
           ],
           "settings": [
@@ -1502,7 +1518,7 @@
         },
         {
           "id": "autosing-loadouts",
-          "title": "Six configurable Ambrosia roles",
+          "title": "Six configurable Ambrosia loadouts",
           "where": "Settings → Auto-Sing → Ambrosia loadouts",
           "summary": "Assigns the Hyperflux (H), 3-7D Cubes, Quark, Obtainium, Offerings and Ambrosia slots; an Antiquities icon shows which are for pre-AOAG (dimmed) and post-AOAG (full colours).",
           "details": [

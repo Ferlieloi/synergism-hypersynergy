@@ -137,7 +137,8 @@ None of them writes `player.headerLayouts` (checked at the merge). All per brows
   button (1 to 8; `__HS_headerButtonCapacity`, recomputed on a grid resize and at each width change) and re-renders
   when it changes. A button joins a group only while the group's buttons fit its width (`__HS_canJoinHeaderButtons`).
   The patch keeps room for 8 buttons in the saved positions (`Math.max(8, …)`), so a group made on a wide window wraps
-  on a narrower one instead of losing buttons. Without the new bundle every hook falls back to the game's value.
+  on a narrower one instead of losing buttons. Without the new bundle every hook falls back to the game's value. A
+  group never grows past its cell's width.
   Tests: `scripts/tests/test-header-layout.cjs`, `synergism_modloader/test/patcherHeaderButtons.test.js`.
 - **Minibar resize** (`HSMinibarResize`, `hs-core/header/hs-minibar-resize.ts`, installed on `#hs-minibars-wrapper`
   by `HSAmbrosiaMinibars`): width / height / corner handles in edit mode, a size readout and Reset size. Stored in

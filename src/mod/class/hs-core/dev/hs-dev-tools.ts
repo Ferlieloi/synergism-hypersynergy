@@ -39,6 +39,8 @@ interface HSDevStoredData {
     freePath: string;
     // Restore moves the save's clock fields to now: no offline progress, same code timers, no daily reset
     skipOfflineProgress: boolean;
+    // Best Purple buys (HSPurpleAdvisor): shown only from here until its release as a setting
+    purpleAdvisor: boolean;
 }
 
 // What the snapshot list shows: a stored snapshot without its save
@@ -148,7 +150,7 @@ export class HSDevTools {
     #freePath?: HTMLInputElement;
     #freeCurrent?: HTMLElement;
 
-    #data: HSDevStoredData = { pinned: [], freePath: '', skipOfflineProgress: true };
+    #data: HSDevStoredData = { pinned: [], freePath: '', skipOfflineProgress: true, purpleAdvisor: false };
 
     // Taken before the first edit of the session (a page load)
     #sessionSnapshot?: HSDevSnapshot;
@@ -190,6 +192,9 @@ export class HSDevTools {
             this.#button('Dump Game vars', () => this.#dumpGameData()),
         );
         root.append(dumps);
+
+        root.append(this.#el('div', 'hs-dev-tools-group', 'Features in development'));
+        root.append(this.#buildPurpleAdvisorCheckbox());
 
         if (!HSGlobal.exposedPlayer) {
             root.append(this.#el('div', '', 'No player object: these tools need the patched game.'));
@@ -619,6 +624,7 @@ export class HSDevTools {
             pinned: Array.isArray(stored?.pinned) ? stored.pinned : [],
             freePath: typeof stored?.freePath === 'string' ? stored.freePath : '',
             skipOfflineProgress: typeof stored?.skipOfflineProgress === 'boolean' ? stored.skipOfflineProgress : true,
+            purpleAdvisor: stored?.purpleAdvisor === true,
         };
     }
 
@@ -655,6 +661,31 @@ export class HSDevTools {
     }
 
     /** On the Snapshots title line: it changes what the Restore buttons below do. */
+    /**
+     * Best Purple buys, off by default. Not a setting while in development: a stored OFF would override the
+     * setting's default ON at its release (docs/features/purple-advisor.md).
+     */
+    #buildPurpleAdvisorCheckbox(): HTMLElement {
+        const apply = (on: boolean) => {
+            const advisor = HSModuleRegistry.getModule('HSPurpleAdvisor');
+            if (on) advisor?.show();
+            else advisor?.hide();
+        };
+        const label = this.#el('label', 'hs-dev-tools-radio');
+        label.title = 'On the Singularity tab, Purple subtab, above the reactor';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = this.#data.purpleAdvisor;
+        checkbox.addEventListener('change', () => {
+            this.#data.purpleAdvisor = checkbox.checked;
+            this.#saveData();
+            apply(checkbox.checked);
+        });
+        label.append(checkbox, 'Best Purple buys');
+        if (this.#data.purpleAdvisor) apply(true);
+        return label;
+    }
+
     #buildSkipOfflineCheckbox(): HTMLElement {
         const skipOfflineProgress = this.#el('label', 'hs-dev-tools-radio hs-dev-tools-skip-offline');
         skipOfflineProgress.title = 'Restore: no offline progress, same code timers, no daily reset';

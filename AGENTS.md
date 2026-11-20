@@ -8,7 +8,7 @@ work with; people named elsewhere (Shewchou, Ferlieloi) are the maintainers.
 HyperSynergism is an unofficial quality-of-life mod for the browser/Steam game [Synergism](https://synergism.cc/). It doesn't automate the game, apart from the opt-in autosing module.
 
 - **Vanilla game source (read-only):** `node scripts/tools/update-game.cjs` clones or pulls the official repo into `local/game/SynergismOfficial-master`, fetches the live bundle into `local/game/out.js` and runs `patcher.js` on it. Use it for formulas, save-data shapes and DOM ids; never edit it. GitHub's `master` can be ahead of the deployed game. After a game update: `docs/game/updating.md`.
-- **`docs/` (committed):** `game/` how the game behaves, `features/` one file per feature with its rules and decisions, `dev/` procedures (`code.md`, `releasing.md`, `tricks.md`). The rest is the player website and wiki, generated from `docs/data/` (`feature-catalogue.json` and the players' guides in `guides/`): edit those, never the generated pages (`docs/dev/publishing-guide.md`; the site's behaviour: `docs/features/website.md`). The site reads the mod's files (settings, the mod's icons), never the reverse: the mod's build reads nothing in `docs/`. People are named there (Shewchou, Ferlieloi), never "the user": each developer's agent would read that as its own user. No personal data.
+- **`docs/` (committed):** `game/` how the game behaves, `features/` one file per feature with its rules and decisions, `dev/` procedures (`code.md`, `releasing.md`, `tricks.md`). The rest is the player website and wiki, generated from `docs/data/` (`feature-catalogue.json` and the players' guides in `guides/`): edit those, never the generated pages (`docs/dev/publishing-guide.md`; the site: `docs/features/website.md`, then `website-pages.md`). The site reads the mod's files (settings, the mod's icons), never the reverse: the mod's build reads nothing in `docs/`. People are named there (Shewchou, Ferlieloi), never "the user": each developer's agent would read that as its own user. No personal data.
 - **`local/` is git-ignored**: it exists only on your disk, so tracked code and docs never point to it, except to what a tool creates there (`local/game/`, `local/harness-out/`, `local/account/`, `local/site/`). Your saves and design docs go there too. Search tools skip it by default: give the path explicitly.
 
 ## Where knowledge goes
@@ -21,9 +21,9 @@ Each kind of knowledge has one home. Write it there and nowhere else; elsewhere,
 | The detail of a cross-feature rule | `docs/game/`, `docs/dev/`, or the feature file it belongs to, with a pointer here |
 | One feature's full rules and the decisions about it | `docs/features/<name>.md`, with a 1–2 line summary + pointer here |
 | One developer's preferences, refusals ("don't propose again"), backlog ideas | that developer's private notes (agent memory, a git-ignored local instructions file) |
-| The design of work in progress | a design doc in `local/`; once done, mark it as history at the top |
+| The design of work in progress | a design doc in `local/`; once done, its rules go to `docs/` and the doc is deleted |
 
-Keep this file short. Never write release state (pushed, tagged, on Live) anywhere: git knows, and such lines go stale. Read a feature's file before changing that feature. When you edit one, cut the history and test logs that no longer explain a current rule. Every rule in `docs/features/` is a maintainer's decision: change it only when asked, and never re-propose a rejected option. Write a rejected option as one clause with its reason ("not X: why"); no who, no when.
+Keep this file short: about 16.5k characters at most; past that, move rules that bite in one place to their doc. Never write release state (pushed, tagged, on Live) anywhere: git knows, and such lines go stale. Read a feature's file before changing that feature. When you edit one, cut the history and test logs that no longer explain a current rule. Every rule in `docs/features/` is a maintainer's decision: change it only when asked. Write down a rejected option only when its reason is a fact about the code, the game or a measurement ("not X: why"; no who, no when), and don't re-propose it. A choice of scope or taste ("not now", "too much work", "keep it as is") isn't written down: re-proposing it costs one line.
 
 ## Commands
 
@@ -32,10 +32,8 @@ Keep this file short. Never write release state (pushed, tagged, on Live) anywhe
 - `scripts/harness/` (read its README first): the real game headless in Chrome and the mod's code in node. A one-off test script goes in `local/`, built on `scripts/harness/lib/`, never in a temporary folder. Reusable scripts that need nothing from `local/`: `scripts/tools/` (also dead-code analysis).
 - `npm run build`: dev build to `build/hypersynergism.js` and loader files in `build/`. `npm run dev` watches both; restart it after changing the `package.json` version (`HS_BUILD_VERSION` is a `define`). `npm run build:loaders` regenerates the checked-in loader files. `start-dev-server.bat`: watch build + `http-server ./build/ --cors` on port 8080, plus the website preview (`npm run site`, rebuilt at each change) on port 8081.
 - `npm run release`: minified build to `release/mod/hypersynergism_release.js`, committed, served to players by jsDelivr, the only build without the dev tools. It is rebuilt only by a release, never by a commit. `npm run release-and-tag-helper` does a whole release, `npm run release-loader` a loader release. Releases, merging Live into Dev, porting to Live, loader releases: `docs/dev/releasing.md`.
-- Every build regenerates the strategy manifest (`scripts/generate-strategy-manifest.js`) and bundles the heater web worker separately (`scripts/heater-worker-plugin.cjs`).
-- **Every release requires a website changelog entry** in `docs/data/changelog.json`, matching its version, channel and player-facing changes. Live regenerates and validates the page before publishing; Dev only validates (`build-docs.py --validate`) and never commits `docs/changelog.html`. Required steps: `docs/dev/releasing.md`.
-- **Catch-up changelogs and credits:** link incoming versions and manually review the receiving release's notes and credits. Dev may list Live fixes made between releases when no patch notes describe them yet. Credit the authors of those fixes as well as the authors of the receiving branch's new work and the merger. See `docs/dev/publishing-guide.md`.
-- Desktop loader (`synergism_modloader/`, its own npm package and version): `npm start` (Electron app), `npm test` (`node --test test/*.test.js`), `npm run dist` (installer).
+- **Every release requires a website changelog entry** in `docs/data/changelog.json`; Dev never commits `docs/changelog.html`. Steps, catch-up notes and credits: `docs/dev/releasing.md`, `docs/dev/publishing-guide.md`.
+- Desktop loader (`synergism_modloader/`, its own npm package and version), its commands: `docs/features/loaders.md`.
 
 ## Architecture
 
@@ -84,7 +82,7 @@ Prefer the game's state (`HSGlobal.exposedPlayer`, GDS data) or signals it keeps
 - **Hepteract Distributor**: many of its choices were reversed at least once; update the panel's `HELP_LINES` with it. `docs/features/hepteract-distributor.md`.
 - **Version check**: `compareVersionTags` and the release helper's `compareVersions` must sort the same way. `docs/features/version-check.md`.
 - **Backup**: a backup file is untrusted. `docs/features/backup.md`.
-- Others, one doc each in `docs/features/`: quickbars (`HSQuickbarManager`), GQ distributor, auto export, subtab memory, tools tab, platonic tooltip, Singularity search fields (perks, GQ, octeracts), log.
+- Others, one doc each in `docs/features/`: quickbars (`HSQuickbarManager`), GQ distributor, auto export, subtab memory, tools tab, platonic tooltip, Singularity search fields (perks, GQ, octeracts), log, Best Purple buys (`purple-advisor.md`).
 
 ### Dev tools (`docs/features/dev-tools.md`)
 `HSDevTools` edits the live player and must never reach players: used only under `if (HS_DEV_BUILD)`, the string `hs-dev-tools` kept out of release code (`esbuild.config.js` refuses such a bundle), no static fields or side-effect imports, not an `HSModule`.

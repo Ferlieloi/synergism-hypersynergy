@@ -1,10 +1,11 @@
-import { AutosingStrategyPhase, Challenge, isCorruptionLevelStep, SET_CORRUPTION_LEVEL_VALUE, CLEANSE_CORRUPTION_VALUE, SPECIAL_ACTIONS, SPECIAL_ACTION_BY_ID, type SpecialAction, IF_JUMP_VALUE, FLIP_TOGGLE_VALUES, isSetAutoToggleStep, IsJumpChallenge, ModalInput, IfJumpParams } from "../hs-autosing-types";
+import { AutosingStrategyPhase, Challenge, isCorruptionLevelStep, SET_CORRUPTION_LEVEL_VALUE, CLEANSE_CORRUPTION_VALUE, SPECIAL_ACTIONS, SPECIAL_ACTION_BY_ID, type SpecialAction, IF_JUMP_VALUE, BUY_RUNE_VALUE, BUYABLE_RUNES, BUYABLE_RUNE_BY_KEY, DEFAULT_BUY_RUNE, type BuyableRuneKey, PAUSE_AUTOSING_VALUE, FLIP_TOGGLE_VALUES, isSetAutoToggleStep, IsJumpChallenge, ModalInput, IfJumpParams } from "../hs-autosing-types";
 import { HSTooltip } from "../../../hs-core/hs-tooltip";
 import { HSUI } from "../../../hs-core/hs-ui";
 import { HSUtils } from "../../../hs-utils/hs-utils";
 import { HSUIXY } from "../../../../types/module-types/hs-ui-types";
 import { escapeHtml } from "../../../hs-utils/hs-escape";
 import { isIfJumpStep, moveStep, stepListRows, stepSlot, type PairedJump } from "./hs-autosing-step-rows";
+import { formatStrategyNumber } from "../hs-autosingFormatUtils";
 
 type IfJumpMode = NonNullable<IfJumpParams["ifJumpMode"]>;
 
@@ -17,8 +18,8 @@ interface FieldContext {
     ifJumpMode: IfJumpMode;
 }
 
-type FieldKey = 'action' | 'challengeNum' | 'forgeItem' | 'completions' | 'corruptionLevel' | 'ascendAfterCorruption' | 'cleanseToHighest' | 'toggleOn' | 'waitBefore' | 'waitInside' | 'maxTime'
-    | 'comment' | 'ifJumpMode' | 'ifJumpChallenge' | 'ifJumpMultiplier' | 'ifJumpOperator' | 'ifJumpValue' | 'ifJumpMaxJumps';
+type FieldKey = 'action' | 'challengeNum' | 'forgeItem' | 'completions' | 'corruptionLevel' | 'ascendAfterCorruption' | 'cleanseToHighest' | 'toggleOn' | 'rune' | 'waitBefore' | 'waitInside' | 'maxTime'
+    | 'comment' | 'ifJumpMode' | 'ifJumpChallenge' | 'ifJumpMultiplier' | 'ifJumpAoagBought' | 'ifJumpOperator' | 'ifJumpValue' | 'ifJumpMaxJumps';
 
 interface FieldRowBase {
     label: string;
@@ -60,7 +61,7 @@ const isSpecialStep = (step: Challenge) => SPECIAL_ACTION_BY_ID.has(step.challen
 // A step's own value, for the fields of a standard challenge or special action (not an IF jump)
 const fromAction = (read: (step: Challenge) => string | number | boolean | undefined) =>
     (step: Challenge) => isIfJumpStep(step) ? undefined : read(step);
-const fromIfJump = (read: (jump: IfJumpParams) => string | number | undefined) =>
+const fromIfJump = (read: (jump: IfJumpParams) => string | number | boolean | undefined) =>
     (step: Challenge) => isIfJumpStep(step) ? read(step.ifJump) : undefined;
 const inIfJumpMode = (mode: IfJumpMode) => (c: FieldContext) => c.isIfJump && c.ifJumpMode === mode;
 
@@ -95,12 +96,13 @@ const WHOLE_NOT_NEGATIVE: NumberCheck = { isValid: v => Number.isInteger(v) && v
 // labelClass: the colour of the group's step labels in the list (none: white)
 const ACTION_GROUPS: readonly { label: string; ranges: readonly [number, number][]; labelClass?: string }[] = [
     { label: "Exit and Ascend", ranges: [[101, 104]] },
-    { label: "Game actions", ranges: [[151, 158], [FORGE_FAMILY.first, FORGE_FAMILY.last]] },
+    { label: "Game actions", ranges: [[151, 159], [FORGE_FAMILY.first, FORGE_FAMILY.last]] },
     { label: "Condition", ranges: [[IF_JUMP_VALUE, IF_JUMP_VALUE]] },
     { label: "Challenges", ranges: [[211, 215], [C1_TO_C10_FAMILY.first, C1_TO_C10_FAMILY.last]] },
     { label: "Ambrosia loadouts", ranges: [[301, 306]], labelClass: "hs-step-ambrosia" },
     { label: "Corruption level", ranges: [[SET_CORRUPTION_LEVEL_VALUE, CLEANSE_CORRUPTION_VALUE]], labelClass: "hs-step-corruption" },
-    { label: "AOAG and Autosing", ranges: [[901, 903]], labelClass: "hs-step-autosing" },
+    { label: "Runes", ranges: [[BUY_RUNE_VALUE, BUY_RUNE_VALUE], [901, 901]], labelClass: "hs-step-rune" },
+    { label: "Autosing", ranges: [[902, PAUSE_AUTOSING_VALUE]], labelClass: "hs-step-autosing" },
 ];
 
 const inRanges = (ranges: readonly [number, number][]) => (a: SpecialAction) => ranges.some(([first, last]) => a.value >= first && a.value <= last);
@@ -196,6 +198,11 @@ const FIELD_ROWS: readonly FieldRow[] = [
         shown: c => c.inputs.has("toggleOn"), load: fromAction(step => step.toggleOn ?? true),
     },
     {
+        key: 'rune', label: "Rune:", initial: DEFAULT_BUY_RUNE,
+        options: BUYABLE_RUNES.map(r => `<option value="${r.key}">${r.name}</option>`).join(""),
+        shown: c => c.inputs.has("rune"), load: fromAction(step => step.rune),
+    },
+    {
         key: 'waitBefore', label: "Wait before (ms):", attributes: `min="0"`, initial: "0", check: fixedCheck(NOT_NEGATIVE),
         load: step => step.challengeWaitBefore,
     },
@@ -213,8 +220,13 @@ const FIELD_ROWS: readonly FieldRow[] = [
     },
     {
         key: 'ifJumpMode', label: "If Jump Mode:", initial: "challenges",
-        options: `<option value="challenges">Challenges</option><option value="stored_c15">Stored C15 value</option>`,
+        options: `<option value="challenges">Challenges</option><option value="stored_c15">Stored C15 value</option><option value="aoag">AOAG bought</option>`,
         shown: c => c.isIfJump, load: fromIfJump(jump => jump.ifJumpMode),
+    },
+    {
+        key: 'ifJumpAoagBought', label: "AOAG:", initial: "false",
+        options: `<option value="false">Not bought</option><option value="true">Bought</option>`,
+        shown: inIfJumpMode("aoag"), load: fromIfJump(jump => jump.ifJumpAoagBought),
     },
     {
         key: 'ifJumpChallenge', label: "If Challenge:", attributes: `min="1" max="15"`, initial: "1", check: fixedCheck(CHALLENGE_NUMBER),
@@ -227,11 +239,12 @@ const FIELD_ROWS: readonly FieldRow[] = [
     {
         key: 'ifJumpOperator', label: "Condition:", initial: ">",
         options: `<option value=">">&gt;</option><option value="<">&lt;</option>`,
-        shown: c => c.isIfJump, load: fromIfJump(jump => jump.ifJumpOperator),
+        shown: c => c.isIfJump && c.ifJumpMode !== "aoag", load: fromIfJump(jump => jump.ifJumpOperator),
     },
     {
         key: 'ifJumpValue', label: "Value:", initial: "1",
-        shown: inIfJumpMode("challenges"), load: fromIfJump(jump => jump.ifJumpValue),
+        // A number field accepts 1e12: shown as in the step list
+        shown: inIfJumpMode("challenges"), load: fromIfJump(jump => formatStrategyNumber(jump.ifJumpValue)),
     },
     {
         label: "", note: "Compares to the current C15",
@@ -505,7 +518,7 @@ export class HSAutosingChallengeModal {
             <div class="hs-challenges-footer">
                 <div class="hs-challenges-footer-btn hs-challenges-small-btn hs-challenges-help-btn">?</div>
                 <div class="hs-challenges-footer-btn hs-challenges-small-btn hs-challenges-undo-btn" data-action="undo" title="Undo (Ctrl+Z)">↶ Undo</div>
-                <div class="hs-challenges-footer-btn hs-challenges-small-btn hs-challenges-undo-btn" data-action="redo" title="Redo (Ctrl+Y)">↷ Redo</div>
+                <div class="hs-challenges-footer-btn hs-challenges-small-btn hs-challenges-undo-btn" data-action="redo" title="Redo (Ctrl+Y)">Redo ↷</div>
                 <div class="hs-challenges-fixed-time" title="Every Wait before, plus the Wait inside of challenges and C1-C10 steps. IF jumps not followed."></div>
                 <div class="hs-challenges-footer-btn hs-challenges-cancel-btn" data-action="cancel">Cancel</div>
                 <div class="hs-challenges-footer-btn hs-challenges-save-btn" data-action="save">Save</div>
@@ -654,8 +667,10 @@ export class HSAutosingChallengeModal {
         const actionId = (id: number) => `<span class="hs-challenge-action-id">(${id})</span>`;
         if (isIfJumpStep(step)) {
             const jump = step.ifJump;
-            const condition = (jump.ifJumpMode ?? "challenges") === "challenges"
-                ? `challenge ${jump.ifJumpChallenge} ${jump.ifJumpOperator} ${jump.ifJumpValue}`
+            const mode = jump.ifJumpMode ?? "challenges";
+            const condition = mode === "challenges"
+                ? `challenge ${jump.ifJumpChallenge} ${jump.ifJumpOperator} ${formatStrategyNumber(jump.ifJumpValue)}`
+                : mode === "aoag" ? (jump.ifJumpAoagBought === true ? "AOAG bought" : "AOAG not bought")
                 : `Stored C15${jump.ifJumpMultiplier ? ` × 10^${jump.ifJumpMultiplier}` : ""} ${jump.ifJumpOperator} Current C15`;
             // The step that runs next when the condition holds (the logs' "jump to step N"); a click shows its "Jump here" row
             return `<strong>IF</strong> ${escapeHtml(condition)} `
@@ -669,7 +684,9 @@ export class HSAutosingChallengeModal {
             ? `${action.label}: ${step.corruptionLevel ?? 0} (${step.ascendAfterCorruption === false ? 'next ascension' : 'ascend now'})`
             : step.challengeNumber === CLEANSE_CORRUPTION_VALUE
                 ? `${action.label} (${step.cleanseToHighest === true ? 'to highest cleared' : 'to 0'})`
-                : isSetAutoToggleStep(step.challengeNumber) ? `${action.label} (${step.toggleOn === false ? 'OFF' : 'ON'})` : action.label;
+                : isSetAutoToggleStep(step.challengeNumber) ? `${action.label} (${step.toggleOn === false ? 'OFF' : 'ON'})`
+                : step.challengeNumber === BUY_RUNE_VALUE ? `${action.label} (${BUYABLE_RUNE_BY_KEY.get(step.rune ?? "")?.name ?? "?"})`
+                : action.label;
         return `<strong class="${labelClass}">${label}</strong> ${actionId(step.challengeNumber)}`;
     }
 
@@ -812,6 +829,7 @@ export class HSAutosingChallengeModal {
         if (action === String(IF_JUMP_VALUE)) {
             const mode = this.#field('ifJumpMode').value as IfJumpMode;
             const isChallengesMode = mode === "challenges";
+            const isAoagMode = mode === "aoag";
             // A new IF jumps to the step after it
             // Written only when set: an old IF updated without one stays unchanged
             const maxJumps = this.#number('ifJumpMaxJumps');
@@ -824,11 +842,13 @@ export class HSAutosingChallengeModal {
                 ifJump: {
                     id: previous?.ifJump?.id ?? HSUtils.uuidv4(),
                     ifJumpMode: mode,
-                    // Stored C15 mode compares C15; the value and multiplier are each one mode's only
+                    // Stored C15 mode compares C15; the value, multiplier and AOAG choice are each one mode's only.
+                    // AOAG mode has no operator: ">" fills the field
                     ifJumpChallenge: isChallengesMode ? this.#number('ifJumpChallenge') : 15,
-                    ifJumpOperator: this.#field('ifJumpOperator').value as IfJumpParams["ifJumpOperator"],
+                    ifJumpOperator: isAoagMode ? ">" : this.#field('ifJumpOperator').value as IfJumpParams["ifJumpOperator"],
                     ifJumpValue: isChallengesMode ? this.#number('ifJumpValue') : 0,
-                    ifJumpMultiplier: isChallengesMode ? 0 : this.#number('ifJumpMultiplier'),
+                    ifJumpMultiplier: mode === "stored_c15" ? this.#number('ifJumpMultiplier') : 0,
+                    ...(isAoagMode ? { ifJumpAoagBought: this.#field('ifJumpAoagBought').value === "true" } : {}),
                     ifJumpIndex: previous?.ifJump?.ifJumpIndex ?? (this.#editingIndex ?? this.#separatorIndex) + 1,
                     ...(maxJumps > 0 ? { ifJumpMaxJumps: maxJumps } : {}),
                 },
@@ -850,6 +870,9 @@ export class HSAutosingChallengeModal {
                 step.challengeCompletions = 0;
             } else if (isSetAutoToggleStep(step.challengeNumber)) {
                 step.toggleOn = this.#field('toggleOn').value === "true";
+                step.challengeCompletions = 0;
+            } else if (step.challengeNumber === BUY_RUNE_VALUE) {
+                step.rune = this.#field('rune').value as BuyableRuneKey;
                 step.challengeCompletions = 0;
             }
         }

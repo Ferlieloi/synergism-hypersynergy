@@ -3,13 +3,15 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 // A virtual module, rather than a once-built define: changes to the worker and its imports also rebuild it in dev.
-module.exports = function heaterWorkerPlugin({ entryPoint = 'src/mod/class/hs-modules/hs-heater/hs-heater-optimizer-worker.ts',
-    minify = false, plugins = [], define = {} } = {}) {
+module.exports = function workerSourcePlugin({ entryPoint = 'src/mod/class/hs-modules/hs-heater/hs-heater-optimizer-worker.ts',
+    sourceModule = 'hs-heater-worker-source', minify = false, plugins = [], define = {} } = {}) {
     return {
-        name: 'heater-worker-source',
+        name: sourceModule,
         setup(build) {
-            build.onResolve({ filter: /^hs-heater-worker-source$/ }, () => ({ path: 'source', namespace: 'heater-worker' }));
-            build.onLoad({ filter: /.*/, namespace: 'heater-worker' }, async () => {
+            build.onResolve({ filter: /^hs-.*-worker-source$/ }, ({ path }) => path === sourceModule
+                ? { path: 'source', namespace: sourceModule }
+                : undefined);
+            build.onLoad({ filter: /.*/, namespace: sourceModule }, async () => {
                 const root = build.initialOptions.absWorkingDir ?? process.cwd();
                 const result = await esbuild.build({
                     absWorkingDir: root, entryPoints: [entryPoint], bundle: true, write: false,

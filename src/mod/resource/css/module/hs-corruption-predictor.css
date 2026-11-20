@@ -1,0 +1,144 @@
+#hs-corruption-predictor {
+    box-sizing: border-box;
+    width: min(100%, 28rem);
+    margin: 8px auto 0;
+    padding: 10px 12px 0;
+    border-top: 1px solid color-mix(in srgb, currentColor 22%, transparent);
+    font-size: 0.875rem;
+    text-align: start;
+}
+
+.hs-corr-predictor-toolbar,
+.hs-corr-predictor-headline,
+.hs-corr-predictor-quickbar-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+}
+
+.hs-corr-predictor-toolbar label {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+}
+
+#hs-corruption-predictor-target {
+    box-sizing: border-box;
+    max-width: 100%;
+    min-height: 30px;
+    padding: 2px 6px;
+    border: 1px solid color-mix(in srgb, currentColor 38%, transparent);
+    border-radius: 3px;
+    background: var(--blackbtn-color, #151515);
+    color: inherit;
+    font: inherit;
+}
+
+#hs-corruption-predictor .hs-corr-predictor-action,
+.hs-corr-predictor-quickbar .hs-corr-predictor-action {
+    width: auto;
+    padding: 0 9px;
+    white-space: nowrap;
+}
+
+.hs-corr-predictor-status,
+.hs-corr-predictor-summary,
+.hs-corr-predictor-result small {
+    color: var(--silver-text-color, #aaa);
+    font-size: 0.88em;
+}
+
+.hs-corr-predictor-status {
+    min-height: 1.25em;
+    margin-top: 4px;
+}
+
+.hs-corr-predictor-status.hs-corr-predictor-error {
+    color: var(--orange-color, #eab478);
+}
+
+.hs-corr-predictor-result {
+    display: grid;
+    gap: 4px;
+    margin: 1px 0 6px;
+}
+
+.hs-corr-predictor-result:empty,
+.hs-corr-predictor-result .hs-corr-predictor-status:empty {
+    display: none;
+}
+
+.hs-corr-predictor-result summary {
+    cursor: pointer;
+    width: fit-content;
+}
+
+.hs-corr-predictor-counts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(64px, 1fr));
+    gap: 3px 6px;
+    list-style: none;
+    padding: 0;
+    margin: 6px 0 4px;
+    font-variant-numeric: tabular-nums;
+}
+
+.hs-corr-predictor-quickbar {
+    width: 100%;
+    box-sizing: border-box;
+    border-top: 1px solid #444;
+    padding-top: 6px;
+}
+
+.hs-corr-predictor-quickbar-row {
+    gap: 4px 8px;
+}
+
+.hs-corr-predictor-choices {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+}
+
+.hs-corr-predictor-choices > .hs-corr-predictor-choice {
+    display: inline-grid;
+    place-items: center;
+    box-sizing: border-box;
+    min-width: 27px;
+    min-height: 27px;
+    padding: 2px 4px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background: transparent;
+    color: #ddd;
+    cursor: pointer;
+}
+
+.hs-corr-predictor-choice > span {
+    display: grid;
+    place-items: center;
+    min-width: 18px;
+    height: 18px;
+    font-size: 11px;
+}
+
+.hs-corr-predictor-choices > .hs-corr-predictor-choice:hover:enabled {
+    background: #2b2b2b;
+}
+
+.hs-corr-predictor-choices > .hs-corr-predictor-choice[aria-pressed="true"] {
+    border-color: #888;
+    background: #262626;
+}
+
+.hs-corr-predictor-choices > .hs-corr-predictor-choice:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.hs-corr-predictor-quickbar .hs-corr-predictor-status {
+    max-width: 17rem;
+}

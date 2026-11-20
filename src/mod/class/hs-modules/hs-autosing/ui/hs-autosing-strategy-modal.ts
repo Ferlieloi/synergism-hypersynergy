@@ -14,7 +14,7 @@ import { HSGlobal } from "../../../hs-core/hs-global";
 const STRATEGY_GUIDE_PATH = "docs/wiki/autosing-guide.html#making-or-editing-a-strategy";
 
 const AOAG_HELP = "Runs when the AOAG rune unlocks (P4x5): stops the current phase, runs these steps, then goes on "
-    + "with the phase that ends at 'end'.";
+    + "with singularity → end.";
 
 type StrategyWindowMode = 'create' | 'edit' | 'copy';
 
@@ -45,9 +45,12 @@ function cascadePosition(modalIds: string[]): HSUIXY | undefined {
  *       itself to the first one and saved stale data over its changes.
  *     - A phase's ✎ opens its actions window (one per phase, several phases at once), which writes its steps into
  *       this window's copy on Save. A new window opens a little right of and below the last one of its kind.
- *     - The first phase starts at "start", each other one at the previous one's end. A phase's end dropdown only
- *       offers ends before the next phase's end, so a change never breaks the phases after it. The "+" above a
- *       phase inserts one before it, up to the point picked, where that phase then starts.
+ *     - The first phase starts at "start", each other one at the previous one's end; the last one is "singularity →
+ *       end", run after AOAG (saving refuses another one). A phase's end dropdown only offers ends before the next
+ *       phase's end, so a change never breaks the phases after it; the last two phases' ends are fixed. The "+" above
+ *       a phase inserts one before it, up to the point picked, where that phase then starts. Deleting a phase gives
+ *       its stages to the next one, or to the previous one for the phase before the last: the last phase and the
+ *       only one before it can't be deleted.
  *     - Cancel and the window's × ask before dropping changes, this window's or its actions windows', and close
  *       them all. Deleting a phase whose actions window is open asks first and closes it. Update is refused while
  *       an actions window has unsaved changes.
@@ -130,7 +133,11 @@ export class HSAutosingStrategyModal {
         this.#key = key;
         this.#editedName = this.#mode === 'edit' ? existingStrategy!.strategyName : undefined;
 
-        const strategy: AutosingStrategyPhase[] = existingStrategy ? structuredClone(existingStrategy.strategy) : [];
+        // A new strategy starts with two empty phases around AOAG, which runs before the phase that ends at "end"
+        const strategy: AutosingStrategyPhase[] = existingStrategy ? structuredClone(existingStrategy.strategy) : [
+            { startPhase: "start", endPhase: "singularity", strat: [] },
+            { startPhase: "singularity", endPhase: "end", strat: [] }
+        ];
         // An older format kept the AOAG phase in the list
         const aoagIndex = strategy.findIndex(p => p.phaseId === AOAG_PHASE_ID);
         const aoagFromList = aoagIndex === -1 ? undefined : strategy.splice(aoagIndex, 1)[0];
@@ -228,21 +235,23 @@ export class HSAutosingStrategyModal {
         }
     }
 
-    #lastEnd(): PhaseOption {
-        return this.#draft.strategy.at(-1)?.endPhase ?? "start";
+    // The last two phases' ends are fixed: the last phase (run after AOAG) starts at the end of the one before it
+    #hasFixedEnd(index: number): boolean {
+        return index >= this.#draft.strategy.length - 2;
+    }
+
+    // The last phase and the only one before it stay
+    #canDelete(index: number): boolean {
+        return index < this.#draft.strategy.length - 1 && this.#draft.strategy.length > 2;
     }
 
     // After the phase's start, before the next phase's end (its current end kept, whatever it is)
     #endsOf(index: number): PhaseOption[] {
         const phase = this.#draft.strategy[index];
+        if (this.#hasFixedEnd(index)) return [phase.endPhase];
         const next = this.#draft.strategy[index + 1];
-        const ends = phases.slice(phases.indexOf(phase.startPhase) + 1, next ? phases.indexOf(next.endPhase) : phases.length);
+        const ends = phases.slice(phases.indexOf(phase.startPhase) + 1, phases.indexOf(next.endPhase));
         return ends.includes(phase.endPhase) ? ends : [...ends, phase.endPhase];
-    }
-
-    #addPhase(endPhase: PhaseOption): void {
-        this.#draft.strategy.push({ startPhase: this.#lastEnd(), endPhase, strat: [] });
-        this.#redraw();
     }
 
     // A new phase before this one, from its start to the point picked, where this one now starts
@@ -267,10 +276,12 @@ export class HSAutosingStrategyModal {
         this.#redraw();
     }
 
-    // By object: the list may have changed since the click
+    // By object: the list may have changed since the click. Its stages go to the next phase, or for the one before the
+    // last phase to the previous one, so that the last phase keeps its start
     #deletePhase(phase: AutosingStrategyPhase): void {
         const index = this.#draft.strategy.indexOf(phase);
-        if (index === -1) return;
+        if (index === -1 || !this.#canDelete(index)) return;
+        if (index === this.#draft.strategy.length - 2) this.#draft.strategy[index - 1].endPhase = phase.endPhase;
         this.#draft.strategy.splice(index, 1);
         this.#fixPhaseChain();
         this.#redraw();
@@ -337,12 +348,12 @@ export class HSAutosingStrategyModal {
             const count = phase.strat.length;
             return `<div class="hs-strategy-btn hs-strategy-btn-icon hs-strategy-btn-steps${count === 0 ? " hs-strategy-btn-steps-empty" : ""}" data-action="edit" title="Edit this phase's steps">✎ ${count} step${count === 1 ? "" : "s"}</div>`;
         };
-        // Autosing runs it right before the phase that ends at "end" (the last one, if any); none yet: at the bottom
-        const finalIndex = this.#draft.strategy.findIndex(phase => phase.endPhase === "end");
+        // Autosing runs it right before the last phase (the one that ends at "end": every strategy opened reaches it)
+        const finalIndex = this.#draft.strategy.length - 1;
         // The final phase's "+" goes on the AOAG row, in the gap above it: inserting before that phase is inserting before AOAG
         const aoagRow = `
             <div class="hs-strategy-phase-item hs-strategy-aoag-item" data-aoag>
-                ${finalIndex === -1 ? "" : this.#insertSelect(finalIndex)}
+                ${this.#insertSelect(finalIndex)}
                 <div class="hs-strategy-phase-text hs-strategy-aoag-label">
                     ${this.#aoagIcon()}<strong>${AOAG_PHASE_NAME}</strong>
                     <span class="hs-strategy-aoag-help" title="${escapeHtml(AOAG_HELP)}">?</span>
@@ -350,22 +361,20 @@ export class HSAutosingStrategyModal {
                 ${stepsButton(this.#draft.aoagPhase)}
                 <span class="hs-strategy-btn-spacer"></span>
             </div>`;
-        const phaseRows = this.#draft.strategy.length === 0
-            ? '<div class="hs-strategy-empty-state">No strategy phases added yet.</div>'
-            : this.#draft.strategy.map((phase, i) => `
+        const endTitle = (i: number) => i === finalIndex ? "Fixed: the last phase ends at end"
+            : this.#hasFixedEnd(i) ? "Fixed: the last phase starts here" : "Where this phase ends";
+        const phaseRows = this.#draft.strategy.map((phase, i) => `
                 ${i === finalIndex ? aoagRow : ""}
                 <div class="hs-strategy-phase-item" data-index="${i}">
                     ${i === finalIndex ? "" : this.#insertSelect(i)}
                     <div class="hs-strategy-phase-text hs-strategy-phase-start"><span>Phase ${i + 1}:</span> <span>${phase.startPhase} <span class="hs-strategy-phase-arrow">→</span></span></div>
-                    <select class="hs-strategy-end-select" title="Where this phase ends">${renderEndOptions(this.#endsOf(i), phase.endPhase)}</select>
+                    <select class="hs-strategy-end-select" title="${endTitle(i)}"${this.#hasFixedEnd(i) ? " disabled" : ""}>${renderEndOptions(this.#endsOf(i), phase.endPhase)}</select>
                     ${stepsButton(phase)}
-                    <div class="hs-strategy-btn hs-strategy-btn-icon hs-strategy-btn-delete" data-action="delete" title="Delete this phase">×</div>
+                    ${this.#canDelete(i)
+                        ? '<div class="hs-strategy-btn hs-strategy-btn-icon hs-strategy-btn-delete" data-action="delete" title="Delete this phase">×</div>'
+                        : '<span class="hs-strategy-btn-spacer"></span>'}
                 </div>`).join("");
-        // Below the last phase (none once a phase ends at "end")
-        const lastEnd = this.#lastEnd();
-        const addSelect = lastEnd === "end" ? "" : `<select class="hs-strategy-add-select" title="Add a phase after the last one">`
-            + `<option value="" selected hidden>Add phase until…</option>${renderEndOptions(phases.slice(phases.indexOf(lastEnd) + 1))}</select>`;
-        this.#list.innerHTML = phaseRows + (finalIndex === -1 ? aoagRow : "") + addSelect;
+        this.#list.innerHTML = phaseRows;
 
         for (const [phase, actionsWindow] of this.#openActions()) actionsWindow.setTitle(this.#actionsTitle(phase));
         // The last refused save's reason may no longer hold
@@ -409,9 +418,7 @@ export class HSAutosingStrategyModal {
         const target = e.target as HTMLSelectElement;
         // The "+" holds its phase's index itself: the final phase's one is on the AOAG row
         const index = Number(target.closest<HTMLElement>("[data-index]")?.dataset.index);
-        if (target.classList.contains("hs-strategy-add-select")) {
-            if (target.value) this.#addPhase(target.value as PhaseOption);
-        } else if (target.classList.contains("hs-strategy-end-select")) {
+        if (target.classList.contains("hs-strategy-end-select")) {
             this.#setEnd(index, target.value as PhaseOption);
         } else if (target.classList.contains("hs-strategy-insert-select")) {
             if (target.value) this.#insertPhase(index, target.value as PhaseOption);
@@ -461,6 +468,11 @@ export class HSAutosingStrategyModal {
         const context = HSAutosingStrategyModal.#context;
         if (this.#actionsHaveChanges()) {
             this.#showError("Save or close the actions windows first");
+            return;
+        }
+        const finalPhaseProblem = HSStrategyManager.finalPhaseProblem(this.#draft);
+        if (finalPhaseProblem) {
+            this.#showError(`${finalPhaseProblem}: split it with the "+" above it`);
             return;
         }
         this.#draft.strategyName = this.#nameInput.value || "Unnamed Strategy";

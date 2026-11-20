@@ -1,4 +1,4 @@
-import { HSAutosingStrategy, AutosingStrategyPhase, Challenge, phases, AOAG_PHASE_ID, AOAG_PHASE_NAME, createDefaultAoagPhase, SET_CORRUPTION_LEVEL_VALUE, CLEANSE_CORRUPTION_VALUE, isSetAutoToggleStep, EXIT_ASCENSION_CHALLENGE_VALUE, STRATEGY_FORMAT_VERSION, AOAG_LEVEL_STEP_COMMENT, IF_JUMP_VALUE, SPECIAL_ACTION_BY_ID, isCorruptionLevelStep, isIfJumpMaxJumps } from "./hs-autosing-types";
+import { HSAutosingStrategy, AutosingStrategyPhase, Challenge, phases, AOAG_PHASE_ID, AOAG_PHASE_NAME, createDefaultAoagPhase, SET_CORRUPTION_LEVEL_VALUE, CLEANSE_CORRUPTION_VALUE, isSetAutoToggleStep, EXIT_ASCENSION_CHALLENGE_VALUE, STRATEGY_FORMAT_VERSION, AOAG_LEVEL_STEP_COMMENT, IF_JUMP_VALUE, SPECIAL_ACTION_BY_ID, isCorruptionLevelStep, isIfJumpMaxJumps, BUY_RUNE_VALUE, BUYABLE_RUNE_BY_KEY } from "./hs-autosing-types";
 import { HSModuleRegistry } from "../../hs-core/module/hs-module-registry";
 
 import { HSGlobal } from "../../hs-core/hs-global";
@@ -82,8 +82,30 @@ export class HSStrategyManager {
     }
 
     /** A default strategy not yet retuned since the game's 4.4.0 corruption rework: its file name ends in "-temp". */
-    static isOldDefaultStrategy(name: string): boolean {
+    static isNotRetunedDefaultStrategy(name: string): boolean {
         return name.endsWith("-temp");
+    }
+
+    /**
+     * The default strategies that are an earlier version of another one: same name before " v", lower version
+     * ("Demon King (rus) v2.0" when "Demon King (rus) v2.1" is there). Names without a version at the end
+     * ("-temp" ones included) are never one.
+     */
+    static previousVersionNames(names: string[]): Set<string> {
+        const parsed = names.flatMap(name => {
+            const match = /^(.+) v(\d+(?:\.\d+)*)$/.exec(name);
+            return match ? [{ name, base: match[1], version: match[2].split('.').map(Number) }] : [];
+        });
+        const isLower = (a: number[], b: number[]) => {
+            for (let i = 0; i < Math.max(a.length, b.length); i++) {
+                const diff = (a[i] ?? 0) - (b[i] ?? 0);
+                if (diff !== 0) return diff < 0;
+            }
+            return false;
+        };
+        return new Set(parsed
+            .filter(p => parsed.some(other => other.base === p.base && isLower(p.version, other.version)))
+            .map(p => p.name));
     }
 
     static async loadDefaultStrategyByName(name: string, context = ''): Promise<HSAutosingStrategy | null> {
@@ -313,14 +335,16 @@ export class HSStrategyManager {
             ids.add(jump.id);
             // Older strategies omit the mode; the editor already treats these as challenge comparisons.
             if (jump.ifJumpMode === undefined) jump.ifJumpMode = 'challenges';
-            if (jump.ifJumpMode !== 'challenges' && jump.ifJumpMode !== 'stored_c15') throw new Error(`${tag}: invalid IF mode`);
-            if (jump.ifJumpOperator !== '>' && jump.ifJumpOperator !== '<') throw new Error(`${tag}: IF operator must be > or <`);
+            if (jump.ifJumpMode !== 'challenges' && jump.ifJumpMode !== 'stored_c15' && jump.ifJumpMode !== 'aoag') throw new Error(`${tag}: invalid IF mode`);
+            if (jump.ifJumpMode !== 'aoag' && jump.ifJumpOperator !== '>' && jump.ifJumpOperator !== '<') throw new Error(`${tag}: IF operator must be > or <`);
             if (!Number.isInteger(jump.ifJumpIndex) || jump.ifJumpIndex < 0 || jump.ifJumpIndex > phase.strat.length) {
                 throw new Error(`${tag}: IF destination must be a step index from 0 to ${phase.strat.length} (end of phase)`);
             }
             if (jump.ifJumpMode === 'challenges') {
                 if (!Number.isInteger(jump.ifJumpChallenge) || jump.ifJumpChallenge < 1 || jump.ifJumpChallenge > 15) throw new Error(`${tag}: IF challenge must be 1 to 15`);
                 if (typeof jump.ifJumpValue !== 'number' || !Number.isFinite(jump.ifJumpValue)) throw new Error(`${tag}: IF value must be a finite number`);
+            } else if (jump.ifJumpMode === 'aoag') {
+                if (typeof jump.ifJumpAoagBought !== 'boolean') throw new Error(`${tag}: IF AOAG bought must be true or false`);
             } else if (jump.ifJumpMultiplier !== undefined && (typeof jump.ifJumpMultiplier !== 'number' || !Number.isFinite(jump.ifJumpMultiplier))) {
                 throw new Error(`${tag}: IF multiplier must be a finite number`);
             }
@@ -365,6 +389,11 @@ export class HSStrategyManager {
             if (invalidToggle !== -1) {
                 throw new Error(`Phase ${phase.startPhase} → ${phase.endPhase}: step ${invalidToggle + 1} has an invalid ON/OFF option (true or false)`);
             }
+            const invalidRune = phase.strat?.findIndex(step => step.challengeNumber === BUY_RUNE_VALUE
+                && !(typeof step.rune === 'string' && BUYABLE_RUNE_BY_KEY.has(step.rune))) ?? -1;
+            if (invalidRune !== -1) {
+                throw new Error(`Phase ${phase.startPhase} → ${phase.endPhase}: step ${invalidRune + 1} has no valid rune`);
+            }
             const invalidMaxJumps = phase.strat?.findIndex(step => step.ifJump && !isIfJumpMaxJumps(step.ifJump.ifJumpMaxJumps)) ?? -1;
             if (invalidMaxJumps !== -1) {
                 throw new Error(`Phase ${phase.startPhase} → ${phase.endPhase}: step ${invalidMaxJumps + 1} has an invalid max jumps (a whole number, 0 or more)`);
@@ -407,6 +436,18 @@ export class HSStrategyManager {
         return strategy;
     }
 
+    /**
+     * Why a strategy can't be saved as it ends, or null. Its last phase must be "singularity → end": the one autosing runs
+     * after AOAG, and no stage before AOAG falls in it. A wider final phase would also run before AOAG, without stopping
+     * when AOAG starts. Checked at save and import only: older stored strategies that end otherwise still load and run.
+     */
+    static finalPhaseProblem(strategy: HSAutosingStrategy): string | null {
+        const last = strategy.strategy.at(-1);
+        return !last || last.startPhase === "singularity"
+            ? null
+            : `The last phase must be "singularity → end", not "${last.startPhase} → ${last.endPhase}"`;
+    }
+
     static getMergedStrategyOptions() {
         const defaultNames = HSStrategyManager.getDefaultStrategyNames();
         const manifestSet = new Set(defaultNames);
@@ -429,6 +470,8 @@ export class HSStrategyManager {
         const strategies = storedStrategyList(storageMod.getData<unknown>(HSGlobal.HSSettings.strategiesKey));
 
         const normalizedStrategy = HSStrategyManager.validateStrategy(strategy, context);
+        const finalPhaseProblem = HSStrategyManager.finalPhaseProblem(normalizedStrategy);
+        if (finalPhaseProblem) throw new Error(finalPhaseProblem);
         const isUpdate = !!strategyName;
         const nameExists = strategies.some(entry => {
             const name = storedStrategyName(entry);

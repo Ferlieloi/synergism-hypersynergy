@@ -40,7 +40,7 @@ The heat is for the **Active Bells** field's bell count (default: the live count
 - `applyHeaterBells` (`hs-heater-utils.ts`) adds the field's bells back; every reader of the three fields goes through it (worker's `fillStatsAndOptionsFromInput`, its `totalRedLuck` for the Red Ambrosia table and the dev diagnostics, the table's two speed reads). The table's `mLuck` comes from the worker, bells included.
 - Exports are always live (`dumpDataForHeater`), so there is no fallback for an old export without the new keys.
 - **When a new input field is added, check its formula for a bell term**: Base Red Luck's bell term was found late.
-- Rejected: the modal rewriting the three fields when Active Bells changes, and the optimizer correcting them from the export's hidden bell count.
+- Rejected: the modal rewriting the three fields when Active Bells changes, and the optimizer correcting them from the export's hidden bell count. Not re-tuning Brick of Lead (alone or by a re-heat) when the bell count changes: bells move its best level by 1–2 for +0.06% to +0.19%, and lowering a level resets the blue, red and purple bars' progress.
 
 ## Obt + Off row
 One loadout for Obtainium and Offerings together (a player's request).

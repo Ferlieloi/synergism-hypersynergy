@@ -13,7 +13,7 @@ import type { HSGameDataAPI } from "./hs-gamedata-api";
  * (patcher: window.__HS_talismans, fragmentsInvested). A save's own are what that save holds.
  */
 export const getTalismanFragments = (data: GameData, t: TalismanKeys): Readonly<TalismanShards> => {
-    const live = window.__HS_talismans?.[t]?.fragmentsInvested;
+    const live = typeof window === 'undefined' ? undefined : window.__HS_talismans?.[t]?.fragmentsInvested;
     if (live && data === (HSGlobal.exposedPlayer as unknown)) return live;
     return data.talismans[t];
 };
@@ -88,7 +88,7 @@ export class TalismanHelper {
         const data = this.#api.getGameData();
         if (!data) return 0;
 
-        const live = window.__HS_talismans;
+        const live = typeof window === 'undefined' ? undefined : window.__HS_talismans;
         if (live && data === (HSGlobal.exposedPlayer as unknown)) return live[t].level;
 
         const shards = getTalismanFragments(data, t);
@@ -448,12 +448,8 @@ const isTalismanUnlocked = (t: TalismanKeys, api: HSGameDataAPI): boolean => {
     if (!data) return false;
 
     switch (t) {
-        case 'exemption': {
-            const exposedPlayer = HSGlobal.exposedPlayer ?? null;
-            return exposedPlayer
-                ? exposedPlayer.unlocks.talismans
-                : data.unlocks.rrow1;
-        }
+        case 'exemption':
+            return api.getTalismanProgressUnlocks()?.exemption ?? data.unlocks.rrow1;
         case 'chronos':
             return Boolean(api.achievement.AchRewards.chronosTalisman());
         case 'midas':
@@ -466,12 +462,8 @@ const isTalismanUnlocked = (t: TalismanKeys, api: HSGameDataAPI): boolean => {
             return api.antUpgrade.getAntUpgradeEffectValue(AntUpgrades.Mortuus, 'talismanUnlock');
         case 'plastic':
             return api.quarkShop.getShopUpgradeEffects('shopTalisman', 'unlocked') as boolean;
-        case 'wowSquare': {
-            const exposedPlayer = HSGlobal.exposedPlayer ?? null;
-            return exposedPlayer
-                ? exposedPlayer.ascensionCount >= 100
-                : data.challengecompletions[11] >= 1;
-        }
+        case 'wowSquare':
+            return api.getTalismanProgressUnlocks()?.wowSquare ?? data.challengecompletions[11] >= 1;
         case 'achievement':
             return api.getLevelMilestone('achievementTalismanUnlock') === 1;
         case 'purpleGem':

@@ -37,7 +37,9 @@ one clone to another: check `git remote -v`.
   bumps) only when `patcher.js` changed since the previous `v*` tag, last number + 1 (`bumpLastNumber`); a major bump is
   made by hand (Shewchou's choices, 2026-10-29). Port the source and version together, then run `npm run build:loaders`.
   The helper updates the source and regenerates the published files when it bumps the patcher or the Live bridge.
-  The bridge version lives in `src/loader/shared/userscript-versions.json`.
+- **The Live bridge's `@version`** (`src/loader/shared/userscript-versions.json`): when the bridge changed, the helper
+  asks for a bump, default no, never with `--yes`. Bump only when installed bridges stop working or lack something
+  players need (`docs/features/loaders.md`).
 - **The GitHub release** (`gh release create` on the origin repo): title = the tag, text = the tag message without its
   "Release vX" line, a normal release marked Latest (a `-devN` suffix only means "built after a Live release", not
   unstable), except that it never takes Latest from a `loader-v*` release (the helper reads the current Latest first).

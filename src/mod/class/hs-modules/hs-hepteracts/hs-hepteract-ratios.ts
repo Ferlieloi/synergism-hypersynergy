@@ -38,6 +38,13 @@ export class HSHepteractRatios {
             grid-template-rows: 1fr;
             grid-column-gap: 0px;
             grid-row-gap: 0px;
+            margin: 0;
+            font-size: 0.85em;
+            line-height: 1.2;
+        }
+
+        #hs-ratio-container + #heptGrid {
+            margin-top: 4px;
         }`;
 
     #ratioElementA?: HTMLElement;

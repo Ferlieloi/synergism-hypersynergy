@@ -21,8 +21,6 @@ type AutomationSelectorSpec = string | {
     expectedTranslationKey?: string;
     isOnForPlayer?: (player: PlayerData) => boolean;
 };
-type AutomationSelectorVisibilityMode = 'self' | 'parent' | 'none';
-
 type AutomationQuickbarRenderKey =
     | 'AutoChallenge'
     | 'BuildingsAndUpgrades'
@@ -39,25 +37,32 @@ type AutomationQuickbarSoloConfig = {
     checks: readonly AutomationSelectorSpec[];
     // Used while the game has not rendered the toggle text yet (e.g. auto-challenge button if challenge tab never opened).
     gameDataFallback?: (gameData: GameData) => boolean;
-    selectorVisibility?: AutomationSelectorVisibilityMode;
+    lockedAncestor?: string;
     hideWhenFullyEnabledMinHighestSingularityCount?: number;
     buttonId: string;
     label: string;
     iconSrc: string;
     iconElementId?: string;
     minHighestSingularityCount?: number;
+    unlockAttribute?: string;
 };
 
 type AutomationQuickbarGroupConfig = {
     kind: 'group';
     selectors: readonly AutomationSelectorSpec[];
-    selectorVisibility?: AutomationSelectorVisibilityMode;
+    // A toggle counts while the game shows it: its own CSS display isn't 'none' (the game hides a locked toggle by a
+    // class and an <html data-*> flag, e.g. .autoOpenCubes). Its tab being closed doesn't matter: display isn't inherited.
+    // lockedAncestor: the closest ancestor the game hides instead of the toggle itself (e.g. #autoSacrifice).
+    lockedAncestor?: string;
     hideWhenFullyEnabledMinHighestSingularityCount?: number;
     buttonId: string;
     label: string;
     iconSrc: string;
     iconElementId?: string;
     minHighestSingularityCount?: number;
+    // An attribute of <html> the game sets to 'true' once the feature is unlocked (its own rule, kept up to date
+    // by its revealStuff()). Like minHighestSingularityCount, it replaces the check that the game's toggle is shown.
+    unlockAttribute?: string;
 };
 
 type AutomationQuickbarToggleConfig = AutomationQuickbarSoloConfig | AutomationQuickbarGroupConfig;
@@ -238,7 +243,7 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
                 selector: '#toggleAutoSacrificeAnt', expected: 'Auto Sacrifice: ON', expectedTranslationKey: 'ants.autoSacrificeOn',
                 isOnForPlayer: (player) => !!player.ants?.toggles?.autoSacrificeEnabled
             }],
-            selectorVisibility: 'parent',
+            lockedAncestor: '#autoSacrifice',
             buttonId: 'automationQuickBar-autoantsacrifice',
             label: 'Auto-Sacrifice',
             iconSrc: './Pictures/Simplified/AntSacrifice.png'
@@ -256,6 +261,8 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
             buttonId: 'automationQuickBar-hepteracts',
             label: 'Hept Auto-Open',
             iconSrc: './Pictures/Default/TinyWow7.png',
+            // Not the game's unlock (Singularity 1), on purpose: low-Singularity players learn to choose what they
+            // craft before an all-on shortcut (docs/features/quickbars.md)
             minHighestSingularityCount: 15
         },
         AutoAscend: {
@@ -268,7 +275,8 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
             buttonId: 'automationQuickBar-autoascend',
             label: 'Auto Ascend',
             iconSrc: './Pictures/Simplified/AscensionNoBorder.png',
-            minHighestSingularityCount: 25
+            // The game: highestSingularityCount > 0 or cube upgrade 10
+            unlockAttribute: 'data-auto-ascend-unlock'
         }
     } as const satisfies Record<AutomationQuickbarRenderKey, AutomationQuickbarToggleConfig>;
 
@@ -458,8 +466,12 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
         return gameData?.highestSingularityCount ?? 0;
     }
 
-    /** Determine whether a toggle should be visible based on `minHighestSingularityCount`. */
+    /** Determine whether a toggle should be visible based on `minHighestSingularityCount` and `unlockAttribute`. */
     #isAutomationToggleVisible(config: AutomationQuickbarToggleConfig, highestSingularityCount: number): boolean {
+        if (config.unlockAttribute !== undefined
+            && document.documentElement.getAttribute(config.unlockAttribute) !== 'true') {
+            return false;
+        }
         const minSingularity = config.minHighestSingularityCount;
         if (minSingularity === undefined) {
             return true;
@@ -467,12 +479,9 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
         return highestSingularityCount >= minSingularity;
     }
 
-    /** Whether selector-visibility rules should be applied for this config. */
+    /** Whether the game's toggles must be shown for this config (not when a singularity or unlock rule decides). */
     #shouldApplyAutomationSelectorVisibility(config: AutomationQuickbarToggleConfig): boolean {
-        if (config.minHighestSingularityCount !== undefined) {
-            return false;
-        }
-        return config.selectorVisibility !== 'none';
+        return config.minHighestSingularityCount === undefined && config.unlockAttribute === undefined;
     }
 
     /**
@@ -492,23 +501,16 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
         return highestSingularityCount >= minSingularity;
     }
 
-    /** Return the actual element that determines visibility according to config. */
-    #getVisibilityTargetElement(el: HTMLElement | null, config: AutomationQuickbarToggleConfig): HTMLElement | null {
-        if (!el) return null;
-        if (config.selectorVisibility === 'parent') {
-            return el.parentElement;
-        }
-        return el;
-    }
-
-    /** Return the automation element if it exists and is visible according to selector-visibility rules in `config`. */
+    /** Return the automation element if it exists and the game shows it (see `lockedAncestor`). */
     #getVisibleAutomationElement(selectorSpec: AutomationSelectorSpec, config: AutomationQuickbarToggleConfig): HTMLElement | null {
         const el = this.#getCachedAutomationElement(selectorSpec);
         if (!el) return null;
         if (!this.#shouldApplyAutomationSelectorVisibility(config)) return el;
 
-        const visibilityTarget = this.#getVisibilityTargetElement(el, config);
-        return !!visibilityTarget && visibilityTarget.isConnected && visibilityTarget.style.display !== 'none' ? el : null;
+        const visibilityTarget = config.lockedAncestor ? el.closest<HTMLElement>(config.lockedAncestor) : el;
+        // Computed, not inline: the game hides locked toggles through its CSS. Callers read every target before
+        // writing anything, so a refresh recomputes the page's styles once.
+        return !!visibilityTarget && visibilityTarget.isConnected && getComputedStyle(visibilityTarget).display !== 'none' ? el : null;
     }
 
     /** Reset queued render state and existing watchers before rebuilding quickbar UI. */
@@ -597,7 +599,16 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
 
         this.#resetAutomationQuickbarRuntime();
 
-        const stateUpdaters: Array<(highestSingularityCount: number) => void> = [];
+        // Each updater reads the game's toggles and returns its button's writes: all reads come before any write,
+        // so the computed styles are recomputed once per refresh, not once per button.
+        const stateUpdaters: Array<(highestSingularityCount: number) => () => void> = [];
+
+        const hideButton = (btn: HTMLButtonElement) => {
+            btn.style.display = 'none';
+            btn.classList.remove('enabled', 'mixed');
+            btn.classList.add('disabled');
+            btn.disabled = true;
+        };
 
         const setAutomationButtonState = (btn: HTMLButtonElement, targetsCount: number, allOn: boolean, allOff: boolean) => {
             btn.classList.remove('enabled', 'disabled', 'mixed');
@@ -650,7 +661,8 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
 
         const updateAutomationUIState = () => {
             const highestSingularityCount = this.#getHighestSingularityCount();
-            stateUpdaters.forEach(update => update(highestSingularityCount));
+            const writes = stateUpdaters.map(update => update(highestSingularityCount));
+            writes.forEach(write => write());
         };
 
         const requestAutomationUpdateUI = () => this.#queueAutomationQuickbarRender(updateAutomationUIState);
@@ -697,13 +709,8 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
                         || !!visibleActionTarget
                         || visibleCheckTargets.some((el): el is HTMLElement => !!el);
 
-                    btn.style.display = meetsSingularityRequirement && hasVisibleLinkedTarget ? '' : 'none';
-
                     if (!meetsSingularityRequirement || !hasVisibleLinkedTarget) {
-                        btn.classList.remove('enabled', 'mixed');
-                        btn.classList.add('disabled');
-                        btn.disabled = true;
-                        return;
+                        return () => hideButton(btn);
                     }
 
                     const checkStates = compiledChecks.map(({ matcher }, idx) => {
@@ -719,16 +726,15 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
                     const enabled = checkStates.length > 0 && checkStates.every(Boolean);
 
                     if (this.#shouldHideAutomationButtonWhenFullyEnabled(config, highestSingularityCount, enabled)) {
-                        btn.style.display = 'none';
-                        btn.classList.remove('enabled', 'mixed');
-                        btn.classList.add('disabled');
-                        btn.disabled = true;
-                        return;
+                        return () => hideButton(btn);
                     }
 
-                    btn.classList.remove('enabled', 'disabled', 'mixed');
-                    btn.classList.add(enabled ? 'enabled' : 'disabled');
-                    btn.disabled = checkStates.length === 0;
+                    return () => {
+                        btn.style.display = '';
+                        btn.classList.remove('enabled', 'disabled', 'mixed');
+                        btn.classList.add(enabled ? 'enabled' : 'disabled');
+                        btn.disabled = checkStates.length === 0;
+                    };
                 });
 
                 this.#automationQuickBarContainer?.appendChild(btn);
@@ -749,24 +755,15 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
                 const meetsSingularityRequirement = this.#isAutomationToggleVisible(config, highestSingularityCount);
                 const hasVisibleLinkedTarget = !this.#shouldApplyAutomationSelectorVisibility(config) || targets.length > 0;
 
-                btn.style.display = meetsSingularityRequirement && hasVisibleLinkedTarget ? '' : 'none';
-
-                if (!meetsSingularityRequirement || !hasVisibleLinkedTarget) {
-                    btn.classList.remove('enabled', 'mixed');
-                    btn.classList.add('disabled');
-                    btn.disabled = true;
-                    return;
+                if (!meetsSingularityRequirement || !hasVisibleLinkedTarget
+                    || this.#shouldHideAutomationButtonWhenFullyEnabled(config, highestSingularityCount, allOn)) {
+                    return () => hideButton(btn);
                 }
 
-                if (this.#shouldHideAutomationButtonWhenFullyEnabled(config, highestSingularityCount, allOn)) {
-                    btn.style.display = 'none';
-                    btn.classList.remove('enabled', 'mixed');
-                    btn.classList.add('disabled');
-                    btn.disabled = true;
-                    return;
-                }
-
-                setAutomationButtonState(btn, targets.length, allOn, allOff);
+                return () => {
+                    btn.style.display = '';
+                    setAutomationButtonState(btn, targets.length, allOn, allOff);
+                };
             });
 
             this.#automationQuickBarContainer?.appendChild(btn);
@@ -969,6 +966,25 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
             } catch (e) {
                 HSLogger.log(`Error setting watcher for ${sel}: ${e}`, this.context);
             }
+        }
+
+        // The game's unlock flags on <html> (data-*, set by its revealStuff()): they show or hide its toggles through
+        // its CSS, and unlockAttribute reads them. Refresh as soon as one changes.
+        const key = 'html[data-*]';
+        if (this.#automationQuickBarWatcherBySelector.has(key)) return;
+        const root = document.documentElement;
+        const stop = HSElementHooker.watchElement(root, () => updateUI(), {
+            attributes: true,
+            childList: false,
+            subtree: false,
+            characterData: false,
+            valueParser: (el) => Array.from(el.attributes)
+                .filter(a => a.name.startsWith('data-'))
+                .map(a => `${a.name}=${a.value}`)
+                .join('|')
+        });
+        if (stop) {
+            this.#automationQuickBarWatcherBySelector.set(key, { stop, element: root });
         }
     }
 

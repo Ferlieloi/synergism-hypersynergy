@@ -76,6 +76,8 @@ const purpleReactorUpgradeData: Record<PurpleReactorUpgradeKey, PurpleUpgradeDef
     purpleQuarkGain: { maxLevel: 5, costFormula: (level) => 2_000 * (Math.pow(4, level) - 1) / 3 },
 };
 
+export const PURPLE_REACTOR_UPGRADE_KEYS = Object.keys(purpleReactorUpgradeData) as PurpleReactorUpgradeKey[];
+
 const purpleAmbrosiaUpgradeData = {
     aries: { maxLevel: 25, costFormula: (level: number) => level * (level + 1) / 2 },
     taurus: { maxLevel: 10, costFormula: (level: number) => 50 * level },
@@ -98,6 +100,18 @@ const purpleAmbrosiaUpgradeData = {
 
 export type PurpleAmbrosiaUpgradeKey = keyof typeof purpleAmbrosiaUpgradeData;
 export const PURPLE_AMBROSIA_UPGRADE_KEYS = Object.keys(purpleAmbrosiaUpgradeData) as PurpleAmbrosiaUpgradeKey[];
+
+/** Purple Honey for the level after `level`; null when `level` is the max level. */
+export function getPurpleReactorUpgradeNextCost(upgradeKey: PurpleReactorUpgradeKey, level: number): number | null {
+    const definition = purpleReactorUpgradeData[upgradeKey];
+    return level >= definition.maxLevel ? null : definition.costFormula(level + 1) - definition.costFormula(level);
+}
+
+/** Purple Ambrosia for the level after `level`; null when `level` is the max level. */
+export function getPurpleAmbrosiaUpgradeNextCost(upgradeKey: PurpleAmbrosiaUpgradeKey, level: number): number | null {
+    const definition = purpleAmbrosiaUpgradeData[upgradeKey];
+    return level >= definition.maxLevel ? null : definition.costFormula(level + 1) - definition.costFormula(level);
+}
 
 // Mirrors synthesisUpgradeData in SynergismOfficial/src/Synthesis.ts. Each upgrade saves what was invested
 // in each resource; a level counts once every resource covers its cumulative cost.
@@ -249,6 +263,14 @@ export class PurpleHelper {
         return this.#reconstructPurpleLevel(invested, purpleAmbrosiaUpgradeData[upgradeKey]);
     }
 
+    /** Aries' multiplier per level: the digits of lifetime Ambrosia, Red Ambrosia and Purple Ambrosia, added. */
+    getAriesDigits(): number {
+        const data = this.#api.getGameData();
+        if (!data) return 0;
+        return [data.lifetimeAmbrosia, data.lifetimeRedAmbrosia, data.lifetimePurpleAmbrosia ?? 0]
+            .reduce((total, ambrosia) => total + (ambrosia > 0 ? Math.floor(Math.log10(ambrosia)) + 1 : 0), 0);
+    }
+
     getPurpleAmbrosiaUpgradeMaxLevel(upgradeKey: PurpleAmbrosiaUpgradeKey): number {
         return purpleAmbrosiaUpgradeData[upgradeKey].maxLevel;
     }
@@ -267,9 +289,7 @@ export class PurpleHelper {
         if (!data) return 0;
         const level = this.getPurpleAmbrosiaUpgradeLevel(upgradeKey);
         if (upgradeKey === 'aries' && effectKey === 'universalBarPointMult') {
-            const digits = [data.lifetimeAmbrosia, data.lifetimeRedAmbrosia, data.lifetimePurpleAmbrosia ?? 0]
-                .reduce((total, ambrosia) => total + (ambrosia > 0 ? Math.floor(Math.log10(ambrosia)) + 1 : 0), 0);
-            return 1 + 0.0002 * level * digits;
+            return 1 + 0.0002 * level * this.getAriesDigits();
         }
         if (upgradeKey === 'leo' && effectKey === 'unassignedBlueberyLuck') {
             const unassignedBlueberries = (this.#api.ambrosia.calculateBlueberryInventory(true) as number) - data.spentBlueberries;

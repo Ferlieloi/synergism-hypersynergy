@@ -10,7 +10,7 @@ Auto-Sing plays singularities for you, following a strategy. It's for the end ga
 ![The mod panel's Settings, Auto-Sing subtab: singularity to farm, strategy, ambrosia loadouts](../../res/guides/autosing-settings@2x.webp)
 
 1. Open the mod panel (the mod's icon, top left), then Settings → **Auto-Sing**.
-2. **Strategy:** pick one. The default strategies are a place to start; some of them are meant for the very end of the game. Those under **Old Strategies** (named "-temp") haven't been retuned by their authors since the game's corruption rework. To adapt one or make your own, see [Making or editing a strategy](#making-or-editing-a-strategy).
+2. **Strategy:** pick one. The default strategies are a place to start; some of them are meant for the very end of the game. Those under **Previous Versions** are a strategy's earlier versions, kept in case the new one doesn't suit your account. Those under **Not Yet Retuned** (named "-temp") haven't been retuned by their authors since the game's corruption rework. To adapt one or make your own, see [Making or editing a strategy](#making-or-editing-a-strategy).
 3. **Ambrosia loadouts:** for each role (pre-AOAG cubes, post-AOAG cubes, quarks, obtainium, offerings, luck), pick the game slot that holds that loadout. The [Ambrosia Heater](https://ferlieloi.github.io/synergism-hypersynergy/docs/wiki/heater-guide.html) (Tools tab) finds the best ones for your save. Each loadout switch resets the ambrosia bars' progress. If you don't want that, tick **⚙ Don't switch ambrosia loadouts**: Auto-Sing then never switches.
 4. Turn on **⚙ Start/Stop Auto-Sing**, or click **Start Auto-Sing** in the [menu by the mod's icon](https://ferlieloi.github.io/synergism-hypersynergy/docs/wiki/interface.html#quick-menu).
 
@@ -53,28 +53,28 @@ The edits players make most often:
 
 A strategy is a list of **phases**. Each phase covers a part of the singularity, from one game stage to another. To see your current stage: the game's Settings → Stats for Nerds → Miscellaneous.
 
-- Phases follow each other: the first starts at "start", each one starts where the previous one ends, and the last one ends at "end".
+- Phases follow each other: the first starts at "start", each one starts where the previous one ends, and the last one is "singularity → end".
 - Auto-Sing reads the current stage, runs the steps of the phase that covers it from top to bottom, then reads the stage again. A phase runs again as long as the stage stays in its range.
 - A phase doesn't reset by itself. Only Ascend, Exit Ascension challenge, entering an ascension challenge and "Set corruption level" (with Ascend immediately) do.
-- **AOAG phase:** once the AOAG rune is unlocked (P4x5), Auto-Sing stops the current phase and runs the AOAG phase, then the phase that ends at "end". It starts with "Set corruption level" 0: no offering penalty to buy the AoAG rune.
-- At the end, Auto-Sing switches to your Quark loadout, ascends and exports the save for the bonus quarks, then starts a new singularity.
+- **AOAG phase:** once the AOAG rune is unlocked (P4x5), Auto-Sing stops the current phase and runs the AOAG phase, then singularity → end. It starts with "Set corruption level" 0: no offering penalty to buy the AoAG rune.
+- At the end of each loop, Auto-Sing switches to your Quark loadout, exports for quarks, levels Infinite Ascent, and opens one Platonic Cube before the next singularity. It also exports once when it starts, so the quarks saved up since your last export are collected at your current strength and kept out of the run's stats.
 
 ### The strategy window
 
 ![The strategy window of a default strategy: five phases from start to end, and the AOAG phase before the last one](../../res/guides/strategy-window@2x.webp)
 
 In Settings → Auto-Sing:
-- **➕ Create** opens a blank strategy (starting from a default is usually easier).
+- **➕ Create** opens a new strategy with two empty phases, "start → singularity" and "singularity → end", and the AOAG phase between them (starting from a default is usually easier).
 - **✏️ Edit** opens the selected one. Default strategies can't be changed: Edit opens a copy that you save under a new name.
 - **📤 Export** copies the strategy to share it; **📥 Import** adds one from a copy.
 
 In the window:
 - **Strategy Name** at the top.
-- Each row is a phase: **Phase N: start → [end ▾] [✎ k steps] [×]**. Change a phase's end with its dropdown, open its steps with ✎, delete it with ×.
-- The dashed **AOAG Unlocked Phase** row sits right before the phase that ends at "end", which is where it runs. Hover its **?** to see when it starts.
-- **Add phase until… ▾** adds the next phase. The round **+** on a phase's left border inserts a phase inside it.
+- Each row is a phase: **Phase N: start → [end ▾] [✎ k steps] [×]**. Change a phase's end with its dropdown, open its steps with ✎, delete it with ×. The last two phases' ends are fixed, and the last phase can't be deleted.
+- The dashed **AOAG Unlocked Phase** row sits right before the last phase, singularity → end, which is where it runs. Hover its **?** to see when it starts.
+- The round **+** on a phase's left border adds a phase: it splits that phase in two.
 - "0 steps" in red: a phase needs at least one step.
-- **Create Strategy** / **Update Strategy** saves. A strategy must go all the way to "end".
+- **Create Strategy** / **Update Strategy** saves.
 
 ### The actions window (✎)
 
@@ -94,6 +94,9 @@ The other actions are grouped in the dropdown (Exit and Ascend, Game actions, Ch
 - **403 - Set corruption level**: sets the level used from the next ascension. With **Ascend immediately** ticked, it ascends right away (or leaves the current ascension challenge). Set the actual level: the game adds your free levels on top.
 - **405 - Cleanse corruption**: the game's Cleanse, without ascending: lowers the current level to 0 at once, or to your highest cleared level with **Cleanse to highest cleared level** ticked. The next ascension uses that level too.
 - **Store C15**: keeps C15's current score for an IF step to compare against.
+- **159 - Set Auto Rune**: turns the game's Auto Rune ON or OFF. The game keeps it through a singularity: turn it back ON in your strategy. OFF also clears the rune you picked for it.
+- **801 - Buy rune**: clicks the Sacrifice button of the chosen rune, which spends all your offerings on it. The AOAG rune has its own action, 901 - Click AOAG.
+- **904 - Pause Autosing**: pauses autosing before the next step, to look at the game while testing a strategy. Resume with ▶️ in the Autosing panel.
 
 #### If-jump steps
 
@@ -102,7 +105,9 @@ The other actions are grouped in the dropdown (Exit and Ascend, Game actions, Ch
 An If-jump step (an IF row ① in the list) jumps to its **Jump here** row ② when its condition holds, else the steps continue below it.
 - **Challenges** mode: compares a challenge's completions (If Challenge) with Value, using > or <.
 - **Stored C15 value** mode: compares C15's current score with the stored score × 10^Multiplier.
+- **AOAG bought** mode: jumps when the AOAG rune is bought, or not bought, as chosen. Put it after a Click AOAG step to retry when the purchase failed: jump back to a step that waits or ascends first, and set Max jumps. Needs the mod's patched game (not the bookmarklet): elsewhere it never jumps, with a warning in the log.
 - **Max jumps** ③: the IF jumps at most this many times per phase run, then continues below it even if its condition still holds (0 = no limit). It keeps an account that never reaches a C15 target from looping forever. The default strategies' last C15 loop has 5.
+- An IF checks its condition at most once per game tick (5 ms). A loop with nothing that waits, such as an IF jumping to itself, checks once per tick: Max jumps 100 then lasts about half a second. Add a Wait before to check less often.
 - The IF row says where it jumps (→ step N), and the Jump here row which IF it belongs to: click either one to see the other. ↺ means the IF jumps back (a loop).
 - Follow the colored line from an IF to its **Jump here** row. Drag the arrow or the row’s handle to change the destination. Hold Shift while dragging an IF to pick up its jump marker. Release Shift to leave the marker where it is.
 

@@ -1,5 +1,5 @@
-import { EventBuffType, ConsumableGameEvents } from "../../../types/data-types/hs-event-data";
-import { AntUpgrades, CalculationCache, CalculationMode, HepteractType, SingularityChallengeDataKeys, SingularityDebuffs, NumberStatLine, PseudoCoinUpgradeNames, RuneKeys, SynergismLevelMilestones } from "../../../types/data-types/hs-gamedata-api-types";
+import { EventBuffType, ConsumableGameEvents, type VanillaGlobalEvent } from "../../../types/data-types/hs-event-data";
+import { AntUpgrades, CalculationCache, CalculationMode, HepteractType, SingularityChallengeDataKeys, SingularityDebuffs, NumberStatLine, pseudoCoinUpgradeNames, PseudoCoinUpgradeNames, RuneKeys, SynergismLevelMilestones } from "../../../types/data-types/hs-gamedata-api-types";
 import type { GameData, SingularityChallengeRewards, SingularityChallengeStatus } from "../../../types/data-types/hs-player-savedata";
 import type { CampaignData } from "../../../types/data-types/hs-campaign-data";
 import type { MeData } from "../../../types/data-types/hs-me-data";
@@ -9,6 +9,7 @@ import { HSUtils } from "../../hs-utils/hs-utils";
 import { HSLogger } from "../hs-logger";
 import { HSUI } from "../hs-ui";
 import { HSModuleRegistry } from "../module/hs-module-registry";
+import { HSGlobal } from "../hs-global";
 
 import { HSGameDataAPIPartial } from "./hs-gamedata-api-partial";
 import { ShopUpgradeHelper } from "./hs-gamedata-api-quarkShop";
@@ -20,7 +21,8 @@ import { AmbrosiaHelper } from "./hs-gamedata-api-ambrosia";
 import { GoldenQuarkHelper } from "./hs-gamedata-api-goldenQuark";
 import { OcteractHelper } from "./hs-gamedata-api-octeract";
 import { LuckHelper } from "./hs-gamedata-api-luck";
-import { PurpleHelper } from "./hs-gamedata-api-purple";
+import { PurpleHelper, PURPLE_AMBROSIA_UPGRADE_KEYS, PURPLE_REACTOR_UPGRADE_KEYS, type PurpleReactorUpgradeKey, type PurpleAmbrosiaUpgradeKey } from "./hs-gamedata-api-purple";
+import { rankPurpleUpgrades, type PurpleAdvisorResult } from "./hs-purple-upgrade-advisor";
 import { SynergismLevelHelper } from "./hs-gamedata-api-synergismLevel";
 import type { HSCalculationComponents } from "../../../types/data-types/hs-gamedata-api-types";
 import { checkCalculationCache, updateCalculationCache, clearCalculationCache, dumpCalculationCache, createCalculationCache } from "./hs-gamedata-api-cache";
@@ -89,6 +91,17 @@ const highScoringStatueBase = (blessings: number) => {
 const CAMPAIGN_INHERITANCE_LEVELS = [2, 5, 10, 17, 26, 37, 50, 65, 82, 101, 220, 240, 260, 270, 277];
 const CAMPAIGN_BONUS_TOKEN_LEVELS = [41, 58, 113, 163, 229];
 
+/** Inputs to the calculations that are kept outside the player save. */
+export interface HSGameCalculationContext {
+    meData?: MeData;
+    campaignData?: CampaignData;
+    eventData?: ConsumableGameEvents;
+    vanillaGlobalEvent: VanillaGlobalEvent | null;
+    isEvent: boolean;
+    pcoinLevels: Partial<Record<PseudoCoinUpgradeNames, number>>;
+    talismanUnlocks?: { exemption: boolean; wowSquare: boolean };
+}
+
 /**
  * Class: HSGameDataAPI
  * IsExplicitHSModule: Yes
@@ -114,6 +127,8 @@ const CAMPAIGN_BONUS_TOKEN_LEVELS = [41, 58, 113, 163, 229];
 */
 export class HSGameDataAPI extends HSGameDataAPIPartial {
     #calculationCache: CalculationCache = {} as CalculationCache;
+    #pcoinLevels?: HSGameCalculationContext['pcoinLevels'];
+    #talismanUnlocks?: HSGameCalculationContext['talismanUnlocks'];
 
     singularityChallengeData: typeof SINGULARITY_CHALLENGE_DATA = SINGULARITY_CHALLENGE_DATA;
 
@@ -500,7 +515,42 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         snapshot.eventData = this.eventData;
         snapshot.vanillaGlobalEvent = this.vanillaGlobalEvent;
         snapshot.isEvent = this.isEvent;
+        snapshot.#pcoinLevels = this.#pcoinLevels;
+        snapshot.#talismanUnlocks = this.#talismanUnlocks;
         return snapshot;
+    }
+
+    getCalculationContext(): HSGameCalculationContext {
+        const pcoinLevels: HSGameCalculationContext['pcoinLevels'] = {};
+        for (const name of pseudoCoinUpgradeNames) pcoinLevels[name] = this.getPCoinUpgradeLevel(name);
+        return {
+            meData: this.meData,
+            campaignData: this.campaignData,
+            eventData: this.eventData,
+            vanillaGlobalEvent: this.vanillaGlobalEvent,
+            isEvent: this.isEvent,
+            pcoinLevels,
+            talismanUnlocks: this.getTalismanProgressUnlocks(),
+        };
+    }
+
+    static fromCalculationContext(data: GameData, context: HSGameCalculationContext): HSGameDataAPI {
+        const api = new HSGameDataAPI({ moduleName: 'HSGameDataAPI', context: 'HSGameDataAPI' });
+        api.gameData = data;
+        api.meData = context.meData;
+        api.campaignData = context.campaignData;
+        api.eventData = context.eventData;
+        api.vanillaGlobalEvent = context.vanillaGlobalEvent;
+        api.isEvent = context.isEvent;
+        api.#pcoinLevels = context.pcoinLevels;
+        api.#talismanUnlocks = context.talismanUnlocks;
+        return api;
+    }
+
+    getTalismanProgressUnlocks(): HSGameCalculationContext['talismanUnlocks'] {
+        if (this.#talismanUnlocks) return this.#talismanUnlocks;
+        const player = typeof window === 'undefined' ? null : HSGlobal.exposedPlayer;
+        if (player) return { exemption: player.unlocks.talismans, wowSquare: player.ascensionCount >= 100 };
     }
 
     // ===== Registration =====
@@ -564,8 +614,9 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
     }
 
     getPCoinUpgradeLevel(name: PseudoCoinUpgradeNames): number {
+        if (this.#pcoinLevels) return this.#pcoinLevels[name] ?? 0;
         // Patched game: its own levels, live, once its fetch has answered (HSGameData clears the cache when they change)
-        const liveLevels = window.__HS_pcoinLevelsLoaded ? window.__HS_pcoinLevels : undefined;
+        const liveLevels = typeof window !== 'undefined' && window.__HS_pcoinLevelsLoaded ? window.__HS_pcoinLevels : undefined;
         if (liveLevels) {
             const liveLevel = Number(liveLevels[name] ?? 0);
             return Number.isFinite(liveLevel) ? liveLevel : 0;
@@ -903,6 +954,34 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         };
     }
 
+    /**
+     * The next Purple Reactor and Purple Ambrosia upgrade levels ranked by Purple Honey growth per Purple Honey
+     * spent (rankPurpleUpgrades). Null without save data.
+     */
+    calculatePurpleUpgradeAdvice(): PurpleAdvisorResult | null {
+        const data = this.gameData;
+        const income = this.ambrosia.buildAmbrosiaBarIncomeInput();
+        if (!data || !income) return null;
+
+        const reactorLevels: Partial<Record<PurpleReactorUpgradeKey, number>> = {};
+        for (const key of PURPLE_REACTOR_UPGRADE_KEYS) {
+            reactorLevels[key] = this.purple.getPurpleReactorUpgradeLevel(key);
+        }
+        const zodiacLevels: Partial<Record<PurpleAmbrosiaUpgradeKey, number>> = {};
+        for (const key of PURPLE_AMBROSIA_UPGRADE_KEYS) zodiacLevels[key] = this.purple.getPurpleAmbrosiaUpgradeLevel(key);
+        const craft = this.calculatePurpleAmbrosiaCraftCosts();
+
+        return rankPurpleUpgrades({
+            income,
+            reactorLevels,
+            zodiacLevels,
+            lifetimePurpleHoney: Number(data.purpleReactor?.lifetimePurpleHoney ?? 0),
+            ariesDigits: this.purple.getAriesDigits(),
+            craftPurpleHoneyCost: craft.craftPurpleHoneyCost,
+            craftRedAmbrosiaCost: craft.craftRedAmbrosiaCost,
+        });
+    }
+
     // Kept here: the helpers' contexts and the level milestones (synergismLevelMilestones, called with this) read it
     calculateSynergismLevel(): number {
         return this.synergismLevel.calculateSynergismLevel();
@@ -939,7 +1018,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         const ascensionLimit = Math.max(
             15 - 2 * data.singularityChallenges.limitedAscensions.completions,
             0,
-        );
+        ) + 10;
         let exponent = data.ascensionCount - ascensionLimit;
 
         exponent = Math.max(0, exponent)
@@ -1145,6 +1224,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             data.octUpgrades.octeractImprovedAscensionSpeed.octeractsInvested,
             data.octUpgrades.octeractImprovedAscensionSpeed2.octeractsInvested,
             data.singularityChallenges.limitedAscensions.completions,
+            data.singularityChallenges.limitedAscensions.enabled ? data.ascensionCount : 0,
             data.singularityChallenges.limitedTime.completions,
             data.shopUpgrades.shopChronometerS,
             cube59,

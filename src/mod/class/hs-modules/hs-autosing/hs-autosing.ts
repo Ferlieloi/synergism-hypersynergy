@@ -9,7 +9,7 @@ import { HSSettings } from "../../hs-core/settings/hs-settings";
 import { HSStrategyManager } from "./hs-strategy-manager";
 import { HSNumericSetting } from "../../hs-core/settings/hs-setting";
 import { HSUtils } from "../../hs-utils/hs-utils";
-import { HSAutosingStrategy, PhaseOption, phases, AutosingStrategyPhase, Challenge, SPECIAL_ACTION_BY_ID, createDefaultAoagPhase, AOAG_PHASE_ID, AOAG_PHASE_NAME, SET_CORRUPTION_LEVEL_VALUE, CLEANSE_CORRUPTION_VALUE, IF_JUMP_VALUE, ALLOWED, type HSAutosingPassRecord, type HSAutosingExposureParts } from "./hs-autosing-types";
+import { HSAutosingStrategy, PhaseOption, phases, AutosingStrategyPhase, Challenge, SPECIAL_ACTION_BY_ID, createDefaultAoagPhase, AOAG_PHASE_ID, AOAG_PHASE_NAME, SET_CORRUPTION_LEVEL_VALUE, CLEANSE_CORRUPTION_VALUE, IF_JUMP_VALUE, BUY_RUNE_VALUE, BUYABLE_RUNE_BY_KEY, type BuyableRuneKey, PAUSE_AUTOSING_VALUE, ALLOWED, type HSAutosingPassRecord, type HSAutosingExposureParts } from "./hs-autosing-types";
 import { HSAutosingModal } from "./hs-autosingModal";
 import { HSAutosingRecorder } from "./hs-autosingRecorder";
 import { HSAutosingStepTimingsWindow } from "./ui/hs-autosing-step-timings-window";
@@ -22,6 +22,7 @@ import { HSAutosingWakeLock } from './hs-autosingWakeLock';
 import { HSGameDialogs } from "../../hs-core/dialogs/hs-game-dialogs";
 import { HSSubtabMemory } from "../hs-subtab-memory";
 import { escapeLogText } from "../../hs-utils/hs-escape";
+import { formatMeasuredNumber, formatStrategyNumber } from "./hs-autosingFormatUtils";
 
 import { HSAutosingDom } from "./hs-autosing-dom";
 import { EXALT_STATE_ATTRIBUTE, HSAutosingDomWaits, HSAutosingTextWaitSupersededError } from "./hs-autosing-dom-waits";
@@ -37,6 +38,11 @@ const ALLOWED_REGEX = new RegExp(ALLOWED.join('|'));
  */
 export class HSAutosing extends HSModule {
     static readonly #DECIMAL_0 = new Decimal(0);
+    // A challenge entry still refused after this long gets one warning (the entry keeps retrying)
+    static readonly #ENTRY_WARN_MS = 2000;
+    // An IF checked again sooner than this in the same pass (one game tick) waits for the rest of it first: a loop
+    // whose steps never wait would otherwise run in microtasks only, the game could never tick and the page froze
+    static readonly #IF_RECHECK_MS = 5;
     #gameDataAPI?: HSGameDataAPI;
 
     #corruptionManager!: HSAutosingCorruption;
@@ -55,12 +61,12 @@ export class HSAutosing extends HSModule {
     #restartTimer?: number;
     #targetSingularity = 0;
     #prevActionTime: number = 0;
-    // Steps added to (and removed from) the first phase at load: the logs number steps as the strategy editor does
-    #insertedStepsPhase: AutosingStrategyPhase | null = null;
-    #insertedStepCount: number = 0;
-    #removedStepCount: number = 0;
+    // The first phase, when its leading Obtainium loadout step was removed at load: the logs number steps as the strategy editor does
+    #obtSwitchRemovedPhase: AutosingStrategyPhase | null = null;
     #stopAtSingularitysEnd: boolean = false;
     #hasWarnedMissingStageFunc: boolean = false;
+    // An AOAG IF found the purchase unreadable in this run (one warning per run)
+    #hasWarnedAoagUnreadable: boolean = false;
     #storedC15: number = 0;
     #settingsFixer = new HSAutosingSettingsFixer();
     #wakeLock = new HSAutosingWakeLock();
@@ -81,11 +87,6 @@ export class HSAutosing extends HSModule {
     #antiquitiesObserverActivated: boolean = false;
     #endStagePromise?: Promise<void>;
     #endStagePromiseResolve?: () => void;
-    #upg81Observer?: MutationObserver;
-    #upg81Promise?: Promise<boolean>;
-    #upg81PromiseResolve?: (value: boolean) => void;
-    #upg81ClickLoopActive: boolean = false;
-    #upg81ClickLoopGeneration: number = 0;
     // Step of #enterAndLeaveExalt(): a stop while 'entering' leaves the Exalt autosing entered
     #exaltStep: 'none' | 'entering' | 'leaving' = 'none';
     // Exalt waits of the current #enterAndLeaveExalt() that a game tick ended, not the game's Exalt attribute (debug line)
@@ -98,6 +99,7 @@ export class HSAutosing extends HSModule {
     #hasStageFunc: boolean = false;
     #hasLivePlayer: boolean = false;
     #hasMaxChallenges: boolean = false;
+    #hasAfterTackHook: boolean = false;
     // The game internals found or not at the last start (shown in the timer's footer)
     #exposureParts: HSAutosingExposureParts = { fastPaths: {}, other: {} };
     #gamestate!: HSGameState;
@@ -123,24 +125,6 @@ export class HSAutosing extends HSModule {
     }
 
     #cacheObservers(): void {
-        // upg81 observer, for the antiBuyCoinBug
-        if (!this.#upg81Observer && this.#dom.upg81Btn) {
-            this.#upg81Observer = new MutationObserver((mutations) => {
-                for (const mutation of mutations) {
-                    if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-                        const isGreen = this.#dom.upg81Btn.classList.contains('green-background');
-                        if (isGreen && this.#upg81PromiseResolve) {
-                            HSLogger.debug(() => `-------> #upg81 turned green o/`, this.context);
-                            this.#stopUpg81Clicking();
-                            this.#upg81PromiseResolve(true);
-                            this.#upg81PromiseResolve = undefined;
-                            this.#upg81Observer?.disconnect();
-                        }
-                    }
-                }
-            });
-        }
-
         // Antiquities observer, starting AOAG phase
         if (!this.#antiquitiesObserver && this.#dom.antiquitiesRuneLockedContainer) {
             this.#antiquitiesObserver = new MutationObserver(mutations => {
@@ -176,6 +160,7 @@ export class HSAutosing extends HSModule {
         // Without the dialog hook, HSGameDialogs' watcher clicks the dialogs as they show, before autosing's
         // next step runs. Without the export output, only the quark export at each singularity's end is skipped.
         const isAfterTackHooked = HSUtils.cacheAfterTackHook();
+        this.#hasAfterTackHook = isAfterTackHooked;
         const isDialogHookPatched = HSGameDialogs.isHookPatched();
         const isExportOutputPatched = !!window.__HS_EXPORT_OUTPUT_PATCHED;
 
@@ -344,12 +329,12 @@ export class HSAutosing extends HSModule {
 
         this.#autosingEnabled = true;
         if (HSSettings.getSetting("autosingKeepAwake").isEnabled()) this.#wakeLock.start();
-        if (HSSettings.getSetting("autosingKeepAwake").isEnabled()) this.#wakeLock.start();
         this.#stopAtSingularitysEnd = false;
         this.#endStageDone = false;
         this.#antiquitiesObserverActivated = false;
         this.#endStagePromise = undefined;
         this.#hasWarnedMissingStageFunc = false;
+        this.#hasWarnedAoagUnreadable = false;
         this.#storedC15 = 0;
         this.#dom.resetChallenge15Score();
 
@@ -488,7 +473,6 @@ export class HSAutosing extends HSModule {
     async #stopAutosingCore(options: { modalDisposition: 'review' | 'destroy', leaveExalt: boolean }): Promise<void> {
         this.#autosingEnabled = false;
         this.#wakeLock.stop();
-        this.#wakeLock.stop();
 
         // Stopped between entering Exalt 2 and leaving it: leave it, or the player stays inside.
         // Its own session answers its dialogs: the exit Alert is queued after stopAutosing() has stopped
@@ -502,14 +486,6 @@ export class HSAutosing extends HSModule {
 
         this.#antiquitiesObserver?.disconnect();
         this.#antiquitiesObserver = undefined;
-
-        this.#upg81Observer?.disconnect();
-        this.#upg81Observer = undefined;
-        this.#stopUpg81Clicking();
-        // Ends the wait of strategy step 999, so its chain ends (a start waits for it)
-        this.#upg81PromiseResolve?.(false);
-        this.#upg81PromiseResolve = undefined;
-        this.#upg81Promise = undefined;
 
         this.#domWaits.stop();
         this.#playerTab = undefined;
@@ -612,51 +588,28 @@ export class HSAutosing extends HSModule {
             return null;
         }
 
-        // Insert special steps at the start of the first phase
-        this.#insertAntiBuyCoinBugStep(runtimeStrategy);
-        HSLogger.log(`Loaded strategy "${escapeLogText(selectedRawName)}" (AntiBuyCoinBug step inserted as first step, and potential obt-switch step removed)`, this.context);
+        const removed = this.#removeLeadingObtSwitch(runtimeStrategy);
+        HSLogger.log(`Loaded strategy "${escapeLogText(selectedRawName)}"${removed ? " (its first Obtainium loadout step skipped: autosing switches to it after each singularity)" : ""}`, this.context);
 
         return runtimeStrategy;
     }
 
-    /** Inserts special steps at the start of the first phase's strat array, adjusting ifJump indices. */
-    #insertAntiBuyCoinBugStep(strategy: any): void {
-        const stepsToInsert = [
-            {
-                comment: "==> Anti buy coin bug",
-                challengeNumber: 999,
-                challengeCompletions: 0,
-                challengeWaitBefore: 0,
-                challengeWaitTime: 0,
-                challengeMaxTime: 0
-            }
-        ];
-
-        this.#insertedStepsPhase = null;
-        if (!strategy || !Array.isArray(strategy.strategy) || strategy.strategy.length === 0) return;
+    /**
+     * Removes a first phase's leading Obtainium loadout step (304): #performSingularity switches to that loadout right
+     * after the singularity, earlier than the step would. IF jumps of that phase are shifted to match.
+     * @returns Whether a step was removed
+     */
+    #removeLeadingObtSwitch(strategy: HSAutosingStrategy): boolean {
+        this.#obtSwitchRemovedPhase = null;
         const firstPhase = strategy.strategy[0];
-        if (!firstPhase || !Array.isArray(firstPhase.strat)) return;
-        let nbSteps = stepsToInsert.length;
-        this.#removedStepCount = 0;
-
-        // Remove probable pre-existing Obt switch as first step
-        if (firstPhase.strat[0]?.challengeNumber === 304) {
-            firstPhase.strat.splice(0, 1);
-            nbSteps--;
-            this.#removedStepCount = 1;
-        }
-
-        // Insert at the start
-        firstPhase.strat.unshift(...stepsToInsert);
-        this.#insertedStepsPhase = firstPhase;
-        this.#insertedStepCount = stepsToInsert.length;
-
-        // Adjust ifJump.ifJumpIndex for all steps in the first phase
+        if (firstPhase?.strat[0]?.challengeNumber !== 304) return false;
+        firstPhase.strat.splice(0, 1);
+        // A jump to the removed step lands on the step that followed it
         for (const step of firstPhase.strat) {
-            if (step.ifJump && typeof step.ifJump.ifJumpIndex === 'number') {
-                step.ifJump.ifJumpIndex += nbSteps;
-            }
+            if (step.ifJump) step.ifJump.ifJumpIndex = Math.max(0, step.ifJump.ifJumpIndex - 1);
         }
+        this.#obtSwitchRemovedPhase = firstPhase;
+        return true;
     }
 
     // ============================================================================
@@ -665,6 +618,8 @@ export class HSAutosing extends HSModule {
 
     async #performAutosingLogic(): Promise<void> {
         try {
+            // Before the panel reads its starting balances: the time since the player's last export isn't the run's
+            await this.#exportInQuarkLoadout();
             await this.#useAddAndTimeCodes();
             if (!this.#autosingEnabled) return;
 
@@ -737,13 +692,6 @@ export class HSAutosing extends HSModule {
 
         if (!this.#strategyPhaseRanges) this.#rebuildStrategyPhaseCaches();
 
-        if (stage === 'final') {
-            const finalPhase = this.#finalPhaseConfig;
-            if (!finalPhase) { HSLogger.warn("No final phase found in strategy - Autosing stopped.", this.context); this.stopAutosing(); return; }
-            await this.#executePhase(finalPhase);
-            return;
-        }
-
         const cachedPhaseConfig = this.#phaseConfigByStage.get(stage);
         if (cachedPhaseConfig) {
             await this.#executePhase(cachedPhaseConfig);
@@ -792,21 +740,22 @@ export class HSAutosing extends HSModule {
         this.#autosingModal?.setCurrentPhase(phaseLabel);
         const passRecord = this.#recordTimings ? HSAutosingRecorder.startPass(phaseLabel) : undefined;
 
-        const isEndPhase = phaseConfig.endPhase === "end";
         // Jumps taken by each IF with a max jumps in this pass, by its index
         const jumpCounts = new Map<number, number>();
+        // When each IF last read its condition in this pass, by its index (#IF_RECHECK_MS)
+        const ifCheckedAt = new Map<number, number>();
         for (let i = 0; i < phaseConfig.strat.length; i++) {
             if (this.#autosingModal?.getIsPaused()) await this.#waitIfAutosingPaused();
 
-            // Autosing disabled or AOAG observer activated
-            if (!this.#autosingEnabled || (this.#antiquitiesObserverActivated && !isEndPhase && !ignoreObserverActivated)) {
+            // Autosing disabled, or AOAG observer activated (except for the AOAG and final phases, run after it)
+            if (!this.#autosingEnabled || (this.#antiquitiesObserverActivated && !ignoreObserverActivated)) {
                 this.#autosingModal?.recordPhase(phaseLabel);
                 if (passRecord) HSAutosingRecorder.endPass(passRecord, this.#autosingEnabled ? 'aoag' : 'stopped');
                 return;
             }
 
             const stepStartedAt = passRecord ? performance.now() : 0;
-            const jumpIndex = await this.#executeStrategyAction(phaseConfig, i, jumpCounts, passRecord);
+            const jumpIndex = await this.#executeStrategyAction(phaseConfig, i, jumpCounts, ifCheckedAt, passRecord);
             if (passRecord) HSAutosingRecorder.step(passRecord, phaseConfig.strat[i], i, this.#stepNumber(phaseConfig, i), stepStartedAt, jumpIndex);
             if (typeof jumpIndex === 'number') {
                 // set loop index to jumpIndex-1 because the for-loop will increment it
@@ -821,19 +770,18 @@ export class HSAutosing extends HSModule {
         if (passRecord) HSAutosingRecorder.endPass(passRecord, 'done');
     }
 
-    /** A step's number in the strategy editor (from 1), 0 for a step inserted at load. */
+    /** A step's number in the strategy editor (from 1), counting a leading Obtainium loadout step removed at load. */
     #stepNumber(phaseConfig: AutosingStrategyPhase, index: number): number {
-        if (phaseConfig !== this.#insertedStepsPhase) return index + 1;
-        if (index < this.#insertedStepCount) return 0;
-        return index + 1 - this.#insertedStepCount + this.#removedStepCount;
+        return phaseConfig === this.#obtSwitchRemovedPhase ? index + 2 : index + 1;
     }
 
     /**
      * @param jumpCounts The pass's jumps taken by each IF with a max jumps, by its index
+     * @param ifCheckedAt When each IF last read its condition in this pass, by its index
      * @param passRecord With "Record step timings" on: the recorder's pass, which gets the time slept before the step
      */
     async #executeStrategyAction(phaseConfig: AutosingStrategyPhase, actionIndex: number, jumpCounts: Map<number, number>,
-        passRecord?: HSAutosingPassRecord): Promise<number | null> {
+        ifCheckedAt: Map<number, number>, passRecord?: HSAutosingPassRecord): Promise<number | null> {
         const challenge = phaseConfig.strat[actionIndex];
 
         const wb = challenge.challengeWaitBefore ?? 0;
@@ -861,10 +809,24 @@ export class HSAutosing extends HSModule {
             case 156:
             case 157:
             case 158:
+            case 159:
                 this.#setAutoToggle(challenge.challengeNumber, challenge.toggleOn !== false, () => `${tag()} - SA: ${actionText()}`);
                 break;
-            case IF_JUMP_VALUE:
+            case BUY_RUNE_VALUE:
+                this.#buyRune(challenge.rune, tag);
+                break;
+            case IF_JUMP_VALUE: {
+                // Checked again within one game tick: a loop with nothing that waits. Its condition can't change
+                // before the next tick anyway. A loop that waits elsewhere (Wait before, completions) never sleeps here
+                const lastCheck = ifCheckedAt.get(actionIndex);
+                const remaining = lastCheck === undefined ? 0 : HSAutosing.#IF_RECHECK_MS - (performance.now() - lastCheck);
+                if (remaining > 0) {
+                    await HSUtils.sleep(remaining);
+                    if (!this.#autosingEnabled) return null;
+                }
+                ifCheckedAt.set(actionIndex, performance.now());
                 return this.#handleIfJumpAction(challenge, phaseConfig, actionIndex, jumpCounts, tag);
+            }
             default:
                 if (challenge.challengeNumber >= 100) {
                     HSLogger.debug(() => `${tag()} - SA: ${actionText()}`, this.context);
@@ -948,7 +910,7 @@ export class HSAutosing extends HSModule {
                 const shouldJump = jumpIndex !== undefined &&
                     ((operator === ">" && completions > value) ||
                         (operator === "<" && completions < value));
-                const condition = `C${ifIdx} (${completions}) ${operator} ${value}`;
+                const condition = `C${ifIdx} (${formatMeasuredNumber(completions)}) ${operator} ${formatStrategyNumber(value)}`;
                 if (shouldJump) return jumpOrNot(condition);
                 logIfJump(condition, false, 0);
                 break;
@@ -962,8 +924,25 @@ export class HSAutosing extends HSModule {
                 const shouldJump = jumpIndex !== undefined &&
                     ((operator === ">" && threshold > c15Score) ||
                         (operator === "<" && threshold < c15Score));
-                const condition = `stored C15 × 10^${exponent} (${threshold}) ${operator} current C15 (${c15Score})`;
+                const condition = `stored C15 × 10^${exponent} (${formatMeasuredNumber(threshold)}) ${operator} current C15 (${formatMeasuredNumber(c15Score)})`;
                 if (shouldJump) return jumpOrNot(condition);
+                logIfJump(condition, false, 0);
+                break;
+            }
+            case "aoag": {
+                const wanted = jump!.ifJumpAoagBought === true;
+                const wantedText = wanted ? "AOAG bought" : "AOAG not bought";
+                const bought = this.#isAoagBought();
+                if (bought === undefined) {
+                    if (!this.#hasWarnedAoagUnreadable) {
+                        this.#hasWarnedAoagUnreadable = true;
+                        HSLogger.warn(`${tag()} - IF ${wantedText} (${IF_JUMP_VALUE}): the AOAG purchase can't be read on this game (bookmarklet, or a Steam game not updated), this IF never jumps`, this.context);
+                    }
+                    logIfJump(`${wantedText} (unknown)`, false, 0);
+                    break;
+                }
+                const condition = `${wantedText} (${bought ? "bought" : "not bought"})`;
+                if (jumpIndex !== undefined && bought === wanted) return jumpOrNot(condition);
                 logIfJump(condition, false, 0);
                 break;
             }
@@ -971,20 +950,32 @@ export class HSAutosing extends HSModule {
         return null;
     }
 
+    /**
+     * The Antiquities rune bought: its level in the live player's runeLevels (RuneType.Antiquities = 6), as the game
+     * checks it. undefined without the live player (bookmarklet) or on a game from before its rune rework (Steam not
+     * updated), which kept the level outside the player.
+     */
+    #isAoagBought(): boolean | undefined {
+        const level = this.#exposedPlayer?.runeLevels?.[6];
+        return typeof level === 'number' ? level > 0 : undefined;
+    }
+
     // ============================================================================
     // SPECIAL ACTIONS
     // ============================================================================
 
     /**
-     * "Set Auto Challenge / Ant-Sac / Ascend" (156-158): the game's buttons only flip their toggle, so the button is
-     * clicked only when the toggle isn't already in the wanted state. The state comes from the live player, else from
-     * a fresh save (bookmarklet players), never from the button's text or colour.
+     * "Set Auto Challenge / Ant-Sac / Ascend / Rune" (156-159): the game's buttons only flip their toggle, so the button
+     * is clicked only when the toggle isn't already in the wanted state. The state comes from the live player, else from
+     * a fresh save (bookmarklet players), never from the button's text or colour. Auto Rune OFF also clears the rune
+     * picked for it (the game's), which ON doesn't bring back.
      */
     #setAutoToggle(actionId: number, on: boolean, logPrefix: () => string): void {
         const toggles: Record<number, { read: (player: PlayerData) => unknown; button: () => HTMLButtonElement }> = {
             156: { read: p => p.autoChallengeRunning, button: () => this.#dom.autoChallengeButton },
             157: { read: p => p.ants?.toggles?.autoSacrificeEnabled, button: () => this.#dom.autoAntSacrificeButton },
             158: { read: p => p.autoAscend, button: () => this.#dom.autoAscendButton },
+            159: { read: p => p.autoSacrificeToggle, button: () => this.#dom.autoRuneButton },
         };
         const toggle = toggles[actionId];
         const wanted = on ? 'ON' : 'OFF';
@@ -1013,6 +1004,28 @@ export class HSAutosing extends HSModule {
             return;
         }
         HSLogger.debug(() => `${logPrefix()} ${wanted}`, this.context);
+    }
+
+    /**
+     * "Buy rune" (801): the step's rune's Sacrifice button, which spends offerings up to the offering buy amount (the
+     * settings fixer sets it to no limit). Buying nothing is normal (no offerings left): only a locked rune is a warning,
+     * read from the game's locked box, which it shows while the rune is locked.
+     */
+    #buyRune(runeKey: BuyableRuneKey | undefined, stepTag: () => string): void {
+        // Validation refuses a step without a known rune
+        const rune = runeKey === undefined ? undefined : BUYABLE_RUNE_BY_KEY.get(runeKey);
+        const elements = runeKey === undefined ? undefined : this.#dom.runeElements.get(runeKey);
+        if (!rune || !elements) return;
+        const actionText = `Buy rune (${BUY_RUNE_VALUE}) ${rune.name}`;
+        if (elements.locked.style.display !== 'none') {
+            HSLogger.warn(`${stepTag()} - ${actionText}: the rune is locked, nothing bought`, this.context);
+            return;
+        }
+        // undefined without the live player (bookmarklet) or on a game from before the rune rework (Steam not updated)
+        const level = (): unknown => this.#exposedPlayer?.runeLevels?.[rune.type];
+        const before = level();
+        elements.sacrifice.click();
+        HSLogger.debug(() => `${stepTag()} - ${actionText}: level ${String(before ?? '?')} → ${String(level() ?? '?')}`, this.context);
     }
 
     /** @param stepTag The strategy step's "Step N", for the timeout warning */
@@ -1101,6 +1114,10 @@ export class HSAutosing extends HSModule {
                 break;
             case 901:
                 this.#dom.AOAG.click();
+                // The game buys at once (no dialog). Checked only where the purchase can be read (#isAoagBought)
+                if (this.#isAoagBought() === false) {
+                    HSLogger.warn(`${stepTag()} - Click AOAG (901): the game did not buy the Antiquities rune (not enough offerings?)`, this.context);
+                }
                 break;
             case 902: // Restart AutoSing
                 this.restartAutosing();
@@ -1108,8 +1125,14 @@ export class HSAutosing extends HSModule {
             case 903: // Stop AutoSing
                 this.stopAutosing();
                 break;
-            case 999: // Anti buy coin bug, in order to be inserted in the strategy
-                await this.#waitForGreenUpg81();
+            case PAUSE_AUTOSING_VALUE:
+                // Takes effect before the next step (#executePhase); the player resumes with the panel's button
+                if (this.#autosingModal) {
+                    this.#autosingModal.pause();
+                    HSLogger.log(`${stepTag()} - Pause Autosing (${PAUSE_AUTOSING_VALUE}): paused, resume with ▶️ in the Autosing panel`, this.context);
+                } else {
+                    HSLogger.warn(`${stepTag()} - Pause Autosing (${PAUSE_AUTOSING_VALUE}): no Autosing panel, not paused`, this.context);
+                }
                 break;
             default:
                 HSLogger.warn(`Unknown special action ${actionId}`, this.context);
@@ -1145,9 +1168,21 @@ export class HSAutosing extends HSModule {
 
             // Challenge state is advanced by the game tack. Retrying faster than that
             // only floods the DOM event handlers and can delay the tack we need.
+            // An entry the game refuses (a locked C11-C15) is retried for as long as autosing runs: warned once
+            let refusedSince = 0;
+            let warned = false;
             while (this.#autosingEnabled && !isChallengeActive()) {
                 this.#fastDoubleClick(challengeBtn!);
-                if (!isChallengeActive()) await HSUtils.waitForNextTack();
+                if (isChallengeActive()) break;
+                if (!warned) {
+                    const now = performance.now();
+                    if (refusedSince === 0) refusedSince = now;
+                    else if (now - refusedSince >= HSAutosing.#ENTRY_WARN_MS) {
+                        warned = true;
+                        HSLogger.warn(`-------> ${stepTag ? `${stepTag()} - ` : ""}C${challengeIndex}: the game has refused the entry for ${HSAutosing.#ENTRY_WARN_MS / 1000} s (locked challenge?), still retrying`, this.context);
+                    }
+                }
+                await HSUtils.waitForNextTack();
             }
         } else {
             const progressUpdated = this.#domWaits.waitForInnerText(
@@ -1274,7 +1309,8 @@ export class HSAutosing extends HSModule {
 
     async #C1to10UntilNoMoreCompletions(challengeIndex: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10, initialWaitTime: number, maxTime: number): Promise<void> {
         await this.#waitForCompletion(challengeIndex, 0, 0, 0);
-        await HSUtils.sleep(initialWaitTime);
+        // A 0 ms timer set from the game's tick (itself a chain of timers) is stretched to 4 ms by the browser
+        if (initialWaitTime > 0) await HSUtils.sleep(initialWaitTime);
 
         // Fast path: use exposedPlayer.challengecompletions instead of MutationObserver/class polling.
         if (this.#hasMaxChallenges) {
@@ -1445,10 +1481,6 @@ export class HSAutosing extends HSModule {
 
         const happyHourStackAmount = this.#gameDataAPI?.getEventData()?.HAPPY_HOUR_BELL.amount ?? 0;
 
-        // antiBuyCoinBug setup (hard-coded inserted first step of the strategy should ensure this promise is resolved)
-        this.#upg81Promise = new Promise<boolean>((resolve) => { this.#upg81PromiseResolve = resolve; });
-        this.#upg81Observer?.observe(this.#dom.upg81Btn, { attributes: true, attributeFilter: ['class'] });
-
         this.#notePlayerTab();
         if (!await this.#enterAndLeaveExalt()) {
             if (this.#autosingEnabled) {
@@ -1500,8 +1532,11 @@ export class HSAutosing extends HSModule {
 
         HSLogger.debug(() => "===== Singularity performed =====", this.context);
 
-        // antiBuyCoinBug next step: loop-click upg81 until it turns green (upg81Promise resolved)
-        this.#startUpg81Clicking();
+        // The game gives upgrades 81-100 within the singularity reset since its 2026-09-24 change; before, its automation
+        // auto-buyer bought them up to 50 ms later, and a challenge entered in between left Workers unbought
+        if (this.#hasLivePlayer && this.#exposedPlayer!.upgrades[81] === 0) {
+            HSLogger.warn("Upgrade 81 (Workers auto-buyer) not bought after the singularity: the game may have changed", this.context);
+        }
 
         // Obt switch so we start producing Obt ASAP every sing
         await this.#setAmbrosiaLoadout(this.#dom.ambrosia_obt);
@@ -1595,12 +1630,46 @@ export class HSAutosing extends HSModule {
         // Stopped during the AOAG phase: don't go on with the final phase (corruptions, Ascend…)
         if (!this.#autosingEnabled) return;
 
+        // The phase that ends at "end": singularity → end for strategies saved since that rule (older ones may start earlier)
+        const finalPhase = this.#finalPhaseConfig;
+        if (!finalPhase) { HSLogger.warn("No final phase found in strategy - Autosing stopped.", this.context); this.stopAutosing(); return; }
         this.#prevActionTime = performance.now();
-        await this.#matchStageToStrategy('final');
+        await this.#executePhase(finalPhase, { ignoreObserverActivated: true });
         if (!this.#autosingEnabled) return; // If the user stopped during the very last step
 
-        // Export to gather a few quarks
+        await this.#exportInQuarkLoadout();
+        if (!this.#autosingEnabled) return;
+
+        if (this.#stopAtSingularitysEnd) {
+            this.#clickResetButton(this.#dom.ascendBtn);
+            HSUI.Notify("Standard strategy exited: Auto-Sing will now push this sing before stopping.");
+            await this.#pushSingularityBeforeStop();
+            // Stopped during the push: stopping again would cancel a start waiting for this chain
+            if (!this.#autosingEnabled) return;
+            HSUI.Notify("Auto-Sing stopped at end of singularity as requested.");
+            this.stopAutosing();
+            return;
+        }
+
+        this.#buyRune("infiniteAscent", () => "Final quark payout");
+        // Pay catch-up quarks while the bank still boosts the Ambrosia cube-quark multiplier.
+        this.#dom.openOnePlatonicCube.click();
+
+        this.#endStagePromiseResolve?.();
+        this.#endStagePromise = undefined;
+        this.#endStagePromiseResolve = undefined;
+    }
+
+    /** Exports the save (no file) in the quark loadout for the export's quarks. At the start too: the export pays
+     *  all the time since the last one, so it lands before the run's stats, at the player's own (usually stronger) state. */
+    async #exportInQuarkLoadout(): Promise<void> {
         await this.#setAmbrosiaLoadout(this.#dom.ambrosia_quark);
+        // The ants pay all their quarks again at the current quark multiplier, minus what they paid: one game tick in
+        // the quark loadout pays them the difference (nothing else gives the game a tick before the singularity).
+        // Loadout switches off: the multiplier didn't change, nothing to pay.
+        // Without the after-tack hook the wait is a 5 ms sleep, and the game runs a tack only once more than 5 ms
+        // have passed since the last one: two sleeps make sure one ran.
+        if (!this.#dom.ambrosiaSwitchesOff) await HSUtils.waitForNextTack(this.#hasAfterTackHook ? 1 : 2);
         const exportSynergism = window.__HS_exportSynergism;
         if (typeof exportSynergism === 'function' && window.__HS_EXPORT_OUTPUT_PATCHED) {
             window.__HS_SUPPRESS_EXPORT_ONCE = true;
@@ -1613,22 +1682,6 @@ export class HSAutosing extends HSModule {
         } else {
             HSLogger.warn('Quark-only export unavailable: the game export-output hook was not patched.', this.context);
         }
-
-        this.#clickResetButton(this.#dom.ascendBtn);
-
-        if (this.#stopAtSingularitysEnd && this.#autosingEnabled) {
-            HSUI.Notify("Standard strategy exited: Auto-Sing will now push this sing before stopping.");
-            await this.#pushSingularityBeforeStop();
-            // Stopped during the push: stopping again would cancel a start waiting for this chain
-            if (!this.#autosingEnabled) return;
-            HSUI.Notify("Auto-Sing stopped at end of singularity as requested.");
-            this.stopAutosing();
-            return;
-        }
-
-        this.#endStagePromiseResolve?.();
-        this.#endStagePromise = undefined;
-        this.#endStagePromiseResolve = undefined;
     }
 
     // ============================================================================
@@ -1876,46 +1929,6 @@ export class HSAutosing extends HSModule {
             this.#dom.antiquitiesRuneLockedContainer,
             { attributes: true, attributeFilter: ['style'] }
         );
-    }
-
-    #startUpg81Clicking(): void {
-        if (this.#upg81ClickLoopActive || !this.#dom.upg81Btn) return;
-
-        const generation = ++this.#upg81ClickLoopGeneration;
-        this.#upg81ClickLoopActive = true;
-
-        void (async (): Promise<void> => {
-            try {
-                while (
-                    generation === this.#upg81ClickLoopGeneration
-                    && this.#autosingEnabled
-                    && this.#upg81Promise
-                ) {
-                    this.#dom.upg81Btn.click();
-                    await HSUtils.waitForNextTack();
-                }
-            } finally {
-                if (generation === this.#upg81ClickLoopGeneration) {
-                    this.#upg81ClickLoopActive = false;
-                }
-            }
-        })();
-    }
-
-    #stopUpg81Clicking(): void {
-        this.#upg81ClickLoopGeneration++;
-        this.#upg81ClickLoopActive = false;
-    }
-
-    async #waitForGreenUpg81(): Promise<void> {
-        if (!this.#upg81Promise) return;
-
-        await this.#upg81Promise;
-
-        this.#stopUpg81Clicking();
-        this.#upg81Observer?.disconnect();
-        this.#upg81PromiseResolve = undefined;
-        this.#upg81Promise = undefined;
     }
 
     #isExpectedAoagWaitSupersession(error: unknown): boolean {

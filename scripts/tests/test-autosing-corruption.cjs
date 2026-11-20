@@ -27,6 +27,7 @@ async function main() {
         };`,
         'hs-utils': `export const HSUtils = {
             sleepUntilElapsed: async () => { globalThis.__corruptionTest.beforeWait?.(); },
+            sleep: async ms => { globalThis.__corruptionTest.sleeps.push(ms); },
             waitForNextTack() { throw new Error('Corruption actions must not wait for a game tick'); }
         };`,
     };
@@ -43,12 +44,14 @@ async function main() {
             build.onLoad({ filter: /.*/, namespace: 'test' }, args => ({ contents: stubs[args.path], loader: 'ts' }));
             build.onLoad({ filter: /hs-autosing\.ts$/ }, () => ({
                 contents: fs.readFileSync(autosing, 'utf8').replace('    init(): Promise<void> {', `
-                    configureForTest(ascend: any, exit: any, action: any, progress: any) {
+                    configureForTest(ascend: any, exit: any, action: any, progress: any, payout: any) {
                         this.#autosingEnabled = true;
                         this.#corruptionManager = new HSAutosingCorruption();
                         this.#dom.ascendBtn = ascend;
                         this.#dom.exitAscBtn = exit;
                         this.#dom.antSacrifice = action;
+                        this.#dom.openOnePlatonicCube = payout.onePlatonic;
+                        this.#dom.runeElements.set('infiniteAscent', payout.rune);
                         this.#exposedPlayer = HSGlobal.exposedPlayer;
                         this.#hasLivePlayer = !!this.#exposedPlayer;
                         this.#dom.challengeProgressElements[2] = progress;
@@ -85,7 +88,7 @@ async function main() {
         const setup = ({ next = 5, used = 5, cap = 100, live = true, confirm = false, challenge = 0 } = {}) => {
             const state = globalThis.__corruptionTest = {
                 player: { corruptions: { next, used }, currentChallenge: { ascension: challenge } },
-                live, events: [], logs: [], dialogWaits: 0, c15Coins: 42, savedC15Score: 0,
+                live, events: [], logs: [], sleeps: [], dialogWaits: 0, c15Coins: 42, savedC15Score: 0,
             };
             const progress = { textContent: challenge ? 'Challenge 15: 42' : '' };
             const input = {
@@ -123,7 +126,10 @@ async function main() {
                 },
             };
             const runner = new HSAutosing({});
-            runner.configureForTest(ascend, exit, { click: () => state.events.push(['action', state.player.corruptions.used]) }, progress);
+            runner.configureForTest(ascend, exit, { click: () => state.events.push(['action', state.player.corruptions.used]) }, progress, {
+                rune: { locked: { style: { display: 'none' } }, sacrifice: { click: () => state.events.push(['rune']) } },
+                onePlatonic: { click: () => state.events.push(['open one platonic']) },
+            });
             return { runner, state };
         };
 
@@ -202,8 +208,8 @@ async function main() {
             ({ runner, state } = setup({ challenge, live }));
             await runner.runFinalStageForTest(structuredClone(migratedAoag));
             assert.deepEqual(state.events, [
-                ['select', 0], ['ascend', 0], ['action', 0], ['ascend', 0],
-            ], 'only the level step\'s reset and the explicit end-of-singularity reset should run');
+                ['select', 0], ['ascend', 0], ['action', 0], ['rune'], ['open one platonic'],
+            ], 'only the level step resets, then the final payout buys the rune and opens one Platonic');
             if (challenge) assert.equal(state.savedC15Score, 42);
             scenarios++;
         }
@@ -211,7 +217,8 @@ async function main() {
         // Nothing is hardcoded any more: an AOAG phase without a level step keeps the current level and run.
         ({ runner, state } = setup({ challenge: 15 }));
         await runner.runFinalStageForTest(phase([step(152)]));
-        assert.deepEqual(state.events, [['action', 5], ['ascend', 5]]);
+        assert.deepEqual(state.events, [['action', 5], ['rune'], ['open one platonic']]);
+        assert.equal(state.player.currentChallenge.ascension, 15);
         scenarios++;
 
         // A stop while the AOAG level step's reset is confirming must not run the rest of AOAG or the final phase.
@@ -325,6 +332,9 @@ async function main() {
         await runner.runPhaseForTest(cappedLoop);
         assert.deepEqual(state.events, [...onePass, ...onePass]);
         assert.equal(state.logs.filter(line => line.includes('max jumps (3) reached')).length, 2);
+        // Nothing in that loop waits: each check after the first sleeps up to one game tick (5 ms), never across passes
+        assert.equal(state.sleeps.length, 6);
+        assert.ok(state.sleeps.every(ms => ms > 0 && ms <= 5));
         scenarios++;
 
         // A false condition never counts: the IF still jumps 3 times after it.
@@ -426,10 +436,13 @@ async function main() {
         for (const filename of fs.readdirSync(directory).filter(name => name.endsWith('.json') && name !== 'manifest.json')) {
             const strategy = JSON.parse(fs.readFileSync(path.join(directory, filename), 'utf8'));
             const validated = HSStrategyManager.validateStrategy(strategy);
-            // In the current format: its AOAG phase starts with level 0, and no second one is added
+            // In the current format: no second AOAG level step is added. The converted ones ("-temp") start their AOAG
+            // phase with level 0; a strategy its author sent may start it otherwise (an author's choice)
             assert.equal(strategy.formatVersion, 2, filename);
-            assert.deepEqual([strategy.aoagPhase.strat[0].challengeNumber, strategy.aoagPhase.strat[0].corruptionLevel,
-                strategy.aoagPhase.strat[0].comment], [403, 0, AOAG_LEVEL_STEP_COMMENT], filename);
+            if (filename.endsWith('-temp.json')) {
+                assert.deepEqual([strategy.aoagPhase.strat[0].challengeNumber, strategy.aoagPhase.strat[0].corruptionLevel,
+                    strategy.aoagPhase.strat[0].comment], [403, 0, AOAG_LEVEL_STEP_COMMENT], filename);
+            }
             assert.equal(validated.aoagPhase.strat.length, strategy.aoagPhase.strat.length, filename);
             for (const entry of [...strategy.strategy, strategy.aoagPhase].filter(Boolean)) {
                 assert.ok(entry.strat.every(action => action.challengeNumber !== 404), filename);

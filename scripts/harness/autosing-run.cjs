@@ -136,12 +136,13 @@ const P = game.PLAYER
     }
 })()
 
-// A heat routine at a new singularity target: heat after the first C15 is left (Obt + early cube/Best H), heat again in
+// A heat routine at a new singularity target, in the first full singularity there: heat after the first C15 is left (Obt + early cube/Best H), heat again in
 // the middle of singularity-end (late cube, quark, off, all ambrosia), sync the settings, then restart autosing for
 // the timed singularities. heated.json keeps the result for later runs (LOADOUTS=).
 async function heatRoutine(cdp, out) {
     const { evaluate, waitFor } = cdp
-    const phase = `document.getElementById('hs-phase-name-val')?.textContent?.trim() ?? ''`
+    // In parentheses: `a ?? '' === b` compares '' with b, and `??` beside `&&` is a syntax error
+    const phase = `(document.getElementById('hs-phase-name-val')?.textContent?.trim() ?? '')`
     const pause = async label => { await evaluate(`document.getElementById('hs-timer-ctrl-pause').click()`); note(label + ': ' + await evaluate(`document.getElementById('hs-timer-ctrl-pause').title`)) }
     const loadoutSettings = ['autosingEarlyCubeLoadout', 'autosingLateCubeLoadout', 'autosingQuarkLoadout', 'autosingObtLoadout', 'autosingOffLoadout', 'autosingAmbrosiaLoadout']
     const storedSettings = `(() => { const s = JSON.parse(localStorage.getItem('hs-settings')); return typeof s === 'string' ? JSON.parse(s) : s; })()`
@@ -174,7 +175,11 @@ async function heatRoutine(cdp, out) {
     }
     const closeHeater = () => evaluate(`[...document.querySelectorAll('[data-close]')].filter(e => document.getElementById(e.dataset.close)?.querySelector('[id^="hs-heater"], [class*="hs-heater"]')).forEach(e => e.click())`)
 
-    await waitFor(`${phase} === 'start-challenge10'`, 60000)
+    // Heated in the first full singularity at the target, not the save's (started mid-way): past the start
+    // singularity, then its first C15 left (the singularity reset zeroes the score). Phase names differ by strategy.
+    const done = `(Number(document.getElementById('hs-completed-sing-amount')?.textContent) || 0)`
+    await waitFor(`${done} >= 1 && ${phase} !== 'singularity-end'`, 120000)
+    const heatSing = await evaluate(done)
     await waitFor(`${P}.challenge15Exponent > 0`, 60000)
     await pause('after the first C15')
     await heat(['obt', 'hyperflux:best'])
@@ -192,7 +197,7 @@ async function heatRoutine(cdp, out) {
     await closeHeater(); await sleep(500)
     await pause('resume')
 
-    await waitFor(`Number(document.getElementById('hs-completed-sing-amount')?.textContent) >= 1`, 120000)
+    await waitFor(`${done} > ${heatSing}`, 120000)
     note('heat singularity done: restarting autosing for the timed run')
     fs.writeFileSync(path.join(out, 'heated.json'), await evaluate(`(() => { const o = ${storedSettings}; const settings = {};
         for (const k of ${JSON.stringify(loadoutSettings)}) settings[k] = o[k]?.settingValue;

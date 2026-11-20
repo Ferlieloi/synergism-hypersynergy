@@ -3,7 +3,7 @@
 ## Source and generated files
 
 - `src/loader/shared/` holds the implementation. `scanner.mjs` walks delimiters, `patch-finders.mjs` locates anchors, `patch-bundle.mjs` applies the rules, and `browser-loader.mjs` starts the game and mod in the browser. The scanner recognises regex literals in common expression and control-header positions, division, comments and nested template expressions. Function-header finders still target the shapes emitted by the game minifier.
-- `userscript-entry.mjs` holds the shared bridge and bootstrap code for Live and local Dev. The generated scripts keep their own install URLs and metadata. The bridge starts with its editable `repo` and `version`, as plain strings with a comment for players (`bridgeSettings()` in `build-loaders.cjs`): the Live bridge keeps `const repo = 'Ferlieloi';`, the line older installs have too, so the guide's switch sentence fits both. Changing the bridge's layout doesn't bump its `@version`: an update would put Dev players back on Live. Steam uses the same `patchBundle` through `patcher-entry.cjs` and injects the mod through its preload.
+- `userscript-entry.mjs` holds the shared bridge and bootstrap code for Live and local Dev. The generated scripts keep their own install URLs and metadata. The bridge starts with its editable `repo` and `version`, as plain strings with a comment for players (`bridgeSettings()` in `build-loaders.cjs`): the Live bridge keeps `const repo = 'Ferlieloi';`, the line older installs have too, so the guide's switch sentence fits both. A bridge change bumps its `@version` only when installed bridges stop working or lack something players need: an update resets the player's edited lines (a Dev player goes back to Live), and Tampermonkey can show it in a new tab, which it does when the player is idle, so an AFK autosing tab is hidden (bridge 1.4, a layout change, did both). Steam uses the same `patchBundle` through `patcher-entry.cjs` and injects the mod through its preload.
 - Run `npm run build:loaders` after editing source. It writes the four standalone scripts in `src/loader/` and `synergism_modloader/lib/patcher.js`. Keep those files with the source change. Older Steam loaders call the patcher as a function and browsers read its `startBrowserLoader` property from the downloaded file. `npm test` checks that the files match the source. The dev server generates its own copies in `build/`.
 
 ## When each loader picks up patcher.js and the mod
@@ -43,6 +43,7 @@ Sometimes Tampermonkey runs the userscript late (its own content script fetches 
 - **Lines for the top of the bundle go through `topLines`**, written after the bundle's `"use strict"` directive. Before it, the directive becomes a plain string and the whole game runs in sloppy mode.
 
 - **Manual ascension** (`manualAscension` in the report) wraps the confirmed reset in `resetConfirmation`. The mod uses this hook for the [Ascension loadout](ascension-loadout.md), including Shift+A. The game still runs its normal reset when the mod is absent.
+- **Ascension payout** (`ascensionPayout` in the report) exposes the game's read-only reward calculation for the [corruption predictor](corruption-predictor.md).
 
 ## Bookmarklet notice
 
@@ -100,4 +101,5 @@ lists every place (tests and docs included).
 
 - **One loader at a time** (`app.requestSingleInstanceLock`): a second start brings the first loader to the front and closes, with a line in the console and in `loader-startup.log`. The lock follows the user data folder, which the installed loader and `npm start` share: close one to run the other.
 - **Re-patch banner:** "Launch last played" patches first when a re-patch is needed (a game update too); no stored hash asks for one re-patch; any patcher difference blocks "Launch only" and "Quick switch", switching builds included; a failed download asks for nothing (a console line). Downloading the patcher and the mod by commit id (`@<sha>`) to avoid jsDelivr's lag was refused.
+- **`synergism_modloader/` keeps its name**: installed loaders fetch `lib/patcher.js` by that path (jsDelivr, the Steam loader's `patcherPath`). A rename would only work with `patcher.js` kept at the old path as a build-generated copy, done at a Live release.
 - **Bookmarklet notice:** shown at every bookmark load, no "don't show again"; the script is always Live (`Ferlieloi`, `master`); only Tampermonkey is named; the installation guide's bookmark loads from `Ferlieloi@master`.
