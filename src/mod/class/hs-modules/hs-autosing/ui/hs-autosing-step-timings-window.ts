@@ -18,7 +18,7 @@ const HEADERS: { text: string; title: string; sort: SortKey; numeric?: boolean }
 ];
 const ROW_TITLES: Partial<Record<HSAutosingStepRow['kind'], string>> = {
     between: 'Exalt 2, teleport, Obtainium loadout, then waiting for an allowed stage',
-    other: 'Quark export, final Ascend, pauses',
+    other: 'Final quark payout, pauses',
 };
 
 /**

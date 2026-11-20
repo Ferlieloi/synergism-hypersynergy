@@ -1638,10 +1638,10 @@ export class HSAutosing extends HSModule {
         if (!this.#autosingEnabled) return; // If the user stopped during the very last step
 
         await this.#exportInQuarkLoadout();
+        if (!this.#autosingEnabled) return;
 
-        this.#clickResetButton(this.#dom.ascendBtn);
-
-        if (this.#stopAtSingularitysEnd && this.#autosingEnabled) {
+        if (this.#stopAtSingularitysEnd) {
+            this.#clickResetButton(this.#dom.ascendBtn);
             HSUI.Notify("Standard strategy exited: Auto-Sing will now push this sing before stopping.");
             await this.#pushSingularityBeforeStop();
             // Stopped during the push: stopping again would cancel a start waiting for this chain
@@ -1650,6 +1650,10 @@ export class HSAutosing extends HSModule {
             this.stopAutosing();
             return;
         }
+
+        this.#buyRune("infiniteAscent", () => "Final quark payout");
+        // Pay catch-up quarks while the bank still boosts the Ambrosia cube-quark multiplier.
+        this.#dom.openOnePlatonicCube.click();
 
         this.#endStagePromiseResolve?.();
         this.#endStagePromise = undefined;

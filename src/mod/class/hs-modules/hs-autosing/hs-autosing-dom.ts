@@ -48,6 +48,7 @@ export class HSAutosingDom {
     exitReincBtn!: HTMLButtonElement;
     exitAscBtn!: HTMLButtonElement;
     ascendBtn!: HTMLButtonElement;
+    openOnePlatonicCube!: HTMLButtonElement;
 
     // DOM Elements - Elevator & Navigation
     elevatorTeleportButton!: HTMLButtonElement;
@@ -165,6 +166,7 @@ export class HSAutosingDom {
             exitReincBtn: document.getElementById('reincarnatechallengebtn') as HTMLButtonElement | null,
             exitAscBtn: document.getElementById('ascendChallengeBtn') as HTMLButtonElement | null,
             ascendBtn: document.getElementById('ascendbtn') as HTMLButtonElement | null,
+            openOnePlatonicCube: document.getElementById('open1PlatonicCube') as HTMLButtonElement | null,
             autoChallengeButton: document.getElementById('toggleAutoChallengeStart') as HTMLButtonElement | null,
             autoAntSacrificeButton: document.getElementById('toggleAutoSacrificeAnt') as HTMLButtonElement | null,
             autoAscendButton: document.getElementById('ascensionAutoEnable') as HTMLButtonElement | null,
@@ -181,6 +183,7 @@ export class HSAutosingDom {
         this.exitReincBtn = elements.exitReincBtn;
         this.exitAscBtn = elements.exitAscBtn;
         this.ascendBtn = elements.ascendBtn;
+        this.openOnePlatonicCube = elements.openOnePlatonicCube;
         this.autoChallengeButton = elements.autoChallengeButton;
         this.autoAntSacrificeButton = elements.autoAntSacrificeButton;
         this.autoAscendButton = elements.autoAscendButton;

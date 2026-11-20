@@ -44,12 +44,14 @@ async function main() {
             build.onLoad({ filter: /.*/, namespace: 'test' }, args => ({ contents: stubs[args.path], loader: 'ts' }));
             build.onLoad({ filter: /hs-autosing\.ts$/ }, () => ({
                 contents: fs.readFileSync(autosing, 'utf8').replace('    init(): Promise<void> {', `
-                    configureForTest(ascend: any, exit: any, action: any, progress: any) {
+                    configureForTest(ascend: any, exit: any, action: any, progress: any, payout: any) {
                         this.#autosingEnabled = true;
                         this.#corruptionManager = new HSAutosingCorruption();
                         this.#dom.ascendBtn = ascend;
                         this.#dom.exitAscBtn = exit;
                         this.#dom.antSacrifice = action;
+                        this.#dom.openOnePlatonicCube = payout.onePlatonic;
+                        this.#dom.runeElements.set('infiniteAscent', payout.rune);
                         this.#exposedPlayer = HSGlobal.exposedPlayer;
                         this.#hasLivePlayer = !!this.#exposedPlayer;
                         this.#dom.challengeProgressElements[2] = progress;
@@ -124,7 +126,10 @@ async function main() {
                 },
             };
             const runner = new HSAutosing({});
-            runner.configureForTest(ascend, exit, { click: () => state.events.push(['action', state.player.corruptions.used]) }, progress);
+            runner.configureForTest(ascend, exit, { click: () => state.events.push(['action', state.player.corruptions.used]) }, progress, {
+                rune: { locked: { style: { display: 'none' } }, sacrifice: { click: () => state.events.push(['rune']) } },
+                onePlatonic: { click: () => state.events.push(['open one platonic']) },
+            });
             return { runner, state };
         };
 
@@ -203,8 +208,8 @@ async function main() {
             ({ runner, state } = setup({ challenge, live }));
             await runner.runFinalStageForTest(structuredClone(migratedAoag));
             assert.deepEqual(state.events, [
-                ['select', 0], ['ascend', 0], ['action', 0], ['ascend', 0],
-            ], 'only the level step\'s reset and the explicit end-of-singularity reset should run');
+                ['select', 0], ['ascend', 0], ['action', 0], ['rune'], ['open one platonic'],
+            ], 'only the level step resets, then the final payout buys the rune and opens one Platonic');
             if (challenge) assert.equal(state.savedC15Score, 42);
             scenarios++;
         }
@@ -212,7 +217,8 @@ async function main() {
         // Nothing is hardcoded any more: an AOAG phase without a level step keeps the current level and run.
         ({ runner, state } = setup({ challenge: 15 }));
         await runner.runFinalStageForTest(phase([step(152)]));
-        assert.deepEqual(state.events, [['action', 5], ['ascend', 5]]);
+        assert.deepEqual(state.events, [['action', 5], ['rune'], ['open one platonic']]);
+        assert.equal(state.player.currentChallenge.ascension, 15);
         scenarios++;
 
         // A stop while the AOAG level step's reset is confirming must not run the rest of AOAG or the final phase.
