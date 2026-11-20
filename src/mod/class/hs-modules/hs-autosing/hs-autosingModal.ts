@@ -213,11 +213,7 @@ export class HSAutosingModal {
         this.#pauseBtn.textContent = '⏸️';
         this.#pauseBtn.title       = "Pause Autosing";
         this.#pauseBtn.className   = 'hs-timer-ctrl-btn';
-        this.#pauseBtn.onclick = () => {
-            this.#isPaused = !this.#isPaused;
-            this.#pauseBtn.textContent = this.#isPaused ? '▶️' : '⏸️';
-            this.#pauseBtn.title = this.#isPaused ? 'Resume Autosing' : 'Pause Autosing';
-        };
+        this.#pauseBtn.onclick = () => this.#setPaused(!this.#isPaused);
         // Restart button
         this.#restartButton = document.createElement('button');
         this.#restartButton.id          = 'hs-timer-ctrl-restart';
@@ -541,7 +537,8 @@ export class HSAutosingModal {
 
         const isReview = this.#modalMode === 'review';
 
-        this.#pauseBtn.classList.toggle('hs-hidden',       isReview || !this.#showDetailedData);
+        // Shown while paused, whatever the detailed data: a "Pause Autosing" step (904) pauses with the panel collapsed
+        this.#pauseBtn.classList.toggle('hs-hidden',       isReview || (!this.#showDetailedData && !this.#isPaused));
         this.#finishStopBtn.classList.toggle('hs-hidden',  isReview || this.#isMinimized || !this.#showDetailedData);
         this.#restartButton.classList.toggle('hs-hidden',  this.#isMinimized || !this.#showDetailedData);
         this.#chartToggleBtn.classList.toggle('hs-hidden', this.#isMinimized);
@@ -976,6 +973,18 @@ export class HSAutosingModal {
             this.#currentPhaseName = phaseName;
             this.#requestRender({ phaseName: true });
         }
+    }
+
+    /** Pauses autosing before its next step, as the pause button ("Pause Autosing" step, 904). */
+    public pause(): void {
+        this.#setPaused(true);
+    }
+
+    #setPaused(paused: boolean): void {
+        this.#isPaused = paused;
+        this.#pauseBtn.textContent = paused ? '▶️' : '⏸️';
+        this.#pauseBtn.title = paused ? 'Resume Autosing' : 'Pause Autosing';
+        this.#applyControlVisibility();
     }
 
     /** Return true if autosing is currently paused. */

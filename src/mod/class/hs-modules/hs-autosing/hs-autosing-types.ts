@@ -41,14 +41,14 @@ export const AOAG_PHASE_NAME = "AOAG Unlocked Phase" as const;
 
 // Standard input fields that can be enabled per special action.
 // "waitBefore" and "comment" are always enabled and not listed here.
-export type ModalInput = "challengeNum" | "completions" | "waitTime" | "maxTime" | "corruptionLevel" | "cleanseToHighest" | "toggleOn";
+export type ModalInput = "challengeNum" | "completions" | "waitTime" | "maxTime" | "corruptionLevel" | "cleanseToHighest" | "toggleOn" | "rune";
 
 // Special action ids that code refers to by name (the full list: SPECIAL_ACTIONS below)
 export const EXIT_ASCENSION_CHALLENGE_VALUE = 103;
-// "Set Auto Challenge / Ant-Sac / Ascend" (156-158): turn that game toggle on or off with Challenge.toggleOn.
+// "Set Auto Challenge / Ant-Sac / Ascend / Rune" (156-159): turn that game toggle on or off with Challenge.toggleOn.
 // 153-155 only flip it; kept for older strategies, no longer offered in the editor.
 export const FLIP_TOGGLE_VALUES = [153, 154, 155] as const;
-export const SET_AUTO_TOGGLE_VALUES = [156, 157, 158] as const;
+export const SET_AUTO_TOGGLE_VALUES = [156, 157, 158, 159] as const;
 export const isSetAutoToggleStep = (challengeNumber: number): boolean =>
     (SET_AUTO_TOGGLE_VALUES as readonly number[]).includes(challengeNumber);
 export const IF_JUMP_VALUE = 200;
@@ -59,6 +59,26 @@ export const isCorruptionLevelStep = (challengeNumber: number): boolean =>
     challengeNumber === SET_CORRUPTION_LEVEL_VALUE;
 // The game's cleanse, without ascending: to 0, or to the highest level cleared with Challenge.cleanseToHighest
 export const CLEANSE_CORRUPTION_VALUE = 405;
+// "Buy rune": clicks the Sacrifice button of the rune in Challenge.rune. 901 ("Click AOAG") stays the Antiquities one.
+export const BUY_RUNE_VALUE = 801;
+// The runes "Buy rune" offers: the game's key (its element ids: `${key}RuneSacrifice`, `${key}RuneLockedContainer`)
+// and RuneType (its index in player.runeLevels). Not Antiquities (901).
+export const BUYABLE_RUNES = [
+    { key: "speed",             name: "Speed",              type: 0 },
+    { key: "duplication",       name: "Duplication",        type: 1 },
+    { key: "prism",             name: "Prism",              type: 2 },
+    { key: "thrift",            name: "Thrift",             type: 3 },
+    { key: "superiorIntellect", name: "Superior Intellect", type: 4 },
+    { key: "infiniteAscent",    name: "Infinite Ascent",    type: 5 },
+    { key: "horseShoe",         name: "Horse Shoe",         type: 7 },
+    { key: "finiteDescent",     name: "Finite Descent",     type: 8 },
+    { key: "topHat",            name: "Top Hat",            type: 9 },
+] as const;
+export type BuyableRuneKey = (typeof BUYABLE_RUNES)[number]["key"];
+export const BUYABLE_RUNE_BY_KEY: ReadonlyMap<string, (typeof BUYABLE_RUNES)[number]> = new Map(BUYABLE_RUNES.map(r => [r.key, r] as const));
+export const DEFAULT_BUY_RUNE: BuyableRuneKey = "infiniteAscent";
+// "Pause Autosing": pauses before the next step, as the panel's pause button; the player resumes with that button
+export const PAUSE_AUTOSING_VALUE = 904;
 
 export const SPECIAL_ACTIONS = [
     { label: "Exit Transcension challenge",     value: 101, inputs: [] as const },
@@ -74,6 +94,7 @@ export const SPECIAL_ACTIONS = [
     { label: "Set Auto Challenge",              value: 156, inputs: ["toggleOn"] as const },
     { label: "Set Auto Ant-Sac",                value: 157, inputs: ["toggleOn"] as const },
     { label: "Set Auto Ascend",                 value: 158, inputs: ["toggleOn"] as const },
+    { label: "Set Auto Rune",                   value: 159, inputs: ["toggleOn"] as const },
 
     { label: "If-jump",                         value: IF_JUMP_VALUE, inputs: [] as const },
 
@@ -108,6 +129,8 @@ export const SPECIAL_ACTIONS = [
     { label: "C9 until no more completions within maxTime ms (after initially waiting waitTime ms)",  value: 609, inputs: ["maxTime", "waitTime"] as const },
     { label: "C10 until no more completions within maxTime ms (after initially waiting waitTime ms)", value: 610, inputs: ["maxTime", "waitTime"] as const },
 
+    { label: "Buy rune",            value: BUY_RUNE_VALUE, inputs: ["rune"] as const },
+
     { label: "Forge Auto-Buy Toggle - Chronos Hept",        value: 701, inputs: [] as const },
     { label: "Forge Auto-Buy Toggle - Hyperreal Hept",      value: 702, inputs: [] as const },
     { label: "Forge Auto-Buy Toggle - Quarks Hept",         value: 703, inputs: [] as const },
@@ -121,6 +144,7 @@ export const SPECIAL_ACTIONS = [
     { label: "Click AOAG",          value: 901, inputs: [] as const },
     { label: "Restart Autosing",    value: 902, inputs: [] as const },
     { label: "Stop Autosing",       value: 903, inputs: [] as const },
+    { label: "Pause Autosing",      value: PAUSE_AUTOSING_VALUE, inputs: [] as const },
 ] as const;
 
 export type SpecialAction = (typeof SPECIAL_ACTIONS)[number];
@@ -223,6 +247,8 @@ export interface Challenge {
     cleanseToHighest?: boolean;
     // "Set Auto X" steps (SET_AUTO_TOGGLE_VALUES): ON or OFF (absent: ON)
     toggleOn?: boolean;
+    // "Buy rune" step (BUY_RUNE_VALUE): the rune's key (BUYABLE_RUNES; required)
+    rune?: BuyableRuneKey;
 
     // Optional special-action params
     ifJump?: IfJumpParams;

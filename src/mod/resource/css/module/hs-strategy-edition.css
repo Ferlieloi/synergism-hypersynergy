@@ -737,7 +737,8 @@
 /* Mid-way along the game's ambrosia bar (navy to darkturquoise); darkturquoise itself is too close to the step's meta line */
 .hs-step-ambrosia { color: #3c8fd8; }
 .hs-step-corruption { color: #e07a7a; }
-.hs-step-autosing { color: #e8d27a; }
+.hs-step-rune { color: #e8d27a; }
+.hs-step-autosing { color: #7fd1d6; }
 
 /* An action's id, after its label */
 .hs-challenge-action-id {

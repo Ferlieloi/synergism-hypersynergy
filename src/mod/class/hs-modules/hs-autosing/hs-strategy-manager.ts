@@ -1,4 +1,4 @@
-import { HSAutosingStrategy, AutosingStrategyPhase, Challenge, phases, AOAG_PHASE_ID, AOAG_PHASE_NAME, createDefaultAoagPhase, SET_CORRUPTION_LEVEL_VALUE, CLEANSE_CORRUPTION_VALUE, isSetAutoToggleStep, EXIT_ASCENSION_CHALLENGE_VALUE, STRATEGY_FORMAT_VERSION, AOAG_LEVEL_STEP_COMMENT, IF_JUMP_VALUE, SPECIAL_ACTION_BY_ID, isCorruptionLevelStep, isIfJumpMaxJumps } from "./hs-autosing-types";
+import { HSAutosingStrategy, AutosingStrategyPhase, Challenge, phases, AOAG_PHASE_ID, AOAG_PHASE_NAME, createDefaultAoagPhase, SET_CORRUPTION_LEVEL_VALUE, CLEANSE_CORRUPTION_VALUE, isSetAutoToggleStep, EXIT_ASCENSION_CHALLENGE_VALUE, STRATEGY_FORMAT_VERSION, AOAG_LEVEL_STEP_COMMENT, IF_JUMP_VALUE, SPECIAL_ACTION_BY_ID, isCorruptionLevelStep, isIfJumpMaxJumps, BUY_RUNE_VALUE, BUYABLE_RUNE_BY_KEY } from "./hs-autosing-types";
 import { HSModuleRegistry } from "../../hs-core/module/hs-module-registry";
 
 import { HSGlobal } from "../../hs-core/hs-global";
@@ -388,6 +388,11 @@ export class HSStrategyManager {
                 && step.toggleOn !== undefined && typeof step.toggleOn !== 'boolean') ?? -1;
             if (invalidToggle !== -1) {
                 throw new Error(`Phase ${phase.startPhase} → ${phase.endPhase}: step ${invalidToggle + 1} has an invalid ON/OFF option (true or false)`);
+            }
+            const invalidRune = phase.strat?.findIndex(step => step.challengeNumber === BUY_RUNE_VALUE
+                && !(typeof step.rune === 'string' && BUYABLE_RUNE_BY_KEY.has(step.rune))) ?? -1;
+            if (invalidRune !== -1) {
+                throw new Error(`Phase ${phase.startPhase} → ${phase.endPhase}: step ${invalidRune + 1} has no valid rune`);
             }
             const invalidMaxJumps = phase.strat?.findIndex(step => step.ifJump && !isIfJumpMaxJumps(step.ifJump.ifJumpMaxJumps)) ?? -1;
             if (invalidMaxJumps !== -1) {

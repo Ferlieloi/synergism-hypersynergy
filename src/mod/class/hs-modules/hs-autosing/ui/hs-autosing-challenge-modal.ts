@@ -1,4 +1,4 @@
-import { AutosingStrategyPhase, Challenge, isCorruptionLevelStep, SET_CORRUPTION_LEVEL_VALUE, CLEANSE_CORRUPTION_VALUE, SPECIAL_ACTIONS, SPECIAL_ACTION_BY_ID, type SpecialAction, IF_JUMP_VALUE, FLIP_TOGGLE_VALUES, isSetAutoToggleStep, IsJumpChallenge, ModalInput, IfJumpParams } from "../hs-autosing-types";
+import { AutosingStrategyPhase, Challenge, isCorruptionLevelStep, SET_CORRUPTION_LEVEL_VALUE, CLEANSE_CORRUPTION_VALUE, SPECIAL_ACTIONS, SPECIAL_ACTION_BY_ID, type SpecialAction, IF_JUMP_VALUE, BUY_RUNE_VALUE, BUYABLE_RUNES, BUYABLE_RUNE_BY_KEY, DEFAULT_BUY_RUNE, type BuyableRuneKey, PAUSE_AUTOSING_VALUE, FLIP_TOGGLE_VALUES, isSetAutoToggleStep, IsJumpChallenge, ModalInput, IfJumpParams } from "../hs-autosing-types";
 import { HSTooltip } from "../../../hs-core/hs-tooltip";
 import { HSUI } from "../../../hs-core/hs-ui";
 import { HSUtils } from "../../../hs-utils/hs-utils";
@@ -18,7 +18,7 @@ interface FieldContext {
     ifJumpMode: IfJumpMode;
 }
 
-type FieldKey = 'action' | 'challengeNum' | 'forgeItem' | 'completions' | 'corruptionLevel' | 'ascendAfterCorruption' | 'cleanseToHighest' | 'toggleOn' | 'waitBefore' | 'waitInside' | 'maxTime'
+type FieldKey = 'action' | 'challengeNum' | 'forgeItem' | 'completions' | 'corruptionLevel' | 'ascendAfterCorruption' | 'cleanseToHighest' | 'toggleOn' | 'rune' | 'waitBefore' | 'waitInside' | 'maxTime'
     | 'comment' | 'ifJumpMode' | 'ifJumpChallenge' | 'ifJumpMultiplier' | 'ifJumpAoagBought' | 'ifJumpOperator' | 'ifJumpValue' | 'ifJumpMaxJumps';
 
 interface FieldRowBase {
@@ -96,12 +96,13 @@ const WHOLE_NOT_NEGATIVE: NumberCheck = { isValid: v => Number.isInteger(v) && v
 // labelClass: the colour of the group's step labels in the list (none: white)
 const ACTION_GROUPS: readonly { label: string; ranges: readonly [number, number][]; labelClass?: string }[] = [
     { label: "Exit and Ascend", ranges: [[101, 104]] },
-    { label: "Game actions", ranges: [[151, 158], [FORGE_FAMILY.first, FORGE_FAMILY.last]] },
+    { label: "Game actions", ranges: [[151, 159], [FORGE_FAMILY.first, FORGE_FAMILY.last]] },
     { label: "Condition", ranges: [[IF_JUMP_VALUE, IF_JUMP_VALUE]] },
     { label: "Challenges", ranges: [[211, 215], [C1_TO_C10_FAMILY.first, C1_TO_C10_FAMILY.last]] },
     { label: "Ambrosia loadouts", ranges: [[301, 306]], labelClass: "hs-step-ambrosia" },
     { label: "Corruption level", ranges: [[SET_CORRUPTION_LEVEL_VALUE, CLEANSE_CORRUPTION_VALUE]], labelClass: "hs-step-corruption" },
-    { label: "AOAG and Autosing", ranges: [[901, 903]], labelClass: "hs-step-autosing" },
+    { label: "Runes", ranges: [[BUY_RUNE_VALUE, BUY_RUNE_VALUE], [901, 901]], labelClass: "hs-step-rune" },
+    { label: "Autosing", ranges: [[902, PAUSE_AUTOSING_VALUE]], labelClass: "hs-step-autosing" },
 ];
 
 const inRanges = (ranges: readonly [number, number][]) => (a: SpecialAction) => ranges.some(([first, last]) => a.value >= first && a.value <= last);
@@ -195,6 +196,11 @@ const FIELD_ROWS: readonly FieldRow[] = [
         key: 'toggleOn', label: "State:", initial: "true",
         options: `<option value="true">ON</option><option value="false">OFF</option>`,
         shown: c => c.inputs.has("toggleOn"), load: fromAction(step => step.toggleOn ?? true),
+    },
+    {
+        key: 'rune', label: "Rune:", initial: DEFAULT_BUY_RUNE,
+        options: BUYABLE_RUNES.map(r => `<option value="${r.key}">${r.name}</option>`).join(""),
+        shown: c => c.inputs.has("rune"), load: fromAction(step => step.rune),
     },
     {
         key: 'waitBefore', label: "Wait before (ms):", attributes: `min="0"`, initial: "0", check: fixedCheck(NOT_NEGATIVE),
@@ -678,7 +684,9 @@ export class HSAutosingChallengeModal {
             ? `${action.label}: ${step.corruptionLevel ?? 0} (${step.ascendAfterCorruption === false ? 'next ascension' : 'ascend now'})`
             : step.challengeNumber === CLEANSE_CORRUPTION_VALUE
                 ? `${action.label} (${step.cleanseToHighest === true ? 'to highest cleared' : 'to 0'})`
-                : isSetAutoToggleStep(step.challengeNumber) ? `${action.label} (${step.toggleOn === false ? 'OFF' : 'ON'})` : action.label;
+                : isSetAutoToggleStep(step.challengeNumber) ? `${action.label} (${step.toggleOn === false ? 'OFF' : 'ON'})`
+                : step.challengeNumber === BUY_RUNE_VALUE ? `${action.label} (${BUYABLE_RUNE_BY_KEY.get(step.rune ?? "")?.name ?? "?"})`
+                : action.label;
         return `<strong class="${labelClass}">${label}</strong> ${actionId(step.challengeNumber)}`;
     }
 
@@ -862,6 +870,9 @@ export class HSAutosingChallengeModal {
                 step.challengeCompletions = 0;
             } else if (isSetAutoToggleStep(step.challengeNumber)) {
                 step.toggleOn = this.#field('toggleOn').value === "true";
+                step.challengeCompletions = 0;
+            } else if (step.challengeNumber === BUY_RUNE_VALUE) {
+                step.rune = this.#field('rune').value as BuyableRuneKey;
                 step.challengeCompletions = 0;
             }
         }

@@ -9,7 +9,7 @@ import { HSSettings } from "../../hs-core/settings/hs-settings";
 import { HSStrategyManager } from "./hs-strategy-manager";
 import { HSNumericSetting } from "../../hs-core/settings/hs-setting";
 import { HSUtils } from "../../hs-utils/hs-utils";
-import { HSAutosingStrategy, PhaseOption, phases, AutosingStrategyPhase, Challenge, SPECIAL_ACTION_BY_ID, createDefaultAoagPhase, AOAG_PHASE_ID, AOAG_PHASE_NAME, SET_CORRUPTION_LEVEL_VALUE, CLEANSE_CORRUPTION_VALUE, IF_JUMP_VALUE, ALLOWED, type HSAutosingPassRecord, type HSAutosingExposureParts } from "./hs-autosing-types";
+import { HSAutosingStrategy, PhaseOption, phases, AutosingStrategyPhase, Challenge, SPECIAL_ACTION_BY_ID, createDefaultAoagPhase, AOAG_PHASE_ID, AOAG_PHASE_NAME, SET_CORRUPTION_LEVEL_VALUE, CLEANSE_CORRUPTION_VALUE, IF_JUMP_VALUE, BUY_RUNE_VALUE, BUYABLE_RUNE_BY_KEY, type BuyableRuneKey, PAUSE_AUTOSING_VALUE, ALLOWED, type HSAutosingPassRecord, type HSAutosingExposureParts } from "./hs-autosing-types";
 import { HSAutosingModal } from "./hs-autosingModal";
 import { HSAutosingRecorder } from "./hs-autosingRecorder";
 import { HSAutosingStepTimingsWindow } from "./ui/hs-autosing-step-timings-window";
@@ -809,7 +809,11 @@ export class HSAutosing extends HSModule {
             case 156:
             case 157:
             case 158:
+            case 159:
                 this.#setAutoToggle(challenge.challengeNumber, challenge.toggleOn !== false, () => `${tag()} - SA: ${actionText()}`);
+                break;
+            case BUY_RUNE_VALUE:
+                this.#buyRune(challenge.rune, tag);
                 break;
             case IF_JUMP_VALUE: {
                 // Checked again within one game tick: a loop with nothing that waits. Its condition can't change
@@ -961,15 +965,17 @@ export class HSAutosing extends HSModule {
     // ============================================================================
 
     /**
-     * "Set Auto Challenge / Ant-Sac / Ascend" (156-158): the game's buttons only flip their toggle, so the button is
-     * clicked only when the toggle isn't already in the wanted state. The state comes from the live player, else from
-     * a fresh save (bookmarklet players), never from the button's text or colour.
+     * "Set Auto Challenge / Ant-Sac / Ascend / Rune" (156-159): the game's buttons only flip their toggle, so the button
+     * is clicked only when the toggle isn't already in the wanted state. The state comes from the live player, else from
+     * a fresh save (bookmarklet players), never from the button's text or colour. Auto Rune OFF also clears the rune
+     * picked for it (the game's), which ON doesn't bring back.
      */
     #setAutoToggle(actionId: number, on: boolean, logPrefix: () => string): void {
         const toggles: Record<number, { read: (player: PlayerData) => unknown; button: () => HTMLButtonElement }> = {
             156: { read: p => p.autoChallengeRunning, button: () => this.#dom.autoChallengeButton },
             157: { read: p => p.ants?.toggles?.autoSacrificeEnabled, button: () => this.#dom.autoAntSacrificeButton },
             158: { read: p => p.autoAscend, button: () => this.#dom.autoAscendButton },
+            159: { read: p => p.autoSacrificeToggle, button: () => this.#dom.autoRuneButton },
         };
         const toggle = toggles[actionId];
         const wanted = on ? 'ON' : 'OFF';
@@ -998,6 +1004,28 @@ export class HSAutosing extends HSModule {
             return;
         }
         HSLogger.debug(() => `${logPrefix()} ${wanted}`, this.context);
+    }
+
+    /**
+     * "Buy rune" (801): the step's rune's Sacrifice button, which spends offerings up to the offering buy amount (the
+     * settings fixer sets it to no limit). Buying nothing is normal (no offerings left): only a locked rune is a warning,
+     * read from the game's locked box, which it shows while the rune is locked.
+     */
+    #buyRune(runeKey: BuyableRuneKey | undefined, stepTag: () => string): void {
+        // Validation refuses a step without a known rune
+        const rune = runeKey === undefined ? undefined : BUYABLE_RUNE_BY_KEY.get(runeKey);
+        const elements = runeKey === undefined ? undefined : this.#dom.runeElements.get(runeKey);
+        if (!rune || !elements) return;
+        const actionText = `Buy rune (${BUY_RUNE_VALUE}) ${rune.name}`;
+        if (elements.locked.style.display !== 'none') {
+            HSLogger.warn(`${stepTag()} - ${actionText}: the rune is locked, nothing bought`, this.context);
+            return;
+        }
+        // undefined without the live player (bookmarklet) or on a game from before the rune rework (Steam not updated)
+        const level = (): unknown => this.#exposedPlayer?.runeLevels?.[rune.type];
+        const before = level();
+        elements.sacrifice.click();
+        HSLogger.debug(() => `${stepTag()} - ${actionText}: level ${String(before ?? '?')} → ${String(level() ?? '?')}`, this.context);
     }
 
     /** @param stepTag The strategy step's "Step N", for the timeout warning */
@@ -1096,6 +1124,15 @@ export class HSAutosing extends HSModule {
                 break;
             case 903: // Stop AutoSing
                 this.stopAutosing();
+                break;
+            case PAUSE_AUTOSING_VALUE:
+                // Takes effect before the next step (#executePhase); the player resumes with the panel's button
+                if (this.#autosingModal) {
+                    this.#autosingModal.pause();
+                    HSLogger.log(`${stepTag()} - Pause Autosing (${PAUSE_AUTOSING_VALUE}): paused, resume with ▶️ in the Autosing panel`, this.context);
+                } else {
+                    HSLogger.warn(`${stepTag()} - Pause Autosing (${PAUSE_AUTOSING_VALUE}): no Autosing panel, not paused`, this.context);
+                }
                 break;
             default:
                 HSLogger.warn(`Unknown special action ${actionId}`, this.context);

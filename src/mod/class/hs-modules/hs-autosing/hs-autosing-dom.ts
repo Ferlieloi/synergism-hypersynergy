@@ -5,6 +5,7 @@ import { HSSettings } from "../../hs-core/settings/hs-settings";
 import type { MainView } from "../../hs-core/hs-gamestate";
 import { HSNumberParser } from "../../hs-utils/hs-number-parser";
 import { MAIN_VIEW_BUTTON_IDS } from "../../../types/module-types/hs-gamestate-types";
+import { BUYABLE_RUNES, type BuyableRuneKey } from "./hs-autosing-types";
 
 const CHALLENGE_COMPLETIONS_REGEX = /\((\d+)\s*\/\s*(\d+)\):/;
 // Everything after the challenge's name: the score is its first number (it can hold no-break spaces, which \S excludes)
@@ -56,6 +57,7 @@ export class HSAutosingDom {
     autoChallengeButton!: HTMLButtonElement;
     autoAntSacrificeButton!: HTMLButtonElement;
     autoAscendButton!: HTMLButtonElement;
+    autoRuneButton!: HTMLButtonElement;
 
     // DOM Elements - Heptract Auto-Buy
     heptractBtns: HTMLButtonElement[] = [];
@@ -74,6 +76,10 @@ export class HSAutosingDom {
     antSacrifice!: HTMLButtonElement;
     AOAG!: HTMLButtonElement;
     exalt2Btn!: HTMLButtonElement;
+
+    // DOM Elements - "Buy rune" (BUYABLE_RUNES): each rune's Sacrifice button, and its locked box, which the game
+    // shows while the rune is locked (revealStuff), as antiquitiesRuneLockedContainer
+    runeElements = new Map<BuyableRuneKey, { sacrifice: HTMLButtonElement; locked: HTMLElement }>();
     addCodeAllBtn!: HTMLButtonElement;
     timeCodeBtn!: HTMLButtonElement;
 
@@ -90,7 +96,22 @@ export class HSAutosingDom {
             && this.#cacheChallengeElements()
             && this.#cacheButtonElements()
             && this.#cacheHepteractButtons()
+            && this.#cacheRuneElements()
             && this.#cacheCorruptionElements();
+    }
+
+    #cacheRuneElements(): boolean {
+        const runeElements = new Map<BuyableRuneKey, { sacrifice: HTMLButtonElement; locked: HTMLElement }>();
+        for (const { key } of BUYABLE_RUNES) {
+            const elements = {
+                [`${key}RuneSacrifice`]: document.getElementById(`${key}RuneSacrifice`) as HTMLButtonElement | null,
+                [`${key}RuneLockedContainer`]: document.getElementById(`${key}RuneLockedContainer`),
+            };
+            if (!this.#ensureElements(elements)) return false;
+            runeElements.set(key, { sacrifice: elements[`${key}RuneSacrifice`] as HTMLButtonElement, locked: elements[`${key}RuneLockedContainer`]! });
+        }
+        this.runeElements = runeElements;
+        return true;
     }
 
     resetChallenge15Score(): void {
@@ -147,6 +168,7 @@ export class HSAutosingDom {
             autoChallengeButton: document.getElementById('toggleAutoChallengeStart') as HTMLButtonElement | null,
             autoAntSacrificeButton: document.getElementById('toggleAutoSacrificeAnt') as HTMLButtonElement | null,
             autoAscendButton: document.getElementById('ascensionAutoEnable') as HTMLButtonElement | null,
+            autoRuneButton: document.getElementById('toggleautosacrifice') as HTMLButtonElement | null,
             antSacrifice: document.getElementById('antSacrifice') as HTMLButtonElement | null,
             AOAG: document.getElementById('antiquitiesRuneSacrifice') as HTMLButtonElement | null,
             exalt2Btn: document.getElementById('oneChallengeCap') as HTMLButtonElement | null,
@@ -162,6 +184,7 @@ export class HSAutosingDom {
         this.autoChallengeButton = elements.autoChallengeButton;
         this.autoAntSacrificeButton = elements.autoAntSacrificeButton;
         this.autoAscendButton = elements.autoAscendButton;
+        this.autoRuneButton = elements.autoRuneButton;
         this.antSacrifice = elements.antSacrifice;
         this.AOAG = elements.AOAG;
         this.exalt2Btn = elements.exalt2Btn;
