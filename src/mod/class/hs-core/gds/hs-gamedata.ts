@@ -28,6 +28,11 @@ export class HSGameData extends HSModule {
     // --- Game Data & State ---
     // The live player (exposedPlayer), or the last parsed save without it
     #gameData?: GameData;
+    #saveImportRevision = 0;
+
+    get saveImportRevision(): number {
+        return this.#saveImportRevision;
+    }
 
     // --- MITM / Encoding / Native JS Hooks ---
     #mitm_gamedata: string | undefined;
@@ -156,8 +161,8 @@ export class HSGameData extends HSModule {
 
     /**
      * The game is about to load a save, whatever the source (patched game only).
-     * A singularity, entering or leaving an Exalt and the game reset load one too, with reset = true:
-     * nothing to do for them, and autosing goes through here at every singularity, so that path stays one test.
+     * A singularity, entering or leaving an Exalt and the game reset load one too, with reset = true.
+     * Invalidate pending corruption estimates on those loads, then return for Autosing's reset path.
      * The other loads replace the save: autosing can't go on. A cloud save and the Steam cloud are only seen here;
      * "Load from file" has already stopped autosing at its button's click.
      * The ambrosia slot the quickbar shows is guessed again from the new save: with reset = false, importSynergism
@@ -165,6 +170,7 @@ export class HSGameData extends HSModule {
      * "Keep my header layout" notes the current header layouts for that load.
      */
     #onSaveImport(reset: boolean): void {
+        this.#saveImportRevision++;
         if (reset) return;
 
         HSHeaderKeepOnImport.onSaveImport();

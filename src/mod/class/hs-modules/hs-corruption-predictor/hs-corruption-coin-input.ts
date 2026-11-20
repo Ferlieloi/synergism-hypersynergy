@@ -6,8 +6,9 @@ import { getBlessingEXP, getRuneEXP, getSpiritEXP, parseGameDataDecimal } from '
 import { heaterCoinRunePurchasedLevel } from '../hs-heater/hs-heater-coins';
 
 
-export function buildCorruptionCoinInput(api: HSGameDataAPI, data: GameData, tokens: number): HeaterCoinsC15Input {
-    api = api.createCalculationSnapshot(data);
+export function buildCorruptionCoinInput(api: HSGameDataAPI, data: GameData, tokens: number,
+    includeProductionTaxBonuses = true): HeaterCoinsC15Input {
+    if (api.getGameData() !== data) api = api.createCalculationSnapshot(data);
     const research = (index: number) => data.researches[index] ?? 0;
     const cube = (index: number) => data.cubeUpgrades[index] ?? 0;
     const platonic = (index: number) => data.platonicUpgrades[index] ?? 0;
@@ -37,11 +38,11 @@ export function buildCorruptionCoinInput(api: HSGameDataAPI, data: GameData, tok
         ? 1 - 0.05 / 250 * Math.min(taxTokens - 250, 250) - 0.05 * Math.log2(Math.max(taxTokens, 500) / 500) : 1;
     const taxes = [
         1 + api.talisman.getTalismanEffects('exemption').taxReduction,
-        data.currentChallenge.reincarnation === 6 ? 3 * (1 + challenge(6) / 25) ** 2 : 1,
+        data.currentChallenge.reincarnation === 6 ? 3 * (1 + (includeProductionTaxBonuses ? challenge(6) : 0) / 25) ** 2 : 1,
         data.currentChallenge.reincarnation === 9 ? 0.005 : 1,
         1,
-        challenge(6) > 0 ? 1 / 1.075 : 1,
-        0.965 ** challenge(6),
+        includeProductionTaxBonuses && challenge(6) > 0 ? 1 / 1.075 : 1,
+        includeProductionTaxBonuses ? 0.965 ** challenge(6) : 1,
         0.966 ** challenge(13),
         api.calculateChallenge15Reward('taxes'),
         (1 - 0.06 * research(51)) * (1 - 0.05 * research(52)) * (1 - 0.05 * research(53))
@@ -49,9 +50,9 @@ export function buildCorruptionCoinInput(api: HSGameDataAPI, data: GameData, tok
         0.98 ** (3 / 5 * log1p(data.rareFragments) * research(159)),
         1 - 0.666 * research(200) / 100000,
         api.antUpgrade.getAntUpgradeEffectValue(AntUpgrades.Taxes, 'taxReduction'),
-        1 / (1 + log1p(data.ascendShards)) ** (1 + challenge(10) * (data.upgrades[125] ?? 0) / 300
+        1 / (1 + log1p(data.ascendShards)) ** (1 + (includeProductionTaxBonuses ? challenge(10) * (data.upgrades[125] ?? 0) / 300 : 0)
             + 0.1 * platonic(5) + 0.2 * platonic(10) + taxBlessing),
-        data.upgrades[121] > 0 ? 0.5 : 1,
+        includeProductionTaxBonuses && data.upgrades[121] > 0 ? 0.5 : 1,
         1 - 0.666 * cube(50) / 100000,
         Number(api.achievement.AchRewards.taxReduction()),
         campaignTax,
@@ -66,7 +67,7 @@ export function buildCorruptionCoinInput(api: HSGameDataAPI, data: GameData, tok
         * (1 + 2 * research(194) / 100) * (1 + 0.25 * research(160))
         * api.calculateChallenge15Reward('blessingBonus');
     const spiritCoefficient = spiritLevel / 777777 / 100 * blessingLevel
-        * (1 + 8 * research(164) / 100) * (research(165) ? 2 : 1)
+        * (1 + 8 * research(164) / 100) * (research(165) && data.currentChallenge.ascension !== 0 ? 2 : 1)
         * (1 + 0.15 * log1p(data.legendaryFragments) * research(189))
         * (1 + 2 * research(194) / 100) * api.calculateChallenge15Reward('spiritBonus');
     const blessing = (count: number, effect: number, dr: number) =>

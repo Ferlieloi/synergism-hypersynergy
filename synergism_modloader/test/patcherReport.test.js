@@ -2,7 +2,7 @@ const test = require('node:test')
 const assert = require('node:assert/strict')
 const { patchBundle } = require('../lib/patcher.js')
 
-const BROWSER_PATCHES = ['export', 'exportOutput', 'stage', 'player', 'talismans', 'getMaxChallenges', 'tack', 'dialogHook',
+const BROWSER_PATCHES = ['export', 'exportOutput', 'stage', 'player', 'talismans', 'getMaxChallenges', 'ascensionPayout', 'tack', 'dialogHook',
     'validateBlueberryTree', 'saveImportHook', 'manualAscension', 'consumables', 'pcoinLevels', 'quarkBonus', 'globalEvent', 'headerModules', 'saveSeedCap', 'headerChallengeSize', 'headerButtons', 'headerLongPress']
 
 const patch = (code, options = {}) => {
@@ -34,6 +34,16 @@ test('report: a patch matching several places is listed in the summary and in th
     assert.deepEqual(window.__HS_PATCH_AMBIGUOUS, ['getMaxChallenges'])
     assert.equal(window.__HS_PATCH_REPORT.getMaxChallenges, true)
     assert.match(logs.at(-1), /— to check \(several matches\): getMaxChallenges$/)
+})
+
+test('ascension payout is available from the reward function at definition time', () => {
+    const window = {}
+    const fields = ['wowCubes', 'wowTesseracts', 'wowHypercubes', 'wowPlatonicCubes', 'wowHepteracts']
+    const reward = fields.map(field => `${field}:Math.min(1e300,Math.floor(amount))`).join(',')
+    const { patched } = patch(`"use strict";let $calc=()=>{let amount=12.5;return {${reward}}};return $calc`)
+    assert.equal(new Function('window', patched)(window), window.__HS_calculateAscensionPayout)
+    assert.deepEqual(window.__HS_calculateAscensionPayout(), Object.fromEntries(fields.map(field => [field, 12])))
+    assert.equal(window.__HS_PATCH_REPORT.ascensionPayout, true)
 })
 
 test('report: the bundle\'s "use strict" directive stays first, so the game still runs in strict mode', () => {

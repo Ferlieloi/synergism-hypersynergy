@@ -531,6 +531,24 @@ if(!window.__HS_CHALLENGES_EXPOSED){window.__HS_getMaxChallenges=${gmcFn};window
   } catch (e) {
     warn("Error while patching getMaxChallenges", e);
   }
+  report.ascensionPayout = false;
+  try {
+    const payout = findEnclosingFunction(
+      code,
+      /(?<![\w$.])wowHepteracts\s*:\s*Math\.min\(/g,
+      ["wowCubes", "wowTesseracts", "wowHypercubes", "wowPlatonicCubes", "Math.floor"],
+      "ascension payout"
+    );
+    if (payout) {
+      code = exposeFunction(code, payout, "__HS_calculateAscensionPayout").code;
+      report.ascensionPayout = true;
+      log(`Patched ascension payout (fn=${payout.fnName})`);
+    } else {
+      warn("Could not patch ascension payout — rounded cube and hepteract rewards not found in bundle");
+    }
+  } catch (e) {
+    warn("Error while patching ascension payout", e);
+  }
   report.tack = false;
   try {
     const tackResult = findEnclosingFunction(

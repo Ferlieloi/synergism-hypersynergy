@@ -38,3 +38,8 @@ declare module 'hs-heater-worker-source' {
     const source: string;
     export default source;
 }
+
+declare module 'hs-corruption-worker-source' {
+    const source: string;
+    export default source;
+}

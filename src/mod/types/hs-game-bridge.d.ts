@@ -3,6 +3,7 @@ import type { ConsumableGameEvents } from './data-types/hs-event-data';
 import type { PseudoCoinUpgradeNames, TalismanKeys } from './data-types/hs-gamedata-api-types';
 import type { TalismanShards } from './data-types/hs-player-savedata';
 import type { HSHeaderButtonLayout, HSHeaderButtonDropTarget } from '../class/hs-core/header/hs-header-buttons';
+import type { AscensionPayout } from '../class/hs-modules/hs-corruption-predictor/hs-corruption-snapshot';
 
 /** Hooks supplied by the shared patcher. Optional for bookmarklets and older loaders. */
 declare global {
@@ -23,6 +24,7 @@ declare global {
         __HS_GLOBAL_EVENT_PATCHED?: boolean;
         __HS_synergismStage?: (mode: number) => string;
         __HS_getMaxChallenges?: (challenge: number) => number;
+        __HS_calculateAscensionPayout?: () => AscensionPayout;
         __HS_validateBlueberryTree?: (tree: unknown) => boolean;
         __HS_exportSynergism?: () => Promise<void>;
         __HS_tackHooks?: Array<() => void>;

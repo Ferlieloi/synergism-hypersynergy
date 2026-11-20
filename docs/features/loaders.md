@@ -42,6 +42,7 @@ Sometimes Tampermonkey runs the userscript late (its own content script fetches 
 - **Lines for the top of the bundle go through `topLines`**, written after the bundle's `"use strict"` directive. Before it, the directive becomes a plain string and the whole game runs in sloppy mode.
 
 - **Manual ascension** (`manualAscension` in the report) wraps the confirmed reset in `resetConfirmation`. The mod uses this hook for the [Ascension loadout](ascension-loadout.md), including Shift+A. The game still runs its normal reset when the mod is absent.
+- **Ascension payout** (`ascensionPayout` in the report) exposes the game's read-only reward calculation for the [corruption predictor](corruption-predictor.md).
 
 ## Bookmarklet notice
 

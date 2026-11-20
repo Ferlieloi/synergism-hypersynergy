@@ -304,6 +304,23 @@ export function patchBundle(code, options = {}) {
     }
 
     // ==================================================================================
+    // The corruption predictor reads the current run's pending payout to estimate automatic cube opening.
+    report.ascensionPayout = false;
+    try {
+        const payout = findEnclosingFunction(code, /(?<![\w$.])wowHepteracts\s*:\s*Math\.min\(/g,
+            ['wowCubes', 'wowTesseracts', 'wowHypercubes', 'wowPlatonicCubes', 'Math.floor'], 'ascension payout');
+        if (payout) {
+            code = exposeFunction(code, payout, '__HS_calculateAscensionPayout').code;
+            report.ascensionPayout = true;
+            log(`Patched ascension payout (fn=${payout.fnName})`);
+        } else {
+            warn('Could not patch ascension payout — rounded cube and hepteract rewards not found in bundle');
+        }
+    } catch (e) {
+        warn('Error while patching ascension payout', e);
+    }
+
+    // ==================================================================================
     // ── TACK PATCH — fire registered after-tack hooks after each game tick (Synergism.ts tack)
     // Found by what it does: the tick skipping its timers during a time warp (.timeWarp), adding time to every timer
     // (autoPotion and purpleReactor among them), then running the automatic tools (runeSacrifice).
