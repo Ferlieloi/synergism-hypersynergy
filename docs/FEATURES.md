@@ -477,7 +477,7 @@ Groups frequently used game automation toggles in a compact header module.
 
 **Related settings:** [Automation quick bar](https://ferlieloi.github.io/synergism-hypersynergy/docs/wiki/settings.html#enableAutomationQuickBar) · [Center quick bars](https://ferlieloi.github.io/synergism-hypersynergy/docs/wiki/settings.html#centerQuickbars)
 
-**Source:** [hs-qolQuickbarAutomation.ts](https://github.com/Ferlieloi/synergism-hypersynergy/blob/master/src/mod/class/hs-modules/hs-qol-quickbar/hs-qolQuickbarAutomation.ts)
+**Source:** [hs-qolQuickbarAutomation.ts](https://github.com/Ferlieloi/synergism-hypersynergy/blob/master/src/mod/class/hs-modules/hs-qol-quickbar/hs-qolQuickbarAutomation.ts) · [quickbars.md](https://github.com/Ferlieloi/synergism-hypersynergy/blob/master/docs/features/quickbars.md)
 
 ## Click-saving tools & input
 
@@ -542,7 +542,21 @@ Repeats clicks at the pointer with a configurable interval.
 
 Current versions use a single corruption level. The old corruption-loadout modules are no longer part of the mod.
 
-**Sources for this category:** [header-corruption.md](https://github.com/Ferlieloi/synergism-hypersynergy/blob/master/docs/features/header-corruption.md) · [header-challenge-progress.md](https://github.com/Ferlieloi/synergism-hypersynergy/blob/master/docs/features/header-challenge-progress.md)
+**Sources for this category:** [corruption-predictor.md](https://github.com/Ferlieloi/synergism-hypersynergy/blob/master/docs/features/corruption-predictor.md) · [header-corruption.md](https://github.com/Ferlieloi/synergism-hypersynergy/blob/master/docs/features/header-corruption.md) · [header-challenge-progress.md](https://github.com/Ferlieloi/synergism-hypersynergy/blob/master/docs/features/header-challenge-progress.md)
+
+### Corruption predictor
+
+Estimates which corruption level gives the most of your chosen reward on the next ascension.
+
+**Where:** Corruption tab → Find optimal level, or Corruption quickbar → Set best
+
+- Auto targets the highest reward type you can earn. Choose another reward type to override it.
+- The quickbar's Set best calculates and applies the recommended level for your next ascension.
+
+**Availability and limits**
+
+- Requires corruption and Instant Challenge II. In an Exalt, clear C11 again first.
+- Challenge completions and rewards are estimates. Leave any active ascension challenge before calculating.
 
 ### Current and next corruption level
 
@@ -831,7 +845,7 @@ The mod enhances the game's Ambrosia loadout controls and adds generation inform
 
 ### Custom Ambrosia loadout icons
 
-Gives saved loadouts recognizable icons instead of only numbers.
+Lets a saved loadout use any game icon, not only the few the game offers.
 
 **Where:** Header editor → slot icon chooser; Ambrosia tab
 
@@ -1197,7 +1211,7 @@ Keeps custom JSON strategies locally and shares them through import/export.
 
 - Inspect built-in strategies, then copy or create one for your own tuning.
 - Imports are validated and older strategy formats are normalized. Exports copy shareable strategy JSON.
-- Bundled strategies whose names carry -temp are listed under Old Strategies: their authors still need to tune them for the changed corruption system.
+- Bundled strategies whose names carry -temp are listed under Not Yet Retuned: their authors still need to tune them for the changed corruption system. A strategy's earlier versions stay available under Previous Versions.
 - If a strategy cannot be saved, the draft stays open and the existing strategy list stays intact.
 
 **Related settings:** [Auto-Sing Strategy](https://ferlieloi.github.io/synergism-hypersynergy/docs/wiki/settings.html#autosingStrategy) · [✏️ Edit](https://ferlieloi.github.io/synergism-hypersynergy/docs/wiki/settings.html#editAutosingStrategy) · [➕ Create](https://ferlieloi.github.io/synergism-hypersynergy/docs/wiki/settings.html#createAutosingStrategy) · [🗑️ Delete](https://ferlieloi.github.io/synergism-hypersynergy/docs/wiki/settings.html#deleteAutosingStrategy) · [📥 Import](https://ferlieloi.github.io/synergism-hypersynergy/docs/wiki/settings.html#importAutosingStrategy) · [📤 Export](https://ferlieloi.github.io/synergism-hypersynergy/docs/wiki/settings.html#exportAutosingStrategy)
@@ -1259,7 +1273,7 @@ Sets actual corruption level, optionally ascending immediately.
 
 - The game may clamp levels. Strategy levels are actual levels, before the game's free reward levels.
 
-### Six configurable Ambrosia roles
+### Six configurable Ambrosia loadouts
 
 Assigns the Hyperflux (H), 3-7D Cubes, Quark, Obtainium, Offerings and Ambrosia slots; an Antiquities icon shows which are for pre-AOAG (dimmed) and post-AOAG (full colours).
 

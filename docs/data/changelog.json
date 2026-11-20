@@ -27,6 +27,95 @@
   ],
   "entries": [
     {
+      "id": "live-2.15.0",
+      "version": "2.15.0",
+      "channel": "live",
+      "repository": "Ferlieloi/synergism-hypersynergy",
+      "commit": "61aa23b8328f66779861ddf0d91b2d1f36a819d8",
+      "previous_commit": "452d72be2f29fc4f2c10e8f86014932a0d5f0a0f",
+      "date": "2026-11-20",
+      "date_kind": "tag",
+      "status": "tagged",
+      "release_url": null,
+      "sources": [
+        {
+          "label": "Git tag",
+          "url": "https://github.com/Ferlieloi/synergism-hypersynergy/tree/v2.15.0"
+        },
+        {
+          "label": "Release build",
+          "url": "https://github.com/Ferlieloi/synergism-hypersynergy/commit/61aa23b8328f66779861ddf0d91b2d1f36a819d8"
+        }
+      ],
+      "notes": [],
+      "changes": [
+        {
+          "type": "added",
+          "text": "The Corruption Predictor estimates which level earns the most of your chosen reward on the next ascension. It requires Instant Challenge II and supports Exalts after clearing C11. Challenge completions and payouts are estimates.",
+          "evidence": [
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/ddd8ef9a4db38d95c80d411725e6ccebf0bbabe7"
+          ]
+        },
+        {
+          "type": "added",
+          "text": "Auto targets the highest reward type you can earn. Choose a reward in the Corruption tab or use Set best in the corruption quickbar to calculate and apply the suggested level.",
+          "evidence": [
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/ddd8ef9a4db38d95c80d411725e6ccebf0bbabe7"
+          ]
+        },
+        {
+          "type": "changed",
+          "text": "At the end of each Auto-Sing loop, the mod exports in the Quark loadout, buys affordable Infinite Ascent levels, and opens one Platonic Cube to collect catch-up quarks before the next singularity.",
+          "evidence": [
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/431aa74208f645b9e5ccc0505a3ca3a2561c8ffa"
+          ]
+        },
+        {
+          "type": "added",
+          "text": "The Auto-Sing strategy editor adds Set Auto Rune, Buy rune, and Pause Autosing actions.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/cf713a07c8da712409e7adcb26d8295b5f89fb4b"
+          ]
+        }
+      ],
+      "contributors": [
+        {
+          "id": "Ferlieloi",
+          "roles": [
+            "changes",
+            "merge"
+          ],
+          "commits": [
+            "ddd8ef9a4db38d95c80d411725e6ccebf0bbabe7",
+            "431aa74208f645b9e5ccc0505a3ca3a2561c8ffa",
+            "723c902d99ff159f264ea465d107f8c323bcf0f6"
+          ]
+        },
+        {
+          "id": "maenhiir",
+          "roles": [
+            "changes"
+          ],
+          "commits": [
+            "cf713a07c8da712409e7adcb26d8295b5f89fb4b"
+          ]
+        }
+      ],
+      "merges": [
+        {
+          "direction": "dev-to-live",
+          "commit": "723c902d99ff159f264ea465d107f8c323bcf0f6",
+          "evidence": [
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/723c902d99ff159f264ea465d107f8c323bcf0f6"
+          ],
+          "summary": "Includes the changes from Dev v2.14.8b-dev1.",
+          "from_entry_ids": [
+            "dev-2.14.8b-dev1"
+          ]
+        }
+      ]
+    },
+    {
       "id": "dev-2.14.8b-dev1",
       "version": "2.14.8b-dev1",
       "channel": "dev",
