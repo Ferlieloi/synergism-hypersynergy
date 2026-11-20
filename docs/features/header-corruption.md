@@ -9,7 +9,8 @@ Decorates the game's `corruptionLevelHeader` ("used/max", game 4.4.0); not a mod
   next ascension's level differs from the one shown. In an ascension challenge the game shows 0, so `0/132 → 25`.
   Read every 250 ms while the module is seen (as the challenge progress module), from `exposedPlayer`, else the
   game's text and input (bookmarklet). Not turned off by autosing (cheap, as the challenge progress module).
-- **Popover on a click on the module** (not the wheel; it keeps every control, the module only some, below), centred under it,
+- **Popover from the arrow beside the corruption icon**, or by clicking the icon or current level. The arrow is a button with
+  a tooltip and expanded state, works with Enter or Space, and is hidden in header edit mode. The popover is centred under the module,
   pushed back inside the page at its edges: the game's cleanse (its `#corruptionExitIcon` image as it is, 30 px as
   the buttons, no frame of the mod's: the icon has its own; left of the 0), the tab's row (0, -10,
   -1, input, +1, +10, Max, the game's button classes, at their text's width + 5 px a side instead of the game's
@@ -22,9 +23,12 @@ Decorates the game's `corruptionLevelHeader` ("used/max", game 4.4.0); not a mod
     icon for 10 s (the game's "Confirm" as tooltip; over it, not beside it: the popover shouldn't grow
     and re-centring), closing the popover cancels it; the second clicks the game's `#corruptionCleanseConfirm`
     (works while hidden).
+  - **Predictor** shows a resource icon picker and **Set best** under the level controls after C11.
+    It shares the Corruption page's objective and applies to the next
+    ascension through the same checks. See [corruption predictor](corruption-predictor.md).
   - **Toggles with short names**: "Auto-climb" (`autoIncrease`) and "Cleanse to highest"
     (`cleanseToHighest`), English for everyone; the game's translated sentence is their tooltip. Closes
-  on Escape, a press outside, a second click on the module, edit mode, the module hidden. In edit mode the game's
+  on Escape, a press outside, a second click on the arrow or module, edit mode, the module hidden. In edit mode the game's
   capture listener stops the click. An emptied input changes nothing (the game would set 0). The game's texts
   (title = "[HS] " + the input's aria-label, Max, toggle) copied at each opening, so they follow a language switch.
 - **Level controls in the module** (hidden setting `corruptionHeaderInline`, on by default, under the setting above;

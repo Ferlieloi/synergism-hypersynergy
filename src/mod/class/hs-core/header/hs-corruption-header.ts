@@ -1,6 +1,7 @@
 import { HSGlobal } from "../hs-global";
 import { HSLogger } from "../hs-logger";
 import { HSUI } from "../hs-ui";
+import { HSModuleRegistry } from "../module/hs-module-registry";
 import { HSCorruptionLevel, HSCorruptionLevelButton, HSCorruptionToggle } from "../hs-corruption-level";
 import { HSHeaderPopover } from "./hs-header-popover";
 import { HSNumberParser } from "../../hs-utils/hs-number-parser";
@@ -61,6 +62,7 @@ interface HSCorruptionPopover {
     maxButton: HTMLButtonElement;
     cleanse: HSCorruptionCleanse;
     toggles: HSCorruptionToggleControl[];
+    predictor?: HTMLElement;
 }
 
 interface HSCorruptionInline {
@@ -79,9 +81,9 @@ interface HSCorruptionInline {
  * Description:
  *     The mod's additions to the game's "Corruption level" header module (corruptionLevelHeader, "used/max"):
  *     - Next level and controls (setting corruptionHeaderControls): " → 30" in silver after the game's text while the
- *       next ascension's level differs from the one shown (in an ascension challenge the game shows 0). A click on
- *       the module opens a popover under it with the Corruption tab's cleanse (its icon; a second click within 10 s
- *       confirms, as the game's Cleanse then Confirm), its level row (0, -10, -1, input, +1, +10, Max) and its two
+ *       next ascension's level differs from the one shown (in an ascension challenge the game shows 0). The arrow
+ *       or a click on the module opens a popover with the predictor and the Corruption tab's cleanse (its icon;
+ *       a second click within 10 s confirms, as the game's Cleanse then Confirm), its level row and its two
  *       toggles, all done through the game's own controls (HSCorruptionLevel). The cleanse and the row are hidden
  *       while the max is 0 (as the game's row). Read every 250 ms while the module is seen; no patcher feature (without
  *       the live player, the levels come from the game's text and controls).
@@ -101,6 +103,7 @@ export class HSCorruptionHeader {
     static #module?: HTMLElement;
     static #text?: HTMLElement;
     static #next?: HTMLSpanElement;
+    static #menuToggle?: HTMLButtonElement;
     static #popover?: HSCorruptionPopover;
     static #inline?: HSCorruptionInline;
     static #inlineWanted = false;
@@ -130,10 +133,23 @@ export class HSCorruptionHeader {
         // After the game's text, never inside it: the game rewrites that span
         const next = document.createElement('span');
         next.className = 'hs-corruption-header-next';
+        const menuToggle = document.createElement('button');
+        menuToggle.type = 'button';
+        menuToggle.className = 'hs-corr-menu-toggle';
+        menuToggle.title = 'Corruption controls and predictor';
+        menuToggle.setAttribute('aria-label', menuToggle.title);
+        menuToggle.setAttribute('aria-expanded', 'false');
+        menuToggle.setAttribute('aria-controls', POPOVER_ID);
+        menuToggle.addEventListener('keydown', event => {
+            // Keep the native button activation when the game binds these keys as hotkeys.
+            if (event.key === 'Enter' || event.key === ' ') event.stopPropagation();
+        });
+        text.before(menuToggle);
         text.after(next);
         HSCorruptionHeader.#module = module;
         HSCorruptionHeader.#text = text;
         HSCorruptionHeader.#next = next;
+        HSCorruptionHeader.#menuToggle = menuToggle;
 
         // In edit mode the game's capture listener stops the click before it reaches the module
         module.addEventListener('click', HSCorruptionHeader.#onModuleClick);
@@ -152,6 +168,8 @@ export class HSCorruptionHeader {
         HSCorruptionHeader.#module?.removeEventListener('click', HSCorruptionHeader.#onModuleClick);
         HSCorruptionHeader.#next?.remove();
         HSCorruptionHeader.#next = undefined;
+        HSCorruptionHeader.#menuToggle?.remove();
+        HSCorruptionHeader.#menuToggle = undefined;
         document.documentElement.classList.remove(CONTROLS_CLASS);
     }
 
@@ -222,8 +240,10 @@ export class HSCorruptionHeader {
         const icon = HSCorruptionLevel.cleanseIcon();
         if (icon && popover.cleanse.icon.getAttribute('src') !== icon) popover.cleanse.icon.src = icon;
         HSCorruptionHeader.#disarmCleanse();
+        HSCorruptionHeader.#attachPredictor();
 
         popover.shell.open();
+        HSCorruptionHeader.#menuToggle?.setAttribute('aria-expanded', 'true');
         HSCorruptionHeader.#refreshPopover(HSCorruptionLevel.getNext(), HSCorruptionHeader.#levels().max);
     }
 
@@ -232,7 +252,10 @@ export class HSCorruptionHeader {
     }
 
     static #buildPopover(module: HTMLElement): HSCorruptionPopover {
-        const shell = new HSHeaderPopover(POPOVER_ID, module, () => HSCorruptionHeader.#disarmCleanse());
+        const shell = new HSHeaderPopover(POPOVER_ID, module, () => {
+            HSCorruptionHeader.#menuToggle?.setAttribute('aria-expanded', 'false');
+            HSCorruptionHeader.#disarmCleanse();
+        });
 
         const title = document.createElement('div');
         title.className = 'hs-corr-pop-title';
@@ -373,6 +396,7 @@ export class HSCorruptionHeader {
 
         // The game hides its level row while the max is 0
         popover.row.hidden = !(max > 0);
+        if (popover.predictor) popover.predictor.hidden = popover.row.hidden;
         // Not while the player types in it
         const value = Number.isFinite(level) ? String(level) : '';
         if (document.activeElement !== popover.input && popover.input.value !== value) popover.input.value = value;
@@ -382,6 +406,17 @@ export class HSCorruptionHeader {
         }
 
         popover.shell.place();
+    }
+
+    static #attachPredictor(): void {
+        const popover = HSCorruptionHeader.#popover;
+        if (!popover) return;
+        const row = HSModuleRegistry.getModule('HSCorruptionPredictor')?.getQuickbar();
+        if (row && !row.isConnected) {
+            row.hidden = popover.row.hidden;
+            popover.shell.element.append(row);
+            popover.predictor = row;
+        }
     }
 
     // ======================================================

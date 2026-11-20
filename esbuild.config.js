@@ -3,6 +3,7 @@ const inlineImport = require('esbuild-plugin-inline-import');
 const fs = require('fs');
 const path = require('path');
 const heaterWorkerPlugin = require('./scripts/heater-worker-plugin.cjs');
+const corruptionWorkerPlugin = require('./scripts/corruption-worker-plugin.cjs');
 const { writeLoaders, checkLoaders, sourceDir: loaderSourceDir } = require('./scripts/build-loaders.cjs');
 
 const baseOptions = {
@@ -59,7 +60,7 @@ async function build(env) {
             ...baseOptions,
             plugins: [...assetPlugins, heaterWorkerPlugin({
                 minify: env === 'release', plugins: assetPlugins, define: baseOptions.define,
-            })],
+            }), corruptionWorkerPlugin({ minify: env === 'release' })],
             outfile: env === 'release' ? 'release/mod/hypersynergism_release.js' : 'build/hypersynergism.js',
             minify: env === 'release',
             sourcemap: false,

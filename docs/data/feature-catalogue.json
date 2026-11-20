@@ -649,10 +649,25 @@
       "icon": "docs/res/categories/challenges.png",
       "intro": "Current versions use a single corruption level. The old corruption-loadout modules are no longer part of the mod.",
       "sources": [
+        "docs/features/corruption-predictor.md",
         "docs/features/header-corruption.md",
         "docs/features/header-challenge-progress.md"
       ],
       "features": [
+        {
+          "id": "corruption-predictor",
+          "title": "Corruption predictor",
+          "where": "Corruption tab → Find optimal level, or Corruption quickbar → Set best",
+          "summary": "Estimates which corruption level gives the most of your chosen reward on the next ascension.",
+          "details": [
+            "Auto targets the highest reward type you can earn. Choose another reward type to override it.",
+            "The quickbar's Set best calculates and applies the recommended level for your next ascension."
+          ],
+          "limits": [
+            "Requires corruption and Instant Challenge II. In an Exalt, clear C11 again first.",
+            "Challenge completions and rewards are estimates. Leave any active ascension challenge before calculating."
+          ]
+        },
         {
           "id": "corruption-next",
           "title": "Current and next corruption level",
